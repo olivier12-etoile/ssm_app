@@ -1,0 +1,20 @@
+# Laravel
+backend/vendor/
+backend/.env
+backend/node_modules/
+backend/storage/logs/*.log
+backend/bootstrap/cache/*.php
+
+# Flutter
+frontend/ssm_app/build/
+frontend/ssm_app/.dart_tool/
+frontend/ssm_app/.flutter-plugins
+frontend/ssm_app/.flutter-plugins-dependencies
+frontend/ssm_app/.packages
+
+# VS Code
+.vscode/settings.json
+
+# Système
+.DS_Store
+Thumbs.db
