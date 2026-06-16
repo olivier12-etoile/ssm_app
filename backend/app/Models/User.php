@@ -16,8 +16,8 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'school_id',
-        'is_password_changed',
+        'ecole_id',
+        'mot_de_passe_change',
     ];
 
     protected $hidden = [
@@ -28,9 +28,24 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at'   => 'datetime',
-            'password'            => 'hashed',
-            'is_password_changed' => 'boolean',
+            'email_verified_at'    => 'datetime',
+            'password'             => 'hashed',
+            'mot_de_passe_change'  => 'boolean',
         ];
+    }
+
+    public function ecole()
+    {
+        return $this->belongsTo(Ecole::class, 'ecole_id');
+    }
+
+    public function permissions()
+    {
+        return $this->hasMany(PermissionModule::class, 'utilisateur_id');
+    }
+
+    public function notes()
+    {
+        return $this->hasMany(Note::class, 'enseignant_id');
     }
 }
