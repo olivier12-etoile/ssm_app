@@ -1,0 +1,15 @@
+{
+  "folders": [
+    { "path": ".", "name": "SSM Racine" },
+    { "path": "backend", "name": "Backend Laravel" },
+    { "path": "frontend/ssm_app", "name": "Frontend Flutter" }
+  ],
+  "settings": {
+    "editor.formatOnSave": true,
+    "dart.flutterSdkPath": "C:\\flutter",
+    "editor.tabSize": 2,
+    "[php]": {
+      "editor.tabSize": 4
+    }
+  }
+}

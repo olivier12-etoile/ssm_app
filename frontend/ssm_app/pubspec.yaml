@@ -1,0 +1,29 @@
+name: ssm_app
+description: Smart School Manager - Système ERP SaaS pour établissements scolaires
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # HTTP & API
+  http: ^1.1.0
+
+  # Stockage local
+  shared_preferences: ^2.2.2
+
+  # Utilitaires
+  uuid: ^4.3.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
