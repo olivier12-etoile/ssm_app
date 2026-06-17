@@ -100,6 +100,13 @@ class MenuLateral extends StatelessWidget {
   titre: 'Années & Périodes',
   route: '/directeur/annees',
 ),
+
+_menuItem(
+  context,
+  icone: Icons.people,
+  titre: 'Gestion des élèves',
+  route: '/directeur/eleves',
+),
                 ],
 
                 // Directeur + Censeur
