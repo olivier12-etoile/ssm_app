@@ -111,6 +111,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
     if (_utilisateur!.estEnseignant) {
       cartes.addAll([
         _carte(Icons.edit_note, 'Saisie Notes', '/enseignant/notes', Colors.indigo),
+        _carte(Icons.calendar_month, 'Années & Périodes', '/directeur/annees', Colors.teal),
       ]);
     }
 

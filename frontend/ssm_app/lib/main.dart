@@ -5,6 +5,7 @@ import 'screens/dashboard/tableau_de_bord_screen.dart';
 import 'screens/directeur/gestion_utilisateurs_screen.dart';
 import 'screens/directeur/gestion_classes_screen.dart';
 import 'screens/directeur/gestion_matieres_screen.dart';
+import 'screens/directeur/gestion_annees_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -29,6 +30,7 @@ class SSMApp extends StatelessWidget {
         '/directeur/utilisateurs': (context) => const GestionUtilisateursScreen(),
         '/directeur/classes':      (context) => const GestionClassesScreen(),
         '/directeur/matieres':     (context) => const GestionMatieresScreen(),
+        '/directeur/annees':       (context) => const GestionAnneesScreen(),
       },
       home: const LoginScreen(),
     );

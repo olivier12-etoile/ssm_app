@@ -93,6 +93,13 @@ class MenuLateral extends StatelessWidget {
                     titre: 'Gestion des matières',
                     route: '/directeur/matieres',
                   ),
+
+                  _menuItem(
+  context,
+  icone: Icons.calendar_month,
+  titre: 'Années & Périodes',
+  route: '/directeur/annees',
+),
                 ],
 
                 // Directeur + Censeur
