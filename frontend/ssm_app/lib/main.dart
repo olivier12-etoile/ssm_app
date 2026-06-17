@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'screens/auth/login_screen.dart';
+import 'screens/auth/changement_mdp_screen.dart';
 import 'screens/dashboard/tableau_de_bord_screen.dart';
+import 'screens/directeur/gestion_utilisateurs_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -19,8 +21,10 @@ class SSMApp extends StatelessWidget {
         useMaterial3: true,
       ),
       routes: {
-        '/login':           (context) => const LoginScreen(),
-        '/tableau-de-bord': (context) => const TableauDeBordScreen(),
+        '/login':                  (context) => const LoginScreen(),
+        '/changer-mot-de-passe':   (context) => const ChangementMdpScreen(),
+        '/tableau-de-bord':        (context) => const TableauDeBordScreen(),
+        '/directeur/utilisateurs': (context) => const GestionUtilisateursScreen(),
       },
       home: const LoginScreen(),
     );
