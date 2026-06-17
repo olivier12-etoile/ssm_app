@@ -3,6 +3,7 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/changement_mdp_screen.dart';
 import 'screens/dashboard/tableau_de_bord_screen.dart';
 import 'screens/directeur/gestion_utilisateurs_screen.dart';
+import 'screens/directeur/gestion_classes_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -25,6 +26,7 @@ class SSMApp extends StatelessWidget {
         '/changer-mot-de-passe':   (context) => const ChangementMdpScreen(),
         '/tableau-de-bord':        (context) => const TableauDeBordScreen(),
         '/directeur/utilisateurs': (context) => const GestionUtilisateursScreen(),
+        '/directeur/classes':      (context) => const GestionClassesScreen(),
       },
       home: const LoginScreen(),
     );
