@@ -1,0 +1,191 @@
+import 'package:flutter/material.dart';
+import '../../models/utilisateur.dart';
+import '../../services/auth_service.dart';
+
+class MenuLateral extends StatelessWidget {
+  final Utilisateur utilisateur;
+
+  const MenuLateral({super.key, required this.utilisateur});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      child: Column(
+        children: [
+          // En-tête
+          UserAccountsDrawerHeader(
+            decoration: BoxDecoration(
+              color: Color(
+                int.parse(
+                  utilisateur.couleurPrimaire.replaceAll('#', '0xFF'),
+                ),
+              ),
+            ),
+            accountName: Text(
+              utilisateur.nom,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            accountEmail: Text(utilisateur.email),
+            currentAccountPicture: CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Text(
+                utilisateur.nom[0].toUpperCase(),
+                style: TextStyle(
+                  fontSize: 24,
+                  color: Color(
+                    int.parse(
+                      utilisateur.couleurPrimaire.replaceAll('#', '0xFF'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            otherAccountsPictures: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  utilisateur.role.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            ],
+          ),
+
+          // Menu selon le rôle
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                // Tableau de bord — tout le monde
+                _menuItem(
+                  context,
+                  icone: Icons.dashboard,
+                  titre: 'Tableau de bord',
+                  route: '/tableau-de-bord',
+                ),
+
+                // Directeur uniquement
+                if (utilisateur.estDirecteur) ...[
+                  _separateur('Administration'),
+                  _menuItem(
+                    context,
+                    icone: Icons.people,
+                    titre: 'Gestion des utilisateurs',
+                    route: '/directeur/utilisateurs',
+                  ),
+                  _menuItem(
+                    context,
+                    icone: Icons.class_,
+                    titre: 'Gestion des classes',
+                    route: '/directeur/classes',
+                  ),
+                  _menuItem(
+                    context,
+                    icone: Icons.book,
+                    titre: 'Gestion des matières',
+                    route: '/directeur/matieres',
+                  ),
+                ],
+
+                // Directeur + Censeur
+                if (utilisateur.estDirecteur || utilisateur.estCenseur) ...[
+                  _separateur('Pédagogie'),
+                  _menuItem(
+                    context,
+                    icone: Icons.grade,
+                    titre: 'Validation des notes',
+                    route: '/notes/validation',
+                  ),
+                ],
+
+                // Secrétaire + Directeur
+                if (utilisateur.estDirecteur || utilisateur.estSecretaire) ...[
+                  _separateur('Finances'),
+                  _menuItem(
+                    context,
+                    icone: Icons.payment,
+                    titre: 'Gestion des paiements',
+                    route: '/paiements',
+                  ),
+                ],
+
+                // Enseignant
+                if (utilisateur.estEnseignant) ...[
+                  _separateur('Mes classes'),
+                  _menuItem(
+                    context,
+                    icone: Icons.edit_note,
+                    titre: 'Saisie des notes',
+                    route: '/enseignant/notes',
+                  ),
+                ],
+
+                const Divider(),
+
+                // Profil — tout le monde
+                _menuItem(
+                  context,
+                  icone: Icons.person,
+                  titre: 'Mon profil',
+                  route: '/profil',
+                ),
+              ],
+            ),
+          ),
+
+          // Déconnexion
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Déconnexion',
+                style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              await AuthService.deconnecter();
+              if (context.mounted) {
+                Navigator.pushReplacementNamed(context, '/login');
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuItem(
+    BuildContext context, {
+    required IconData icone,
+    required String titre,
+    required String route,
+  }) {
+    return ListTile(
+      leading: Icon(icone),
+      title: Text(titre),
+      onTap: () {
+        Navigator.pop(context);
+        Navigator.pushNamed(context, route);
+      },
+    );
+  }
+
+  Widget _separateur(String titre) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Text(
+        titre.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+}
