@@ -8,6 +8,10 @@ use App\Http\Controllers\Api\ClasseController;
 use App\Http\Controllers\Api\MatiereController;
 use App\Http\Controllers\Api\ChangerMotDePasseController;
 use App\Http\Controllers\Api\AffectationController;
+use App\Http\Controllers\Api\AnneeAcademiqueController;
+use App\Http\Controllers\Api\PeriodeAcademiqueController;
+use App\Http\Controllers\Api\EleveController;
+use App\Http\Controllers\Api\NoteController;
 
 // ── Test ─────────────────────────────────────────────────
 Route::get('/ping', fn() => response()->json([
@@ -47,8 +51,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/matieres/{id}',  [MatiereController::class, 'modifier']);
     Route::delete('/matieres/{id}', [MatiereController::class, 'supprimer']);
 
-    // ✅ Affectations — DANS le middleware
+    // Affectations
     Route::get('/affectations/{enseignantId}', [AffectationController::class, 'index']);
     Route::post('/affectations',               [AffectationController::class, 'ajouter']);
     Route::delete('/affectations/{id}',        [AffectationController::class, 'supprimer']);
+
+    // Années académiques
+    Route::get('/annees',    [AnneeAcademiqueController::class, 'index']);
+    Route::post('/annees',   [AnneeAcademiqueController::class, 'creer']);
+
+    // Périodes
+    Route::get('/periodes/{anneeId}',         [PeriodeAcademiqueController::class, 'index']);
+    Route::post('/periodes',                  [PeriodeAcademiqueController::class, 'creer']);
+    Route::patch('/periodes/{id}/statut',     [PeriodeAcademiqueController::class, 'changerStatut']);
+
+    // Élèves
+    Route::get('/eleves',                    [EleveController::class, 'index']);
+    Route::get('/eleves/classe/{classeId}',  [EleveController::class, 'parClasse']);
+    Route::post('/eleves',                   [EleveController::class, 'creer']);
+
+    // Notes
+    Route::get('/notes',              [NoteController::class, 'index']);
+    Route::post('/notes',             [NoteController::class, 'sauvegarder']);
+    Route::post('/notes/soumettre',   [NoteController::class, 'soumettre']);
+    Route::post('/notes/valider',     [NoteController::class, 'valider']);
+    Route::post('/notes/rejeter',     [NoteController::class, 'rejeter']);
 });
