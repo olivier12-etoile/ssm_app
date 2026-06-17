@@ -113,6 +113,8 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
         _carte(Icons.edit_note, 'Saisie Notes', '/enseignant/notes', Colors.indigo),
         _carte(Icons.calendar_month, 'Années & Périodes', '/directeur/annees', Colors.teal),
         _carte(Icons.people, 'Élèves', '/directeur/eleves', Colors.deepOrange),
+        // Pour le Directeur
+_carte(Icons.edit_note, 'Saisie Notes', '/enseignant/notes', Colors.indigo),
       ]);
     }
 
