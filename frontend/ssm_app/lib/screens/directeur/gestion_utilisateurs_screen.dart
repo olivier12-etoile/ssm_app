@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/utilisateur_service.dart';
+import 'affectation_enseignant_screen.dart';
 
 class GestionUtilisateursScreen extends StatefulWidget {
   const GestionUtilisateursScreen({super.key});
@@ -111,8 +112,8 @@ class _GestionUtilisateursScreenState
   }
 
   Future<void> _afficherDialogCreation() async {
-    final nomController   = TextEditingController();
-    final emailController = TextEditingController();
+    final nomController    = TextEditingController();
+    final emailController  = TextEditingController();
     String roleSelectionne = 'enseignant';
     String? motDePasseGenere;
 
@@ -126,7 +127,6 @@ class _GestionUtilisateursScreenState
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Résultat si créé
                   if (motDePasseGenere != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -144,7 +144,7 @@ class _GestionUtilisateursScreenState
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
-                          Text('Mot de passe temporaire :'),
+                          const Text('Mot de passe temporaire :'),
                           SelectableText(
                             motDePasseGenere!,
                             style: const TextStyle(
@@ -276,7 +276,7 @@ class _GestionUtilisateursScreenState
                   padding: const EdgeInsets.all(16),
                   itemCount: _utilisateurs.length,
                   itemBuilder: (context, index) {
-                    final u = _utilisateurs[index];
+                    final u    = _utilisateurs[index];
                     final role = u['role'] as String;
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
@@ -308,7 +308,8 @@ class _GestionUtilisateursScreenState
                                 color: _couleurRole(role).withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                    color: _couleurRole(role).withOpacity(0.5)),
+                                  color: _couleurRole(role).withOpacity(0.5),
+                                ),
                               ),
                               child: Text(
                                 role.toUpperCase(),
@@ -321,9 +322,43 @@ class _GestionUtilisateursScreenState
                             ),
                           ],
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          onPressed: () => _modifierRole(u['id'] as int, role),
+
+                        // ← MODIFIÉ : boutons selon le rôle
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Bouton affectation uniquement pour les enseignants
+                            if (role == 'enseignant')
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.assignment_ind,
+                                  color: Colors.indigo,
+                                ),
+                                tooltip: 'Gérer les affectations',
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        AffectationEnseignantScreen(
+                                      enseignantId:  u['id'] as int,
+                                      enseignantNom: u['name'] as String,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                            // Bouton modifier rôle — tout le monde sauf directeur
+                            if (role != 'directeur')
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.blue,
+                                ),
+                                tooltip: 'Modifier le rôle',
+                                onPressed: () =>
+                                    _modifierRole(u['id'] as int, role),
+                              ),
+                          ],
                         ),
                       ),
                     );
