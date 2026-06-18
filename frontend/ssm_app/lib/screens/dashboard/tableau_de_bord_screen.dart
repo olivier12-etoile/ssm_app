@@ -98,6 +98,8 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
         _carte(Icons.person_remove, 'Liste de renvoi', '/paiements/renvoi', Colors.red),
         // Pour Directeur
         _carte(Icons.bar_chart, 'Statistiques', '/statistiques', Colors.indigo),
+        // Pour Directeur et Censeur
+        _carte(Icons.description, 'Bulletins', '/bulletins', Colors.deepPurple),
       ]);
     }
 
@@ -105,6 +107,8 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
     if (_utilisateur!.estCenseur) {
       cartes.addAll([
         _carte(Icons.grade, 'Validation Notes', '/notes/validation', Colors.orange),
+        // Pour Directeur et Censeur
+        _carte(Icons.description, 'Bulletins', '/bulletins', Colors.deepPurple),
       ]);
     }
 

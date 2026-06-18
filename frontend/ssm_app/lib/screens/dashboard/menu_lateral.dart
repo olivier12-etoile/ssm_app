@@ -107,19 +107,25 @@ class MenuLateral extends StatelessWidget {
                 ],
 
                 // ── Directeur + Censeur ───────────────────
-                if (utilisateur.estDirecteur || utilisateur.estCenseur) ...[
-                  _separateur('Pédagogie'),
-                  _menuItem(context,
-                    icone: Icons.edit_note,
-                    titre: 'Saisie des notes',
-                    route: '/enseignant/notes',
-                  ),
-                  _menuItem(context,
-                    icone: Icons.grade,
-                    titre: 'Validation des notes',
-                    route: '/notes/validation',
-                  ),
-                ],
+                // Dans la section Pédagogie
+if (utilisateur.estDirecteur || utilisateur.estCenseur) ...[
+  _separateur('Pédagogie'),
+  _menuItem(context,
+    icone: Icons.edit_note,
+    titre: 'Saisie des notes',
+    route: '/enseignant/notes',
+  ),
+  _menuItem(context,
+    icone: Icons.grade,
+    titre: 'Validation des notes',
+    route: '/notes/validation',
+  ),
+  _menuItem(context,
+    icone: Icons.description,
+    titre: 'Bulletins',
+    route: '/bulletins',
+  ),
+],
 
                 // ── Directeur + Secrétaire ────────────────
                 if (utilisateur.estDirecteur || utilisateur.estSecretaire) ...[

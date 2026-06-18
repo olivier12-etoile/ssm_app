@@ -13,6 +13,7 @@ import 'screens/secretaire/gestion_paiements_screen.dart';
 import 'screens/secretaire/liste_renvoi_screen.dart';
 import 'screens/profil/profil_screen.dart';
 import 'screens/statistiques/statistiques_screen.dart';
+import 'screens/bulletins/bulletins_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -45,6 +46,7 @@ class SSMApp extends StatelessWidget {
         '/paiements/renvoi':       (context) => const ListeRenvoiScreen(),
         '/profil':                 (context) => const ProfilScreen(),
         '/statistiques':           (context) => const StatistiquesScreen(),
+        '/bulletins':              (context) => const BulletinsScreen(),
       },
       home: const LoginScreen(),
     );

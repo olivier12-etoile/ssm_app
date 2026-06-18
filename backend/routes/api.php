@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\StatistiqueController;
+use App\Http\Controllers\Api\BulletinController;
 
 
 
@@ -100,4 +101,10 @@ Route::post('/profil/mot-de-passe',     [ProfilController::class, 'changerMotDeP
 
 // Dans le groupe auth:sanctum
 Route::get('/statistiques', [StatistiqueController::class, 'index']);
+
+
+
+// Dans le groupe auth:sanctum
+Route::post('/bulletins/eleve',  [BulletinController::class, 'generer']);
+Route::post('/bulletins/classe', [BulletinController::class, 'parClasse']);
 });
