@@ -22,7 +22,6 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
   Future<void> _chargerUtilisateur() async {
     final u = await AuthService.getUtilisateur();
 
-    // Rediriger si mot de passe pas encore changé
     if (u != null && !u.motDePasseChange && mounted) {
       Navigator.pushReplacementNamed(context, '/changer-mot-de-passe');
       return;
@@ -68,8 +67,6 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
               style: TextStyle(color: Colors.grey[600]),
             ),
             const SizedBox(height: 32),
-
-            // Cartes rapides selon le rôle
             Expanded(
               child: GridView.count(
                 crossAxisCount: 2,
@@ -87,34 +84,37 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
   List<Widget> _cartesRapides() {
     final cartes = <Widget>[];
 
+    // ── Directeur ─────────────────────────────────────────
     if (_utilisateur!.estDirecteur) {
       cartes.addAll([
-        _carte(Icons.people, 'Utilisateurs', '/directeur/utilisateurs', Colors.blue),
-        _carte(Icons.class_, 'Classes', '/directeur/classes', Colors.green),
-        _carte(Icons.book, 'Matières', '/directeur/matieres', Colors.purple),
-        _carte(Icons.grade, 'Validation Notes', '/notes/validation', Colors.orange),
+        _carte(Icons.people,         'Utilisateurs',      '/directeur/utilisateurs', Colors.blue),
+        _carte(Icons.class_,          'Classes',           '/directeur/classes',      Colors.green),
+        _carte(Icons.book,            'Matières',          '/directeur/matieres',     Colors.purple),
+        _carte(Icons.calendar_month,  'Années & Périodes', '/directeur/annees',       Colors.teal),
+        _carte(Icons.people_outline,  'Élèves',            '/directeur/eleves',       Colors.deepOrange),
+        _carte(Icons.edit_note,       'Saisie Notes',      '/enseignant/notes',       Colors.indigo),
+        _carte(Icons.grade,           'Validation Notes',  '/notes/validation',       Colors.orange),
       ]);
     }
 
+    // ── Censeur ───────────────────────────────────────────
     if (_utilisateur!.estCenseur) {
       cartes.addAll([
         _carte(Icons.grade, 'Validation Notes', '/notes/validation', Colors.orange),
       ]);
     }
 
+    // ── Secrétaire ────────────────────────────────────────
     if (_utilisateur!.estSecretaire) {
       cartes.addAll([
         _carte(Icons.payment, 'Paiements', '/paiements', Colors.teal),
       ]);
     }
 
+    // ── Enseignant ────────────────────────────────────────
     if (_utilisateur!.estEnseignant) {
       cartes.addAll([
-        _carte(Icons.edit_note, 'Saisie Notes', '/enseignant/notes', Colors.indigo),
-        _carte(Icons.calendar_month, 'Années & Périodes', '/directeur/annees', Colors.teal),
-        _carte(Icons.people, 'Élèves', '/directeur/eleves', Colors.deepOrange),
-        // Pour le Directeur
-_carte(Icons.edit_note, 'Saisie Notes', '/enseignant/notes', Colors.indigo),
+        _carte(Icons.edit_note, 'Saisie des notes', '/enseignant/notes', Colors.indigo),
       ]);
     }
 
@@ -126,7 +126,8 @@ _carte(Icons.edit_note, 'Saisie Notes', '/enseignant/notes', Colors.indigo),
       onTap: () => Navigator.pushNamed(context, route),
       child: Card(
         elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

@@ -12,7 +12,7 @@ class MenuLateral extends StatelessWidget {
     return Drawer(
       child: Column(
         children: [
-          // En-tête
+          // ── En-tête ──────────────────────────────────────
           UserAccountsDrawerHeader(
             decoration: BoxDecoration(
               color: Color(
@@ -59,83 +59,77 @@ class MenuLateral extends StatelessWidget {
             ],
           ),
 
-          // Menu selon le rôle
+          // ── Menu ─────────────────────────────────────────
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
                 // Tableau de bord — tout le monde
-                _menuItem(
-                  context,
+                _menuItem(context,
                   icone: Icons.dashboard,
                   titre: 'Tableau de bord',
                   route: '/tableau-de-bord',
                 ),
 
-                // Directeur uniquement
+                // ── Directeur uniquement ──────────────────
                 if (utilisateur.estDirecteur) ...[
                   _separateur('Administration'),
-                  _menuItem(
-                    context,
+                  _menuItem(context,
                     icone: Icons.people,
-                    titre: 'Gestion des utilisateurs',
+                    titre: 'Utilisateurs',
                     route: '/directeur/utilisateurs',
                   ),
-                  _menuItem(
-                    context,
+                  _menuItem(context,
                     icone: Icons.class_,
-                    titre: 'Gestion des classes',
+                    titre: 'Classes',
                     route: '/directeur/classes',
                   ),
-                  _menuItem(
-                    context,
+                  _menuItem(context,
                     icone: Icons.book,
-                    titre: 'Gestion des matières',
+                    titre: 'Matières',
                     route: '/directeur/matieres',
                   ),
-
-                  _menuItem(
-  context,
-  icone: Icons.calendar_month,
-  titre: 'Années & Périodes',
-  route: '/directeur/annees',
-),
-
-_menuItem(
-  context,
-  icone: Icons.people,
-  titre: 'Gestion des élèves',
-  route: '/directeur/eleves',
-),
+                  _menuItem(context,
+                    icone: Icons.calendar_month,
+                    titre: 'Années & Périodes',
+                    route: '/directeur/annees',
+                  ),
+                  _menuItem(context,
+                    icone: Icons.people_outline,
+                    titre: 'Élèves',
+                    route: '/directeur/eleves',
+                  ),
                 ],
 
-                // Directeur + Censeur
+                // ── Directeur + Censeur ───────────────────
                 if (utilisateur.estDirecteur || utilisateur.estCenseur) ...[
                   _separateur('Pédagogie'),
-                  _menuItem(
-                    context,
+                  _menuItem(context,
+                    icone: Icons.edit_note,
+                    titre: 'Saisie des notes',
+                    route: '/enseignant/notes',
+                  ),
+                  _menuItem(context,
                     icone: Icons.grade,
                     titre: 'Validation des notes',
                     route: '/notes/validation',
                   ),
                 ],
 
-                // Secrétaire + Directeur
+                // ── Directeur + Secrétaire ────────────────
                 if (utilisateur.estDirecteur || utilisateur.estSecretaire) ...[
                   _separateur('Finances'),
-                  _menuItem(
-                    context,
+                  _menuItem(context,
                     icone: Icons.payment,
-                    titre: 'Gestion des paiements',
+                    titre: 'Paiements',
                     route: '/paiements',
                   ),
                 ],
 
-                // Enseignant
+                // ── Enseignant uniquement ─────────────────
                 if (utilisateur.estEnseignant) ...[
                   _separateur('Mes classes'),
-                  _menuItem(
-                    context,
+                  _menuItem(context,
                     icone: Icons.edit_note,
                     titre: 'Saisie des notes',
                     route: '/enseignant/notes',
@@ -145,8 +139,7 @@ _menuItem(
                 const Divider(),
 
                 // Profil — tout le monde
-                _menuItem(
-                  context,
+                _menuItem(context,
                   icone: Icons.person,
                   titre: 'Mon profil',
                   route: '/profil',
@@ -155,7 +148,7 @@ _menuItem(
             ),
           ),
 
-          // Déconnexion
+          // ── Déconnexion ───────────────────────────────────
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.red),
             title: const Text('Déconnexion',
