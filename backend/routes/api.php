@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\EleveController;
 use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\ProfilController;
+use App\Http\Controllers\Api\StatistiqueController;
+
+
 
 // ── Test ─────────────────────────────────────────────────
 Route::get('/ping', fn() => response()->json([
@@ -94,4 +97,7 @@ Route::get('/paiements/statistiques',      [PaiementController::class, 'statisti
 Route::get('/profil',                   [ProfilController::class, 'index']);
 Route::patch('/profil',                 [ProfilController::class, 'modifier']);
 Route::post('/profil/mot-de-passe',     [ProfilController::class, 'changerMotDePasse']);
+
+// Dans le groupe auth:sanctum
+Route::get('/statistiques', [StatistiqueController::class, 'index']);
 });

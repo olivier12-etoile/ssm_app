@@ -99,6 +99,11 @@ class MenuLateral extends StatelessWidget {
                     titre: 'Élèves',
                     route: '/directeur/eleves',
                   ),
+                  _menuItem(context,
+    icone: Icons.bar_chart,
+    titre: 'Statistiques',
+    route: '/statistiques',
+  ),
                 ],
 
                 // ── Directeur + Censeur ───────────────────

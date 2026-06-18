@@ -96,6 +96,8 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
         _carte(Icons.grade,           'Validation Notes',  '/notes/validation',       Colors.orange),
         _carte(Icons.payment, 'Paiements', '/paiements', Colors.teal),
         _carte(Icons.person_remove, 'Liste de renvoi', '/paiements/renvoi', Colors.red),
+        // Pour Directeur
+        _carte(Icons.bar_chart, 'Statistiques', '/statistiques', Colors.indigo),
       ]);
     }
 
