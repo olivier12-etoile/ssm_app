@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\AnneeAcademiqueController;
 use App\Http\Controllers\Api\PeriodeAcademiqueController;
 use App\Http\Controllers\Api\EleveController;
 use App\Http\Controllers\Api\NoteController;
+use App\Http\Controllers\Api\PaiementController;
 
 // ── Test ─────────────────────────────────────────────────
 Route::get('/ping', fn() => response()->json([
@@ -76,4 +77,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notes/soumettre',   [NoteController::class, 'soumettre']);
     Route::post('/notes/valider',     [NoteController::class, 'valider']);
     Route::post('/notes/rejeter',     [NoteController::class, 'rejeter']);
+
+    
+
+// Paiements
+Route::get('/paiements',                   [PaiementController::class, 'index']);
+Route::get('/paiements/eleve/{eleveId}',   [PaiementController::class, 'parEleve']);
+Route::post('/paiements',                  [PaiementController::class, 'enregistrer']);
+Route::post('/paiements/liste-renvoi',     [PaiementController::class, 'listeRenvoi']);
+Route::get('/paiements/statistiques',      [PaiementController::class, 'statistiques']);
 });

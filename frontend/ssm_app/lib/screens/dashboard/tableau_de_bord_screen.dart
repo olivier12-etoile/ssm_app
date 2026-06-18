@@ -94,6 +94,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
         _carte(Icons.people_outline,  'Élèves',            '/directeur/eleves',       Colors.deepOrange),
         _carte(Icons.edit_note,       'Saisie Notes',      '/enseignant/notes',       Colors.indigo),
         _carte(Icons.grade,           'Validation Notes',  '/notes/validation',       Colors.orange),
+        _carte(Icons.payment, 'Paiements', '/paiements', Colors.teal),
       ]);
     }
 

@@ -9,6 +9,7 @@ import 'screens/directeur/gestion_annees_screen.dart';
 import 'screens/directeur/gestion_eleves_screen.dart';
 import 'screens/directeur/validation_notes_screen.dart';
 import 'screens/enseignant/saisie_notes_screen.dart';
+import 'screens/secretaire/gestion_paiements_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -37,6 +38,7 @@ class SSMApp extends StatelessWidget {
         '/directeur/eleves':       (context) => const GestionElevesScreen(),
         '/notes/validation':       (context) => const ValidationNotesScreen(),
         '/enseignant/notes':       (context) => const SaisieNotesScreen(),
+        '/paiements':              (context) => const GestionPaiementsScreen(),
       },
       home: const LoginScreen(),
     );
