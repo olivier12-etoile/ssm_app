@@ -71,6 +71,14 @@ class MenuLateral extends StatelessWidget {
                   route: '/tableau-de-bord',
                 ),
 
+                // Tout le monde
+const Divider(),
+_menuItem(context,
+  icone: Icons.sync,
+  titre: 'Synchronisation',
+  route: '/sync',
+),    
+
                 // ── Directeur uniquement ──────────────────
                 if (utilisateur.estDirecteur) ...[
                   _separateur('Administration'),

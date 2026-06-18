@@ -14,6 +14,7 @@ import 'screens/secretaire/liste_renvoi_screen.dart';
 import 'screens/profil/profil_screen.dart';
 import 'screens/statistiques/statistiques_screen.dart';
 import 'screens/bulletins/bulletins_screen.dart';
+import 'screens/sync/sync_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -47,6 +48,7 @@ class SSMApp extends StatelessWidget {
         '/profil':                 (context) => const ProfilScreen(),
         '/statistiques':           (context) => const StatistiquesScreen(),
         '/bulletins':              (context) => const BulletinsScreen(),
+        '/sync':                   (context) => const SyncScreen(),
       },
       home: const LoginScreen(),
     );

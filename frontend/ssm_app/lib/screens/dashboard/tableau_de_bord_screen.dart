@@ -82,7 +82,10 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
   }
 
   List<Widget> _cartesRapides() {
-    final cartes = <Widget>[];
+    final cartes = <Widget>[
+      // Pour tout le monde
+_carte(Icons.sync, 'Synchronisation', '/sync', Colors.blueGrey),
+    ];
 
     // ── Directeur ─────────────────────────────────────────
     if (_utilisateur!.estDirecteur) {
