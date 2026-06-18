@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\PeriodeAcademiqueController;
 use App\Http\Controllers\Api\EleveController;
 use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\PaiementController;
+use App\Http\Controllers\Api\ProfilController;
 
 // ── Test ─────────────────────────────────────────────────
 Route::get('/ping', fn() => response()->json([
@@ -86,4 +87,11 @@ Route::get('/paiements/eleve/{eleveId}',   [PaiementController::class, 'parEleve
 Route::post('/paiements',                  [PaiementController::class, 'enregistrer']);
 Route::post('/paiements/liste-renvoi',     [PaiementController::class, 'listeRenvoi']);
 Route::get('/paiements/statistiques',      [PaiementController::class, 'statistiques']);
+
+
+
+// Dans le groupe auth:sanctum
+Route::get('/profil',                   [ProfilController::class, 'index']);
+Route::patch('/profil',                 [ProfilController::class, 'modifier']);
+Route::post('/profil/mot-de-passe',     [ProfilController::class, 'changerMotDePasse']);
 });
