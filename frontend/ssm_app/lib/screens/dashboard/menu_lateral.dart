@@ -118,13 +118,18 @@ class MenuLateral extends StatelessWidget {
 
                 // ── Directeur + Secrétaire ────────────────
                 if (utilisateur.estDirecteur || utilisateur.estSecretaire) ...[
-                  _separateur('Finances'),
-                  _menuItem(context,
-                    icone: Icons.payment,
-                    titre: 'Paiements',
-                    route: '/paiements',
-                  ),
-                ],
+  _separateur('Finances'),
+  _menuItem(context,
+    icone: Icons.payment,
+    titre: 'Paiements',
+    route: '/paiements',
+  ),
+  _menuItem(context,
+    icone: Icons.person_remove,
+    titre: 'Liste de renvoi',
+    route: '/paiements/renvoi',
+  ),
+],
 
                 // ── Enseignant uniquement ─────────────────
                 if (utilisateur.estEnseignant) ...[

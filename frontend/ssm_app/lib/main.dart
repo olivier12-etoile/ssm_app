@@ -10,6 +10,7 @@ import 'screens/directeur/gestion_eleves_screen.dart';
 import 'screens/directeur/validation_notes_screen.dart';
 import 'screens/enseignant/saisie_notes_screen.dart';
 import 'screens/secretaire/gestion_paiements_screen.dart';
+import 'screens/secretaire/liste_renvoi_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -39,6 +40,7 @@ class SSMApp extends StatelessWidget {
         '/notes/validation':       (context) => const ValidationNotesScreen(),
         '/enseignant/notes':       (context) => const SaisieNotesScreen(),
         '/paiements':              (context) => const GestionPaiementsScreen(),
+        '/paiements/renvoi':       (context) => const ListeRenvoiScreen(),
       },
       home: const LoginScreen(),
     );

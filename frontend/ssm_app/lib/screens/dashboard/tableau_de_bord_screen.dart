@@ -95,6 +95,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
         _carte(Icons.edit_note,       'Saisie Notes',      '/enseignant/notes',       Colors.indigo),
         _carte(Icons.grade,           'Validation Notes',  '/notes/validation',       Colors.orange),
         _carte(Icons.payment, 'Paiements', '/paiements', Colors.teal),
+        _carte(Icons.person_remove, 'Liste de renvoi', '/paiements/renvoi', Colors.red),
       ]);
     }
 
@@ -109,6 +110,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen> {
     if (_utilisateur!.estSecretaire) {
       cartes.addAll([
         _carte(Icons.payment, 'Paiements', '/paiements', Colors.teal),
+        _carte(Icons.person_remove, 'Liste de renvoi', '/paiements/renvoi', Colors.red),
       ]);
     }
 
