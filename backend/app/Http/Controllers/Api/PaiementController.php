@@ -7,6 +7,7 @@ use App\Models\Paiement;
 use App\Models\Eleve;
 use App\Models\Inscription;
 use Illuminate\Http\Request;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PaiementController extends Controller
 {
@@ -134,4 +135,41 @@ class PaiementController extends Controller
             'nombre_paiements' => $nombrePaiements,
         ]);
     }
+
+    public function genererRecuPdf(Request $request, $paiementId)
+{
+    $paiement = Paiement::where('id', $paiementId)
+        ->whereHas('eleve', function ($q) use ($request) {
+            $q->where('ecole_id', $request->user()->ecole_id);
+        })
+        ->with(['eleve.ecole', 'annee'])
+        ->firstOrFail();
+
+    $data = [
+        'numero_recu'    => 'REC-' . str_pad($paiement->id, 6, '0', STR_PAD_LEFT),
+        'eleve'          => [
+            'nom'       => $paiement->eleve->nom,
+            'prenom'    => $paiement->eleve->prenom,
+            'matricule' => $paiement->eleve->matricule,
+        ],
+        'annee'          => $paiement->annee->libelle,
+        'tranche'        => $paiement->tranche,
+        'montant'        => $paiement->montant,
+        'date_paiement'  => \Carbon\Carbon::parse($paiement->date_paiement)->format('d/m/Y'),
+        'reference'      => $paiement->reference,
+        'ecole'          => [
+            'nom'              => $paiement->eleve->ecole->nom,
+            'code_ecole'       => $paiement->eleve->ecole->code_ecole,
+            'couleur_primaire' => $paiement->eleve->ecole->couleur_primaire,
+            'telephone'        => $paiement->eleve->ecole->telephone,
+            'adresse'          => $paiement->eleve->ecole->adresse,
+        ],
+        'genere_le'      => now()->format('d/m/Y à H:i'),
+    ];
+
+    $pdf = Pdf::loadView('pdf.recu', $data);
+    $nomFichier = 'recu_' . $data['numero_recu'] . '.pdf';
+
+    return $pdf->download($nomFichier);
+}
 }

@@ -119,4 +119,5 @@ Route::patch('/absences/{id}/justifier',   [AbsenceController::class, 'justifier
 Route::get('/absences/eleve/{eleveId}',    [AbsenceController::class, 'parEleve']);
 Route::get('/absences/statistiques',       [AbsenceController::class, 'statistiques']);
 Route::post('/bulletins/eleve/pdf', [BulletinController::class, 'genererPdf']);
+Route::get('/paiements/{id}/recu', [PaiementController::class, 'genererRecuPdf']);
 });
