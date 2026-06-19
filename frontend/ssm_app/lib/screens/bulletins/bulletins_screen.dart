@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:open_file/open_file.dart';
 import '../../services/bulletin_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
@@ -28,6 +29,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
   int? _anneeIdEleve;
   Map<String, dynamic>? _bulletin;
   bool _chargementBulletin = false;
+  bool _telechargementPdf  = false;
 
   // Sélections bulletin classe
   int? _classeId;
@@ -127,6 +129,28 @@ class _BulletinsScreenState extends State<BulletinsScreen>
     } catch (e) {
       setState(() => _chargementClasse = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // ── Télécharger et ouvrir le PDF ────────────────────────
+  Future<void> _telechargerPdf(Map<String, dynamic> bulletin) async {
+    setState(() => _telechargementPdf = true);
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Génération du PDF...')),
+      );
+
+      final chemin = await BulletinService.telechargerPdf(
+        eleveId:   bulletin['eleve']['id'] as int,
+        periodeId: _periodeIdEleve!,
+      );
+
+      await OpenFile.open(chemin);
+    } catch (e) {
+      _afficherErreur('Erreur téléchargement PDF: $e');
+    } finally {
+      if (mounted) setState(() => _telechargementPdf = false);
     }
   }
 
@@ -486,6 +510,36 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                     ],
                   ),
                 ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // ← AJOUTÉ : Bouton télécharger PDF
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _telechargementPdf
+                    ? null
+                    : () => _telechargerPdf(bulletin),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red[700],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.all(14),
+                ),
+                icon: _telechargementPdf
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.picture_as_pdf),
+                label: Text(_telechargementPdf
+                    ? 'Génération...'
+                    : 'Télécharger le PDF'),
               ),
             ),
           ],
