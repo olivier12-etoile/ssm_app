@@ -103,6 +103,8 @@ _carte(Icons.sync, 'Synchronisation', '/sync', Colors.blueGrey),
         _carte(Icons.bar_chart, 'Statistiques', '/statistiques', Colors.indigo),
         // Pour Directeur et Censeur
         _carte(Icons.description, 'Bulletins', '/bulletins', Colors.deepPurple),
+        _carte(Icons.event_busy, 'Absences', '/enseignant/absences', Colors.brown),
+
       ]);
     }
 
@@ -112,6 +114,8 @@ _carte(Icons.sync, 'Synchronisation', '/sync', Colors.blueGrey),
         _carte(Icons.grade, 'Validation Notes', '/notes/validation', Colors.orange),
         // Pour Directeur et Censeur
         _carte(Icons.description, 'Bulletins', '/bulletins', Colors.deepPurple),
+        _carte(Icons.event_busy, 'Absences', '/enseignant/absences', Colors.brown),
+
       ]);
     }
 
@@ -127,6 +131,8 @@ _carte(Icons.sync, 'Synchronisation', '/sync', Colors.blueGrey),
     if (_utilisateur!.estEnseignant) {
       cartes.addAll([
         _carte(Icons.edit_note, 'Saisie des notes', '/enseignant/notes', Colors.indigo),
+        _carte(Icons.event_busy, 'Absences', '/enseignant/absences', Colors.brown),
+
       ]);
     }
 

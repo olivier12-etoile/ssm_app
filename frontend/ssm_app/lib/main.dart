@@ -15,6 +15,7 @@ import 'screens/profil/profil_screen.dart';
 import 'screens/statistiques/statistiques_screen.dart';
 import 'screens/bulletins/bulletins_screen.dart';
 import 'screens/sync/sync_screen.dart';
+import 'screens/enseignant/saisie_absences_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -49,6 +50,7 @@ class SSMApp extends StatelessWidget {
         '/statistiques':           (context) => const StatistiquesScreen(),
         '/bulletins':              (context) => const BulletinsScreen(),
         '/sync':                   (context) => const SyncScreen(),
+        '/enseignant/absences': (context) => const SaisieAbsencesScreen(),
       },
       home: const LoginScreen(),
     );

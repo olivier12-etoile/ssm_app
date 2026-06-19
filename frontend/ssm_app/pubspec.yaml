@@ -20,6 +20,7 @@ dependencies:
   # Utilitaires
   uuid: ^4.3.3
   connectivity_plus: ^7.1.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
