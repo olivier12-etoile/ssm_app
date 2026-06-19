@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../services/auth_service.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 class PaiementService {
   static Future<Map<String, String>> _headers() async {
@@ -12,6 +14,30 @@ class PaiementService {
       'Authorization': 'Bearer $token',
     };
   }
+
+  // Télécharger le reçu en PDF
+static Future<String> telechargerRecuPdf(int paiementId) async {
+  final token = await AuthService.getToken();
+
+  final response = await http.get(
+    Uri.parse('${AppConfig.apiBaseUrl}/paiements/$paiementId/recu'),
+    headers: {
+      'Accept':        'application/pdf',
+      'Authorization': 'Bearer $token',
+    },
+  );
+
+  if (response.statusCode != 200) {
+    throw Exception('Erreur génération reçu PDF');
+  }
+
+  final dossier = await getApplicationDocumentsDirectory();
+  final cheminFichier = '${dossier.path}/recu_$paiementId.pdf';
+  final fichier = File(cheminFichier);
+  await fichier.writeAsBytes(response.bodyBytes);
+
+  return cheminFichier;
+}
 
   // Liste tous les paiements
   static Future<List<dynamic>> listerPaiements() async {

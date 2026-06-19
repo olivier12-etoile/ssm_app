@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/paiement_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/annee_service.dart';
+import 'package:open_file/open_file.dart';
 
 class GestionPaiementsScreen extends StatefulWidget {
   const GestionPaiementsScreen({super.key});
@@ -17,6 +18,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen> {
   List<dynamic> _annees     = [];
   bool _chargement          = true;
   Map<String, dynamic>? _stats;
+  int? _telechargementEnCours;
 
   @override
   void initState() {
@@ -55,6 +57,19 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: Colors.green),
     );
+  }
+
+  Future<void> _telechargerRecu(int paiementId) async {
+    setState(() => _telechargementEnCours = paiementId);
+
+    try {
+      final chemin = await PaiementService.telechargerRecuPdf(paiementId);
+      await OpenFile.open(chemin);
+    } catch (e) {
+      _afficherErreur('Erreur téléchargement reçu: $e');
+    } finally {
+      if (mounted) setState(() => _telechargementEnCours = null);
+    }
   }
 
   Future<void> _afficherDialogPaiement() async {
@@ -303,6 +318,8 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen> {
                           itemBuilder: (context, index) {
                             final p     = _paiements[index];
                             final eleve = p['eleve'];
+                            final paiementId = p['id'] as int;
+
                             return Card(
                               margin: const EdgeInsets.only(bottom: 8),
                               shape: RoundedRectangleBorder(
@@ -325,13 +342,36 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen> {
                                 subtitle: Text(
                                   '${p['tranche']}  •  ${p['date_paiement']}',
                                 ),
-                                trailing: Text(
-                                  '${p['montant']} FCFA',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.teal,
-                                    fontSize: 14,
-                                  ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      '${p['montant']} FCFA',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.teal,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _telechargementEnCours == paiementId
+                                        ? const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : IconButton(
+                                            icon: const Icon(
+                                              Icons.receipt_long,
+                                              color: Colors.teal,
+                                            ),
+                                            tooltip: 'Télécharger le reçu',
+                                            onPressed: () =>
+                                                _telechargerRecu(paiementId),
+                                          ),
+                                  ],
                                 ),
                               ),
                             );
