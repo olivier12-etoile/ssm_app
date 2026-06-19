@@ -9,6 +9,7 @@ use App\Models\Inscription;
 use App\Models\PeriodeAcademique;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BulletinController extends Controller
 {
@@ -174,4 +175,88 @@ class BulletinController extends Controller
         if ($note >= 10) return 'Passable';
         return 'Insuffisant';
     }
+
+    public function genererPdf(Request $request)
+{
+    $request->validate([
+        'eleve_id'   => 'required|integer',
+        'periode_id' => 'required|integer',
+    ]);
+
+    // Réutilise la logique de generer() pour calculer les données
+    $ecoleId   = $request->user()->ecole_id;
+    $eleveId   = $request->eleve_id;
+    $periodeId = $request->periode_id;
+
+    $eleve = Eleve::where('id', $eleveId)
+        ->where('ecole_id', $ecoleId)
+        ->with('ecole')
+        ->firstOrFail();
+
+    $periode = PeriodeAcademique::with('annee')->findOrFail($periodeId);
+
+    $inscription = Inscription::where('eleve_id', $eleveId)
+        ->where('annee_academique_id', $periode->annee->id)
+        ->with('classe')
+        ->first();
+
+    $notes = Note::where('eleve_id', $eleveId)
+        ->where('periode_id', $periodeId)
+        ->where('statut', 'valide')
+        ->with('matiere')
+        ->get();
+
+    $totalPoints       = 0;
+    $totalCoefficients = 0;
+    $lignesNotes       = [];
+
+    foreach ($notes as $note) {
+        $coef               = $note->matiere->coefficient;
+        $totalPoints        += $note->valeur * $coef;
+        $totalCoefficients  += $coef;
+
+        $lignesNotes[] = [
+            'matiere'     => $note->matiere->nom,
+            'coefficient' => $coef,
+            'note'        => $note->valeur,
+            'points'      => round($note->valeur * $coef, 2),
+            'mention'     => $this->mention($note->valeur),
+        ];
+    }
+
+    $moyenneGenerale = $totalCoefficients > 0
+        ? round($totalPoints / $totalCoefficients, 2)
+        : 0;
+
+    $data = [
+        'eleve'  => [
+            'id'        => $eleve->id,
+            'nom'       => $eleve->nom,
+            'prenom'    => $eleve->prenom,
+            'matricule' => $eleve->matricule,
+            'sexe'      => $eleve->sexe,
+        ],
+        'classe'           => $inscription?->classe?->nom ?? 'Non définie',
+        'periode'          => ['nom' => $periode->nom],
+        'annee'            => $periode->annee->libelle,
+        'ecole'            => [
+            'nom'              => $eleve->ecole->nom,
+            'code_ecole'       => $eleve->ecole->code_ecole,
+            'couleur_primaire' => $eleve->ecole->couleur_primaire,
+            'telephone'        => $eleve->ecole->telephone,
+            'adresse'          => $eleve->ecole->adresse,
+        ],
+        'notes'            => $lignesNotes,
+        'moyenne_generale' => $moyenneGenerale,
+        'mention_generale' => $this->mention($moyenneGenerale),
+        'total_matieres'   => count($lignesNotes),
+        'appreciation'     => $request->appreciation ?? null,
+        'genere_le'        => now()->format('d/m/Y à H:i'),
+    ];
+
+    $pdf = Pdf::loadView('pdf.bulletin', $data);
+    $nomFichier = 'bulletin_' . str_replace(' ', '_', $eleve->nom . '_' . $eleve->prenom) . '.pdf';
+
+    return $pdf->download($nomFichier);
+}
 }
