@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\StatistiqueController;
 use App\Http\Controllers\Api\BulletinController;
+use App\Http\Controllers\Api\AbsenceController;
 
 
 
@@ -107,4 +108,14 @@ Route::get('/statistiques', [StatistiqueController::class, 'index']);
 // Dans le groupe auth:sanctum
 Route::post('/bulletins/eleve',  [BulletinController::class, 'generer']);
 Route::post('/bulletins/classe', [BulletinController::class, 'parClasse']);
+
+
+
+// Dans le groupe auth:sanctum
+Route::get('/absences',                    [AbsenceController::class, 'index']);
+Route::post('/absences',                   [AbsenceController::class, 'enregistrer']);
+Route::patch('/absences/{id}/notifie',     [AbsenceController::class, 'marquerNotifie']);
+Route::patch('/absences/{id}/justifier',   [AbsenceController::class, 'justifier']);
+Route::get('/absences/eleve/{eleveId}',    [AbsenceController::class, 'parEleve']);
+Route::get('/absences/statistiques',       [AbsenceController::class, 'statistiques']);
 });
