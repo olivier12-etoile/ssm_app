@@ -31,6 +31,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
   Map<String, dynamic>? _bulletin;
   bool _chargementBulletin = false;
   bool _telechargementPdf  = false;
+  bool _envoiNotification  = false;
 
   // Sélections bulletin classe
   int? _classeId;
@@ -152,6 +153,23 @@ class _BulletinsScreenState extends State<BulletinsScreen>
       _afficherErreur('Erreur téléchargement PDF: $e');
     } finally {
       if (mounted) setState(() => _telechargementPdf = false);
+    }
+  }
+
+  // ── Notifier le parent (ajoute à la file d'attente) ─────
+  Future<void> _notifierParent(Map<String, dynamic> bulletin) async {
+    setState(() => _envoiNotification = true);
+    try {
+      await BulletinService.notifierBulletin(
+        eleveId:   bulletin['eleve']['id'] as int,
+        periodeId: _periodeIdEleve!,
+      );
+      _afficherSucces(
+          'Notification ajoutée — à retrouver dans "Notifications à envoyer"');
+    } catch (e) {
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _envoiNotification = false);
     }
   }
 
@@ -709,6 +727,36 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                       ? 'Modifier les appréciations'
                       : 'Ajouter des appréciations',
                 ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // ← AJOUTÉ : Bouton notifier le parent
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _envoiNotification
+                    ? null
+                    : () => _notifierParent(bulletin),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.green[700],
+                  side: BorderSide(color: Colors.green[700]!),
+                  padding: const EdgeInsets.all(14),
+                ),
+                icon: _envoiNotification
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          color: Colors.green[700],
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.notifications_active),
+                label: Text(_envoiNotification
+                    ? 'Ajout en cours...'
+                    : 'Notifier le parent'),
               ),
             ),
 

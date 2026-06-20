@@ -15,43 +15,61 @@ class BulletinService {
     };
   }
 
-// ... (garde le code existant) ...
+  // Ajouter une notification bulletin à la file d'attente
+  static Future<void> notifierBulletin({
+    required int eleveId,
+    required int periodeId,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/bulletins/notifier'),
+      headers: await _headers(),
+      body: jsonEncode({
+        'eleve_id':   eleveId,
+        'periode_id': periodeId,
+      }),
+    );
 
-// Télécharger le bulletin en PDF
-static Future<String> telechargerPdf({
-  required int eleveId,
-  required int periodeId,
-  String? appreciation,
-}) async {
-  final token = await AuthService.getToken();
-
-  final response = await http.post(
-    Uri.parse('${AppConfig.apiBaseUrl}/bulletins/eleve/pdf'),
-    headers: {
-      'Content-Type':  'application/json',
-      'Accept':        'application/pdf',
-      'Authorization': 'Bearer $token',
-    },
-    body: jsonEncode({
-      'eleve_id':     eleveId,
-      'periode_id':   periodeId,
-      'appreciation': appreciation,
-    }),
-  );
-
-  if (response.statusCode != 200) {
-    throw Exception('Erreur génération PDF');
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['message'] ?? 'Erreur ajout notification');
+    }
   }
 
-  // Sauvegarder le fichier localement
-  final dossier = await getApplicationDocumentsDirectory();
-  final cheminFichier =
-      '${dossier.path}/bulletin_${eleveId}_$periodeId.pdf';
-  final fichier = File(cheminFichier);
-  await fichier.writeAsBytes(response.bodyBytes);
+  // Télécharger le bulletin en PDF
+  static Future<String> telechargerPdf({
+    required int eleveId,
+    required int periodeId,
+    String? appreciation,
+  }) async {
+    final token = await AuthService.getToken();
 
-  return cheminFichier;
-}
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/bulletins/eleve/pdf'),
+      headers: {
+        'Content-Type':  'application/json',
+        'Accept':        'application/pdf',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'eleve_id':     eleveId,
+        'periode_id':   periodeId,
+        'appreciation': appreciation,
+      }),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Erreur génération PDF');
+    }
+
+    // Sauvegarder le fichier localement
+    final dossier = await getApplicationDocumentsDirectory();
+    final cheminFichier =
+        '${dossier.path}/bulletin_${eleveId}_$periodeId.pdf';
+    final fichier = File(cheminFichier);
+    await fichier.writeAsBytes(response.bodyBytes);
+
+    return cheminFichier;
+  }
 
   // Bulletin d'un élève
   static Future<Map<String, dynamic>> genererBulletin({
