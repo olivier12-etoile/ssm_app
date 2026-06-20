@@ -10,6 +10,8 @@ use App\Models\PeriodeAcademique;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\NotificationAttente;
+use App\Services\MessageTemplateService;
 
 class BulletinController extends Controller
 {
@@ -258,5 +260,60 @@ class BulletinController extends Controller
     $nomFichier = 'bulletin_' . str_replace(' ', '_', $eleve->nom . '_' . $eleve->prenom) . '.pdf';
 
     return $pdf->download($nomFichier);
+}
+
+// Créer une notification en attente pour un bulletin (appelé manuellement depuis Flutter)
+public function notifierBulletin(Request $request)
+{
+    $request->validate([
+        'eleve_id'   => 'required|integer',
+        'periode_id' => 'required|integer',
+    ]);
+
+    $eleve = Eleve::with('ecole')
+        ->where('id', $request->eleve_id)
+        ->where('ecole_id', $request->user()->ecole_id)
+        ->firstOrFail();
+
+    $periode = PeriodeAcademique::findOrFail($request->periode_id);
+
+    $notes = Note::where('eleve_id', $eleve->id)
+        ->where('periode_id', $periode->id)
+        ->where('statut', 'valide')
+        ->with('matiere')
+        ->get();
+
+    $totalPoints       = 0;
+    $totalCoefficients = 0;
+    foreach ($notes as $note) {
+        $coef = $note->matiere->coefficient;
+        $totalPoints       += $note->valeur * $coef;
+        $totalCoefficients += $coef;
+    }
+    $moyenne = $totalCoefficients > 0 ? round($totalPoints / $totalCoefficients, 2) : 0;
+    $mention = $this->mention($moyenne);
+
+    if (!$eleve->telephone_parent) {
+        return response()->json(['message' => 'Aucun numéro de téléphone parent enregistré'], 422);
+    }
+
+    $message = MessageTemplateService::bulletin(
+        $eleve->nom . ' ' . $eleve->prenom,
+        $periode->nom,
+        $moyenne,
+        $mention,
+        $eleve->ecole->nom ?? ''
+    );
+
+    NotificationAttente::create([
+        'ecole_id'         => $request->user()->ecole_id,
+        'eleve_id'         => $eleve->id,
+        'type'             => 'bulletin',
+        'telephone_parent' => $eleve->telephone_parent,
+        'message'          => $message,
+        'statut'           => 'en_attente',
+    ]);
+
+    return response()->json(['message' => 'Notification ajoutée à la file d\'attente']);
 }
 }

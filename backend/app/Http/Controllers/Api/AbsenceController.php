@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Absence;
 use App\Models\Eleve;
 use Illuminate\Http\Request;
+use App\Models\NotificationAttente;
+use App\Services\MessageTemplateService;
 
 class AbsenceController extends Controller
 {
@@ -26,40 +28,61 @@ class AbsenceController extends Controller
 
     // Enregistrer les absences d'une classe pour une date (par lot)
     public function enregistrer(Request $request)
-    {
-        $request->validate([
-            'classe_id'             => 'required|integer',
-            'date_absence'          => 'required|date',
-            'absences'              => 'required|array',
-            'absences.*.eleve_id'   => 'required|integer',
-            'absences.*.motif'      => 'nullable|string',
+{
+    $request->validate([
+        'classe_id'             => 'required|integer',
+        'date_absence'          => 'required|date',
+        'absences'              => 'required|array',
+        'absences.*.eleve_id'   => 'required|integer',
+        'absences.*.motif'      => 'nullable|string',
+    ]);
+
+    $marquePar = $request->user()->id;
+    $ecoleId   = $request->user()->ecole_id;
+
+    Absence::where('classe_id', $request->classe_id)
+        ->where('date_absence', $request->date_absence)
+        ->delete();
+
+    $cree = [];
+    foreach ($request->absences as $a) {
+        $absence = Absence::create([
+            'eleve_id'     => $a['eleve_id'],
+            'classe_id'    => $request->classe_id,
+            'date_absence' => $request->date_absence,
+            'motif'        => $a['motif'] ?? null,
+            'justifiee'    => false,
+            'marque_par'   => $marquePar,
+            'notifie'      => false,
         ]);
+        $cree[] = $absence;
 
-        $marquePar = $request->user()->id;
+        // ── Créer automatiquement la notification en attente ──
+        $eleve = $absence->eleve;
+        if ($eleve && $eleve->telephone_parent) {
+            $message = MessageTemplateService::absence(
+                $eleve->nom . ' ' . $eleve->prenom,
+                $absence->classe->nom ?? '',
+                now()->format('H:i'),
+                $eleve->ecole->nom ?? ''
+            );
 
-        // Supprimer les anciennes absences de cette classe/date pour repartir propre
-        Absence::where('classe_id', $request->classe_id)
-            ->where('date_absence', $request->date_absence)
-            ->delete();
-
-        $cree = [];
-        foreach ($request->absences as $a) {
-            $cree[] = Absence::create([
-                'eleve_id'     => $a['eleve_id'],
-                'classe_id'    => $request->classe_id,
-                'date_absence' => $request->date_absence,
-                'motif'        => $a['motif'] ?? null,
-                'justifiee'    => false,
-                'marque_par'   => $marquePar,
-                'notifie'      => false,
+            NotificationAttente::create([
+                'ecole_id'         => $ecoleId,
+                'eleve_id'         => $eleve->id,
+                'type'             => 'absence',
+                'telephone_parent' => $eleve->telephone_parent,
+                'message'          => $message,
+                'statut'           => 'en_attente',
             ]);
         }
-
-        return response()->json([
-            'message'  => count($cree) . ' absence(s) enregistrée(s)',
-            'absences' => $cree,
-        ], 201);
     }
+
+    return response()->json([
+        'message'  => count($cree) . ' absence(s) enregistrée(s)',
+        'absences' => $cree,
+    ], 201);
+}
 
     // Marquer une absence comme notifiée (après envoi WhatsApp)
     public function marquerNotifie(Request $request, $id)

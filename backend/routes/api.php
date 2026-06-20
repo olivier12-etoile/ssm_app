@@ -128,4 +128,5 @@ Route::post('/eleves/{id}/photo', [EleveController::class, 'uploaderPhoto']);
 Route::get('/notifications-attente',                  [NotificationAttenteController::class, 'index']);
 Route::patch('/notifications-attente/{id}/envoyee',   [NotificationAttenteController::class, 'marquerEnvoyee']);
 Route::delete('/notifications-attente/{id}',          [NotificationAttenteController::class, 'supprimer']);
+Route::post('/bulletins/notifier', [BulletinController::class, 'notifierBulletin']);
 });

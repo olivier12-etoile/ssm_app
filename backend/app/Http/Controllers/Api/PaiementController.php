@@ -8,6 +8,8 @@ use App\Models\Eleve;
 use App\Models\Inscription;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\NotificationAttente;
+use App\Services\MessageTemplateService;
 
 class PaiementController extends Controller
 {
@@ -42,30 +44,50 @@ class PaiementController extends Controller
 
     // Enregistrer un paiement
     public function enregistrer(Request $request)
-    {
-        $request->validate([
-            'eleve_id'            => 'required|integer',
-            'annee_academique_id' => 'required|integer',
-            'montant'             => 'required|numeric|min:1',
-            'tranche'             => 'required|string|max:50',
-            'date_paiement'       => 'required|date',
-            'reference'           => 'nullable|string|max:50',
-        ]);
+{
+    $request->validate([
+        'eleve_id'            => 'required|integer',
+        'annee_academique_id' => 'required|integer',
+        'montant'             => 'required|numeric|min:1',
+        'tranche'             => 'required|string|max:50',
+        'date_paiement'       => 'required|date',
+        'reference'           => 'nullable|string|max:50',
+    ]);
 
-        $paiement = Paiement::create([
-            'eleve_id'            => $request->eleve_id,
-            'annee_academique_id' => $request->annee_academique_id,
-            'montant'             => $request->montant,
-            'tranche'             => $request->tranche,
-            'date_paiement'       => $request->date_paiement,
-            'reference'           => $request->reference,
-        ]);
+    $paiement = Paiement::create([
+        'eleve_id'            => $request->eleve_id,
+        'annee_academique_id' => $request->annee_academique_id,
+        'montant'             => $request->montant,
+        'tranche'             => $request->tranche,
+        'date_paiement'       => $request->date_paiement,
+        'reference'           => $request->reference,
+    ]);
 
-        return response()->json([
-            'message'  => 'Paiement enregistré avec succès',
-            'paiement' => $paiement,
-        ], 201);
+    // ── Créer automatiquement la notification en attente ──
+    $eleve = Eleve::with('ecole')->find($request->eleve_id);
+    if ($eleve && $eleve->telephone_parent) {
+        $message = MessageTemplateService::paiement(
+            $eleve->nom . ' ' . $eleve->prenom,
+            number_format($request->montant, 0, ',', ' '),
+            $request->tranche,
+            $eleve->ecole->nom ?? ''
+        );
+
+        NotificationAttente::create([
+            'ecole_id'         => $request->user()->ecole_id,
+            'eleve_id'         => $eleve->id,
+            'type'             => 'paiement',
+            'telephone_parent' => $eleve->telephone_parent,
+            'message'          => $message,
+            'statut'           => 'en_attente',
+        ]);
     }
+
+    return response()->json([
+        'message'  => 'Paiement enregistré avec succès',
+        'paiement' => $paiement,
+    ], 201);
+}
 
     // Liste de renvoi — élèves non à jour
     public function listeRenvoi(Request $request)
