@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\StatistiqueController;
 use App\Http\Controllers\Api\BulletinController;
 use App\Http\Controllers\Api\AbsenceController;
+use App\Http\Controllers\Api\NotificationAttenteController;
 
 
 
@@ -121,4 +122,10 @@ Route::get('/absences/statistiques',       [AbsenceController::class, 'statistiq
 Route::post('/bulletins/eleve/pdf', [BulletinController::class, 'genererPdf']);
 Route::get('/paiements/{id}/recu', [PaiementController::class, 'genererRecuPdf']);
 Route::post('/eleves/{id}/photo', [EleveController::class, 'uploaderPhoto']);
+
+
+// Dans le groupe auth:sanctum
+Route::get('/notifications-attente',                  [NotificationAttenteController::class, 'index']);
+Route::patch('/notifications-attente/{id}/envoyee',   [NotificationAttenteController::class, 'marquerEnvoyee']);
+Route::delete('/notifications-attente/{id}',          [NotificationAttenteController::class, 'supprimer']);
 });
