@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
@@ -51,6 +53,30 @@ class _GestionElevesScreenState extends State<GestionElevesScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: Colors.green),
     );
+  }
+
+  Future<void> _changerPhoto(int eleveId) async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth:  800,
+      maxHeight: 800,
+      imageQuality: 80,
+    );
+
+    if (image == null) return;
+
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Envoi de la photo...')),
+      );
+
+      await EleveService.uploaderPhoto(eleveId, File(image.path));
+      _afficherSucces('Photo mise à jour');
+      _chargerDonnees();
+    } catch (e) {
+      _afficherErreur('Erreur upload photo: $e');
+    }
   }
 
   Future<void> _afficherDialogCreation() async {
@@ -262,22 +288,56 @@ class _GestionElevesScreenState extends State<GestionElevesScreen> {
                   itemBuilder: (context, index) {
                     final e   = _eleves[index];
                     final sexe = e['sexe'] as String;
+                    final eleveId = e['id'] as int;
+                    final photoUrl = e['photo_url'] as String?;
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(12),
-                        leading: CircleAvatar(
-                          backgroundColor: sexe == 'M'
-                              ? Colors.blue
-                              : Colors.pink,
-                          child: Text(
-                            e['prenom'].toString().substring(0, 1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        leading: GestureDetector(
+                          onTap: () => _changerPhoto(eleveId),
+                          child: Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundColor: sexe == 'M'
+                                    ? Colors.blue
+                                    : Colors.pink,
+                                backgroundImage: photoUrl != null
+                                    ? NetworkImage(photoUrl)
+                                    : null,
+                                child: photoUrl == null
+                                    ? Text(
+                                        e['prenom']
+                                            .toString()
+                                            .substring(0, 1),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              Positioned(
+                                bottom: -2,
+                                right: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.white,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.camera_alt,
+                                    size: 14,
+                                    color: Colors.deepOrange,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         title: Text(
