@@ -145,6 +145,12 @@ class MenuLateral extends StatelessWidget {
                     titre: 'Liste de renvoi',
                     route: '/paiements/renvoi',
                   ),
+
+                  _menuItem(context,
+    icone: Icons.send_to_mobile,
+    titre: 'Notifications à envoyer',
+    route: '/notifications',
+  ),
                 ],
 
                 // ── Enseignant uniquement ─────────────────

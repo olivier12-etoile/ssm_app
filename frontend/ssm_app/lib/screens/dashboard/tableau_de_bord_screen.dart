@@ -104,6 +104,7 @@ _carte(Icons.sync, 'Synchronisation', '/sync', Colors.blueGrey),
         // Pour Directeur et Censeur
         _carte(Icons.description, 'Bulletins', '/bulletins', Colors.deepPurple),
         _carte(Icons.event_busy, 'Absences', '/enseignant/absences', Colors.brown),
+        _carte(Icons.send_to_mobile, 'Notifications', '/notifications', Colors.green),
 
       ]);
     }
@@ -124,6 +125,7 @@ _carte(Icons.sync, 'Synchronisation', '/sync', Colors.blueGrey),
       cartes.addAll([
         _carte(Icons.payment, 'Paiements', '/paiements', Colors.teal),
         _carte(Icons.person_remove, 'Liste de renvoi', '/paiements/renvoi', Colors.red),
+        _carte(Icons.send_to_mobile, 'Notifications', '/notifications', Colors.green),
       ]);
     }
 
