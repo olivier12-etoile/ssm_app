@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\StatistiqueController;
 use App\Http\Controllers\Api\BulletinController;
 use App\Http\Controllers\Api\AbsenceController;
 use App\Http\Controllers\Api\NotificationAttenteController;
+use App\Http\Controllers\Api\AppreciationController;
 
 
 
@@ -129,4 +130,11 @@ Route::get('/notifications-attente',                  [NotificationAttenteContro
 Route::patch('/notifications-attente/{id}/envoyee',   [NotificationAttenteController::class, 'marquerEnvoyee']);
 Route::delete('/notifications-attente/{id}',          [NotificationAttenteController::class, 'supprimer']);
 Route::post('/bulletins/notifier', [BulletinController::class, 'notifierBulletin']);
+
+
+
+// Dans le groupe auth:sanctum
+Route::get('/appreciations',                    [AppreciationController::class, 'index']);
+Route::post('/appreciations',                   [AppreciationController::class, 'enregistrer']);
+Route::get('/appreciations/suggerer',           [AppreciationController::class, 'suggererObservation']);
 });
