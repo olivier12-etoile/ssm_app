@@ -167,9 +167,30 @@
         </table>
     </div>
 
-    @if(!empty($appreciation))
-    <div class="titre-section" style="margin-top:16px;">APPRÉCIATION</div>
-    <p>{{ $appreciation }}</p>
+    @if(!empty($observation))
+    <div style="margin-top: 16px; padding: 10px 16px; background-color: {{ $ecole['couleur_primaire'] }}; border-radius: 6px; text-align: center;">
+        <span style="color: #fff; font-size: 14px; font-weight: bold; letter-spacing: 1px;">
+            {{ strtoupper($observation) }}
+        </span>
+    </div>
+    @endif
+
+    @if(!empty($appreciation_enseignant) || !empty($appreciation_directeur))
+    <div class="titre-section" style="margin-top:16px;">APPRÉCIATIONS</div>
+    <table class="infos">
+        @if(!empty($appreciation_enseignant))
+        <tr>
+            <td class="label">Enseignant</td>
+            <td>{{ $appreciation_enseignant }}</td>
+        </tr>
+        @endif
+        @if(!empty($appreciation_directeur))
+        <tr>
+            <td class="label">Directeur</td>
+            <td>{{ $appreciation_directeur }}</td>
+        </tr>
+        @endif
+    </table>
     @endif
 
     <table class="signature">
