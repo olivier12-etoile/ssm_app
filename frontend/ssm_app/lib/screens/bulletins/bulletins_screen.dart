@@ -4,6 +4,7 @@ import '../../services/bulletin_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
+import '../../services/appreciation_service.dart';
 
 class BulletinsScreen extends StatefulWidget {
   const BulletinsScreen({super.key});
@@ -154,9 +155,139 @@ class _BulletinsScreenState extends State<BulletinsScreen>
     }
   }
 
+  // ── Dialog appréciations ────────────────────────────────
+  Future<void> _afficherDialogAppreciation(
+      Map<String, dynamic> bulletin) async {
+    final eleveId   = bulletin['eleve']['id'] as int;
+    final periodeId = _periodeIdEleve!;
+    final moyenne   = (bulletin['moyenne_generale'] as num).toDouble();
+
+    final enseignantController = TextEditingController(
+      text: bulletin['appreciation_enseignant'] as String? ?? '',
+    );
+    final directeurController = TextEditingController(
+      text: bulletin['appreciation_directeur'] as String? ?? '',
+    );
+    String? observationSelectionnee = bulletin['observation'] as String?;
+
+    // Suggestion automatique si vide
+    if (observationSelectionnee == null) {
+      try {
+        observationSelectionnee =
+            await AppreciationService.suggererObservation(moyenne);
+      } catch (_) {}
+    }
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Appréciations du bulletin'),
+            content: SizedBox(
+              width: 400,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Observation suggérée
+                    DropdownButtonFormField<String>(
+                      value: observationSelectionnee,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Observation',
+                        prefixIcon: Icon(Icons.star),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: [
+                        'Félicitations',
+                        'Encouragements',
+                        'Tableau d\'honneur',
+                        'Travail satisfaisant',
+                        'Doit fournir davantage d\'efforts',
+                        'Avertissement - Travail insuffisant',
+                      ].map((o) {
+                        return DropdownMenuItem(value: o, child: Text(o));
+                      }).toList(),
+                      onChanged: (v) =>
+                          setStateDialog(() => observationSelectionnee = v),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Appréciation enseignant
+                    TextField(
+                      controller: enseignantController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Appréciation Enseignant',
+                        hintText: 'Ex: Élève sérieux et appliqué...',
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Appréciation directeur
+                    TextField(
+                      controller: directeurController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Appréciation Directeur',
+                        hintText: 'Ex: Bon trimestre, continuez ainsi...',
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () async {
+                  try {
+                    await AppreciationService.enregistrer(
+                      eleveId:                 eleveId,
+                      periodeId:               periodeId,
+                      appreciationEnseignant:  enseignantController.text,
+                      appreciationDirecteur:   directeurController.text,
+                      observation:             observationSelectionnee,
+                    );
+                    Navigator.pop(context);
+                    _afficherSucces('Appréciation enregistrée');
+                    // Recharger le bulletin pour voir les changements
+                    _genererBulletinEleve();
+                  } catch (e) {
+                    _afficherErreur(
+                        e.toString().replaceAll('Exception: ', ''));
+                  }
+                },
+                child: const Text('Enregistrer'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(msg), backgroundColor: Colors.red),
+    );
+  }
+
+  void _afficherSucces(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: Colors.green),
     );
   }
 
@@ -312,6 +443,8 @@ class _BulletinsScreenState extends State<BulletinsScreen>
     final moyenneGenerale = bulletin['moyenne_generale'] as num;
     final mention         = bulletin['mention_generale'] as String;
     final notes           = bulletin['notes'] as List;
+    final aAppreciation   = bulletin['appreciation_enseignant'] != null ||
+        bulletin['appreciation_directeur'] != null;
 
     return Card(
       elevation: 4,
@@ -513,9 +646,75 @@ class _BulletinsScreenState extends State<BulletinsScreen>
               ),
             ),
 
-            const SizedBox(height: 16),
+            // ── Aperçu appréciations si déjà saisies ──────
+            if (aAppreciation) ...[
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: Colors.deepPurple.withOpacity(0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (bulletin['observation'] != null) ...[
+                      Text(
+                        (bulletin['observation'] as String).toUpperCase(),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    if (bulletin['appreciation_enseignant'] != null) ...[
+                      const Text('Enseignant :',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey)),
+                      Text(
+                          bulletin['appreciation_enseignant'] as String),
+                      const SizedBox(height: 6),
+                    ],
+                    if (bulletin['appreciation_directeur'] != null) ...[
+                      const Text('Directeur :',
+                          style: TextStyle(
+                              fontSize: 11, color: Colors.grey)),
+                      Text(
+                          bulletin['appreciation_directeur'] as String),
+                    ],
+                  ],
+                ),
+              ),
+            ],
 
-            // ← AJOUTÉ : Bouton télécharger PDF
+            const SizedBox(height: 12),
+
+            // Bouton appréciations
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _afficherDialogAppreciation(bulletin),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.deepPurple,
+                  side: const BorderSide(color: Colors.deepPurple),
+                  padding: const EdgeInsets.all(14),
+                ),
+                icon: const Icon(Icons.rate_review),
+                label: Text(
+                  aAppreciation
+                      ? 'Modifier les appréciations'
+                      : 'Ajouter des appréciations',
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Bouton télécharger PDF
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
