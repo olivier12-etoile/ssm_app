@@ -79,4 +79,30 @@ class EleveController extends Controller
             'eleve'   => $eleve,
         ], 201);
     }
+
+    public function uploaderPhoto(Request $request, $id)
+{
+    $request->validate([
+        'photo' => 'required|image|mimes:jpg,jpeg,png|max:5120', // 5 Mo max
+    ]);
+
+    $eleve = Eleve::where('id', $id)
+        ->where('ecole_id', $request->user()->ecole_id)
+        ->firstOrFail();
+
+    // Supprimer l'ancienne photo si elle existe
+    if ($eleve->photo_path) {
+        \Storage::disk('public')->delete($eleve->photo_path);
+    }
+
+    // Stocker la nouvelle photo
+    $chemin = $request->file('photo')->store('eleves/photos', 'public');
+
+    $eleve->update(['photo_path' => $chemin]);
+
+    return response()->json([
+        'message'    => 'Photo mise à jour avec succès',
+        'photo_url'  => asset('storage/' . $chemin),
+    ]);
+}
 }

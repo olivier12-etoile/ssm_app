@@ -16,7 +16,17 @@ class Eleve extends Model
         'sexe',
         'matricule',
         'telephone_parent',
+        'photo_path'
     ];
+
+    protected $appends = ['photo_url'];
+
+public function getPhotoUrlAttribute()
+{
+    return $this->photo_path
+        ? asset('storage/' . $this->photo_path)
+        : null;
+}
 
     public function ecole()
     {
