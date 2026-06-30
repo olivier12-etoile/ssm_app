@@ -116,6 +116,8 @@ _carte(Icons.sync, 'Synchronisation', '/sync', Colors.blueGrey),
         // Pour Directeur et Censeur
         _carte(Icons.description, 'Bulletins', '/bulletins', Colors.deepPurple),
         _carte(Icons.event_busy, 'Absences', '/enseignant/absences', Colors.brown),
+        // Dans _cartesRapides(), ajoute temporairement pour TOUT LE MONDE :
+_carte(Icons.bug_report, 'TEST Censeur', '/test-dashboard-censeur', Colors.grey),
 
       ]);
     }

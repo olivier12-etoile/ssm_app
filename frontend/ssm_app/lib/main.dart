@@ -18,6 +18,7 @@ import 'screens/sync/sync_screen.dart';
 import 'screens/enseignant/saisie_absences_screen.dart';
 import 'screens/notifications/notifications_attente_screen.dart';
 import 'screens/enseignant/dashboard_enseignant_screen.dart';
+import 'screens/directeur/dashboard_censeur_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -55,6 +56,7 @@ class SSMApp extends StatelessWidget {
         '/enseignant/absences': (context) => const SaisieAbsencesScreen(),
         '/notifications': (context) => const NotificationsAttenteScreen(),
         '/test-dashboard-enseignant': (context) => const DashboardEnseignantScreen(),
+        '/test-dashboard-censeur': (context) => const DashboardCenseurScreen(),
       },
       home: const LoginScreen(),
     );
