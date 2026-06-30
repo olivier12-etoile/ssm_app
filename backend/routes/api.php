@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\BulletinController;
 use App\Http\Controllers\Api\AbsenceController;
 use App\Http\Controllers\Api\NotificationAttenteController;
 use App\Http\Controllers\Api\AppreciationController;
+use App\Http\Controllers\Api\DashboardController;
 
 
 
@@ -137,4 +138,9 @@ Route::post('/bulletins/notifier', [BulletinController::class, 'notifierBulletin
 Route::get('/appreciations',                    [AppreciationController::class, 'index']);
 Route::post('/appreciations',                   [AppreciationController::class, 'enregistrer']);
 Route::get('/appreciations/suggerer',           [AppreciationController::class, 'suggererObservation']);
+
+
+// Dans le groupe auth:sanctum
+Route::get('/dashboard', [DashboardController::class, 'index']);
+
 });
