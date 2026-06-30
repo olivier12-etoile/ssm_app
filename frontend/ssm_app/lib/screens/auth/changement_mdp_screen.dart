@@ -23,6 +23,20 @@ class _ChangementMdpScreenState extends State<ChangementMdpScreen> {
     super.dispose();
   }
 
+  // ── Détermine la route selon le rôle de l'utilisateur ──
+  String _routeSelonRole(String? role) {
+    switch (role) {
+      case 'enseignant':
+        return '/dashboard/enseignant';
+      case 'censeur':
+        return '/dashboard/censeur';
+      case 'secretaire':
+        return '/dashboard/secretaire';
+      default: // directeur, super_admin
+        return '/tableau-de-bord';
+    }
+  }
+
   Future<void> _changer() async {
     if (_ancienController.text.isEmpty || _nouveauController.text.isEmpty) {
       _afficherErreur('Veuillez remplir tous les champs');
@@ -42,7 +56,9 @@ class _ChangementMdpScreenState extends State<ChangementMdpScreen> {
       );
 
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/tableau-de-bord');
+        final utilisateur = await AuthService.getUtilisateur();
+        final route = _routeSelonRole(utilisateur?.role);
+        Navigator.pushReplacementNamed(context, route);
       }
     } catch (e) {
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));

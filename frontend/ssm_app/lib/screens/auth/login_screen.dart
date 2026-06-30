@@ -23,34 +23,57 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _connecter() async {
-  if (_emailController.text.isEmpty ||
-      _motDePasseController.text.isEmpty ||
-      _codeEcoleController.text.isEmpty) {
-    _afficherErreur('Veuillez remplir tous les champs');
-    return;
-  }
-
-  setState(() => _chargement = true);
-
-  try {
-    await AuthService.connecter(
-      email:      _emailController.text.trim(),
-      motDePasse: _motDePasseController.text,
-      codeEcole:  _codeEcoleController.text.trim().toUpperCase(),
-    );
-
-    if (mounted) {
-      Navigator.pushReplacementNamed(context, '/tableau-de-bord');
+  // ── Détermine la route selon le rôle de l'utilisateur ──
+  String _routeSelonRole(String? role) {
+    switch (role) {
+      case 'enseignant':
+        return '/dashboard/enseignant';
+      case 'censeur':
+        return '/dashboard/censeur';
+      case 'secretaire':
+        return '/dashboard/secretaire';
+      default: // directeur, super_admin
+        return '/tableau-de-bord';
     }
-  } catch (e) {
-    // Affiche l'erreur exacte pour déboguer
-    _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-    debugPrint('ERREUR CONNEXION: $e');
-  } finally {
-    if (mounted) setState(() => _chargement = false);
   }
-}
+
+  Future<void> _connecter() async {
+    if (_emailController.text.isEmpty ||
+        _motDePasseController.text.isEmpty ||
+        _codeEcoleController.text.isEmpty) {
+      _afficherErreur('Veuillez remplir tous les champs');
+      return;
+    }
+
+    setState(() => _chargement = true);
+
+    try {
+      await AuthService.connecter(
+        email:      _emailController.text.trim(),
+        motDePasse: _motDePasseController.text,
+        codeEcole:  _codeEcoleController.text.trim().toUpperCase(),
+      );
+
+      if (mounted) {
+        final utilisateur = await AuthService.getUtilisateur();
+
+        // Si mot de passe pas encore changé, priorité à cet écran
+        if (utilisateur != null && !utilisateur.motDePasseChange) {
+          Navigator.pushReplacementNamed(context, '/changer-mot-de-passe');
+          return;
+        }
+
+        final route = _routeSelonRole(utilisateur?.role);
+        Navigator.pushReplacementNamed(context, route);
+      }
+    } catch (e) {
+      // Affiche l'erreur exacte pour déboguer
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+      debugPrint('ERREUR CONNEXION: $e');
+    } finally {
+      if (mounted) setState(() => _chargement = false);
+    }
+  }
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
