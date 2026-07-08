@@ -111,6 +111,16 @@ class MenuLateral extends StatelessWidget {
                   ),
                 ],
 
+                // ── Censeur uniquement ─────────────────────
+                if (utilisateur.estCenseur) ...[
+                  _separateur('Classes'),
+                  _menuItem(context,
+                    icone: Icons.class_,
+                    titre: 'Mes classes',
+                    route: '/dashboard/censeur',
+                  ),
+                ],
+
                 // ── Directeur + Censeur ───────────────────
                 if (utilisateur.estDirecteur || utilisateur.estCenseur) ...[
                   _separateur('Pédagogie'),

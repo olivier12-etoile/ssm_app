@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../services/dashboard_service.dart';
+import '../../services/classe_service.dart';
+import '../../services/annee_service.dart';
 import '../../models/utilisateur.dart';
 import '../../services/auth_service.dart';
 import '../dashboard/menu_lateral.dart';
 import '../directeur/validation_notes_screen.dart';
+import '../directeur/eleves_par_classe_screen.dart';
+import '../censeur/suivi_absences_classe_screen.dart';
 
 class DashboardCenseurScreen extends StatefulWidget {
   const DashboardCenseurScreen({super.key});
@@ -16,6 +20,8 @@ class DashboardCenseurScreen extends StatefulWidget {
 class _DashboardCenseurScreenState extends State<DashboardCenseurScreen> {
   Map<String, dynamic>? _donnees;
   Utilisateur? _utilisateur;
+  List<dynamic> _classes = [];
+  int? _anneeId;
   bool _chargement = true;
 
   @override
@@ -27,10 +33,25 @@ class _DashboardCenseurScreenState extends State<DashboardCenseurScreen> {
   Future<void> _chargerTout() async {
     try {
       final u = await AuthService.getUtilisateur();
-      final data = await DashboardService.chargerDashboard();
+      final resultats = await Future.wait([
+        DashboardService.chargerDashboard(),
+        ClasseService.listerClasses(),
+        AnneeService.listerAnnees(),
+      ]);
+
+      final data = resultats[0] as Map<String, dynamic>;
+      final classes = resultats[1] as List;
+      final annees = resultats[2] as List;
+      final anneeEnCours = annees.firstWhere(
+        (a) => a['statut'] == 'en_cours',
+        orElse: () => annees.isNotEmpty ? annees.first : null,
+      );
+
       setState(() {
         _utilisateur = u;
         _donnees     = data;
+        _classes     = classes;
+        _anneeId     = anneeEnCours?['id'] as int?;
         _chargement  = false;
       });
     } catch (e) {
@@ -42,6 +63,20 @@ class _DashboardCenseurScreenState extends State<DashboardCenseurScreen> {
         ),
       );
     }
+  }
+
+  int _absencesJourPourClasse(int classeId, List<dynamic> absencesJour) {
+    return absencesJour.where((a) => a['classe']?['id'] == classeId).length;
+  }
+
+  int _notesAttentePourClasse(int classeId) {
+    // Laravel sérialise une collection pluck() vide en `[]` (liste) et non
+    // en `{}` (objet) — on ne peut donc pas caster directement en Map.
+    final brut = _donnees?['notes_a_valider_par_classe'];
+    if (brut is Map) {
+      return (brut['$classeId'] as int?) ?? 0;
+    }
+    return 0;
   }
 
   Color _couleurMoyenne(double moyenne) {
@@ -149,6 +184,141 @@ class _DashboardCenseurScreenState extends State<DashboardCenseurScreen> {
               ),
               const SizedBox(height: 20),
             ],
+
+            // ── Mes Classes ──────────────────────────────────
+            const Text(
+              'Mes Classes',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            if (_classes.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Aucune classe pour l\'instant',
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              ..._classes.map((classe) {
+                final classeId = classe['id'] as int;
+                final classeNom = classe['nom'] as String;
+                final absencesClasse =
+                    _absencesJourPourClasse(classeId, absencesJour);
+                final notesAttenteClasse = _notesAttentePourClasse(classeId);
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          classeNom,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              absencesClasse > 0
+                                  ? Icons.event_busy
+                                  : Icons.check_circle,
+                              size: 16,
+                              color: absencesClasse > 0
+                                  ? Colors.orange
+                                  : Colors.green,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$absencesClasse absence(s) aujourd\'hui',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const SizedBox(width: 16),
+                            Icon(
+                              notesAttenteClasse > 0
+                                  ? Icons.pending_actions
+                                  : Icons.check_circle,
+                              size: 16,
+                              color: notesAttenteClasse > 0
+                                  ? Colors.blue
+                                  : Colors.green,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$notesAttenteClasse note(s) en attente',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    settings: const RouteSettings(
+                                        name: '/censeur/classe/absences'),
+                                    builder: (_) => SuiviAbsencesClasseScreen(
+                                      classeId: classeId,
+                                      classeNom: classeNom,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text('📋 Présences'),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ValidationNotesScreen(
+                                      classeIdPreselectionne: classeId,
+                                    ),
+                                  ),
+                                ),
+                                child: const Text('✅ Notes'),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _anneeId == null
+                                    ? null
+                                    : () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ElevesParClasseScreen(
+                                              classeId: classeId,
+                                              anneeId: _anneeId!,
+                                              nomClasse: classeNom,
+                                            ),
+                                          ),
+                                        ),
+                                child: const Text('👥 Élèves'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            const SizedBox(height: 24),
 
             // ── Aperçu des notes en attente ──────────────────
             if (notesAValider.isNotEmpty) ...[

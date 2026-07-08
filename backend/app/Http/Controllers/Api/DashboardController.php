@@ -134,13 +134,25 @@ class DashboardController extends Controller
             ->orderBy('moyenne', 'desc')
             ->get();
 
+        // Notes en attente de validation, par classe
+        $notesAValiderParClasse = DB::table('notes')
+            ->join('inscriptions', 'notes.eleve_id', '=', 'inscriptions.eleve_id')
+            ->join('classes', 'inscriptions.classe_id', '=', 'classes.id')
+            ->join('eleves', 'notes.eleve_id', '=', 'eleves.id')
+            ->where('eleves.ecole_id', $ecoleId)
+            ->where('notes.statut', 'soumis')
+            ->select('classes.id as classe_id', DB::raw('count(*) as total'))
+            ->groupBy('classes.id')
+            ->pluck('total', 'classe_id');
+
         return response()->json([
-            'role'                   => 'censeur',
-            'notes_a_valider'        => $notesASoumettre,
-            'total_notes_a_valider'  => $totalNotesASoumettre,
-            'absences_aujourdhui'    => $absencesAujourdhui,
-            'absences_semaine'       => $absencesSemaine,
-            'moyennes_classes'       => $moyennesClasses,
+            'role'                       => 'censeur',
+            'notes_a_valider'            => $notesASoumettre,
+            'total_notes_a_valider'      => $totalNotesASoumettre,
+            'notes_a_valider_par_classe' => $notesAValiderParClasse,
+            'absences_aujourdhui'        => $absencesAujourdhui,
+            'absences_semaine'           => $absencesSemaine,
+            'moyennes_classes'           => $moyennesClasses,
         ]);
     }
 

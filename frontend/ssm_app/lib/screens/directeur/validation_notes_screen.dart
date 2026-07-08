@@ -5,7 +5,9 @@ import '../../services/annee_service.dart';
 import '../../services/matiere_service.dart';
 
 class ValidationNotesScreen extends StatefulWidget {
-  const ValidationNotesScreen({super.key});
+  final int? classeIdPreselectionne;
+
+  const ValidationNotesScreen({super.key, this.classeIdPreselectionne});
 
   @override
   State<ValidationNotesScreen> createState() => _ValidationNotesScreenState();
@@ -43,6 +45,10 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
         _classes    = resultats[0] as List;
         _annees     = resultats[1] as List;
         _matieres   = resultats[2] as List;
+        if (widget.classeIdPreselectionne != null &&
+            _classes.any((c) => c['id'] == widget.classeIdPreselectionne)) {
+          _classeId = widget.classeIdPreselectionne;
+        }
         _chargement = false;
       });
     } catch (e) {

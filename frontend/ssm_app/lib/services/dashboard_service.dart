@@ -18,7 +18,9 @@ class DashboardService {
       Uri.parse('${AppConfig.apiBaseUrl}/dashboard'),
       headers: await _headers(),
     );
-    if (response.statusCode == 200) return jsonDecode(response.body);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
     throw Exception('Erreur chargement dashboard');
   }
 }

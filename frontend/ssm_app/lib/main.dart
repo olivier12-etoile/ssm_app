@@ -13,6 +13,7 @@ import 'screens/directeur/gestion_affectations_screen.dart';
 import 'screens/directeur/affectations_classe_screen.dart';
 import 'screens/directeur/validation_notes_screen.dart';
 import 'screens/directeur/dashboard_censeur_screen.dart';
+import 'screens/censeur/suivi_absences_classe_screen.dart';
 import 'screens/enseignant/saisie_notes_screen.dart';
 import 'screens/enseignant/saisie_absences_screen.dart';
 import 'screens/enseignant/liste_presence_screen.dart';
@@ -48,6 +49,14 @@ class SSMApp extends StatelessWidget {
         '/tableau-de-bord':        (context) => const TableauDeBordScreen(),
         '/dashboard/enseignant':   (context) => const DashboardEnseignantScreen(),
         '/dashboard/censeur':      (context) => const DashboardCenseurScreen(),
+        '/censeur/classe/absences': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return SuiviAbsencesClasseScreen(
+            classeId:  args['classeId'] as int,
+            classeNom: args['classeNom'] as String,
+          );
+        },
         '/dashboard/secretaire':   (context) => const DashboardSecretaireScreen(),
         '/directeur/utilisateurs': (context) => const GestionUtilisateursScreen(),
         '/directeur/classes':      (context) => const GestionClassesScreen(),
