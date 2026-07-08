@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Eleve;
+use App\Models\Evaluation;
 use App\Models\Note;
 use App\Models\Inscription;
 use App\Models\PeriodeAcademique;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\NotificationAttente;
 use App\Services\MessageTemplateService;
+use App\Services\MoyenneCalculService;
 use App\Models\AppreciationBulletin;
 
 class BulletinController extends Controller
@@ -44,36 +46,9 @@ class BulletinController extends Controller
             ->with('classe')
             ->first();
 
-        // Récupérer les notes validées
-        $notes = Note::where('eleve_id', $eleveId)
-            ->where('periode_id', $periodeId)
-            ->where('statut', 'valide')
-            ->with('matiere')
-            ->get();
-
-        // Calculer les moyennes
-        $classeId         = $inscription?->classe?->id;
-        $totalPoints      = 0;
-        $totalCoefficients = 0;
-        $lignesNotes      = [];
-
-        foreach ($notes as $note) {
-            $coef = $this->coefficientPourClasse($classeId, $note->matiere_id, $note->matiere->coefficient);
-            $totalPoints    += $note->valeur * $coef;
-            $totalCoefficients += $coef;
-
-            $lignesNotes[] = [
-                'matiere'      => $note->matiere->nom,
-                'coefficient'  => $coef,
-                'note'         => $note->valeur,
-                'points'       => round($note->valeur * $coef, 2),
-                'mention'      => $this->mention($note->valeur),
-            ];
-        }
-
-        $moyenneGenerale = $totalCoefficients > 0
-            ? round($totalPoints / $totalCoefficients, 2)
-            : 0;
+        // Calculer les moyennes à partir des évaluations (devoirs + composition)
+        $classeId = $inscription?->classe?->id;
+        [$lignesNotes, $moyenneGenerale] = $this->moyennesMatieresEleve($classeId, $eleveId, $periodeId);
 
         // Récupérer l'appréciation existante
         $appreciation = AppreciationBulletin::where('eleve_id', $eleveId)
@@ -179,18 +154,68 @@ class BulletinController extends Controller
         ]);
     }
 
-    // Coefficient spécifique à la classe, avec repli sur le coefficient général de la matière
-    private function coefficientPourClasse(?int $classeId, int $matiereId, float $coefficientDefaut): float
+    // Moyenne de chaque matière de la classe pour un élève, à partir des évaluations (devoirs + composition)
+    private function moyennesMatieresEleve(?int $classeId, int $eleveId, int $periodeId): array
     {
         if (!$classeId) {
-            return $coefficientDefaut;
+            return [[], 0];
         }
 
-        $classeMatiere = ClasseMatiere::where('classe_id', $classeId)
-            ->where('matiere_id', $matiereId)
-            ->first();
+        $matieresClasse = ClasseMatiere::where('classe_id', $classeId)
+            ->with('matiere')
+            ->get();
 
-        return $classeMatiere?->coefficient ?? $coefficientDefaut;
+        $evaluations = Evaluation::where('classe_id', $classeId)
+            ->where('periode_id', $periodeId)
+            ->with(['notes' => fn($q) => $q->where('eleve_id', $eleveId)])
+            ->get()
+            ->groupBy('matiere_id');
+
+        $lignesNotes       = [];
+        $totalPoints       = 0;
+        $totalCoefficients = 0;
+
+        foreach ($matieresClasse as $classeMatiere) {
+            $evalsMatiere = $evaluations->get($classeMatiere->matiere_id, collect());
+
+            $notesDevoirs    = [];
+            $noteComposition = null;
+
+            foreach ($evalsMatiere as $evaluation) {
+                $note = $evaluation->notes->first();
+                if (!$note) {
+                    continue;
+                }
+                if ($evaluation->type === 'devoir') {
+                    $notesDevoirs[] = $note->valeur;
+                } else {
+                    $noteComposition = $note->valeur;
+                }
+            }
+
+            $moyenneFinale = MoyenneCalculService::moyenneFinale($notesDevoirs, $noteComposition);
+            $coefficient   = $classeMatiere->coefficient;
+
+            if ($moyenneFinale !== null) {
+                $totalPoints       += $moyenneFinale * $coefficient;
+                $totalCoefficients += $coefficient;
+            }
+
+            $lignesNotes[] = [
+                'matiere'          => $classeMatiere->matiere->nom,
+                'moyenne_devoirs'  => MoyenneCalculService::moyenneDevoirs($notesDevoirs),
+                'note_composition' => $noteComposition,
+                'moyenne_finale'   => $moyenneFinale,
+                'coefficient'      => $coefficient,
+                'points'           => $moyenneFinale !== null ? round($moyenneFinale * $coefficient, 2) : null,
+            ];
+        }
+
+        $moyenneGenerale = $totalCoefficients > 0
+            ? round($totalPoints / $totalCoefficients, 2)
+            : 0;
+
+        return [$lignesNotes, $moyenneGenerale];
     }
 
     private function mention(float $note): string
@@ -227,34 +252,8 @@ class BulletinController extends Controller
             ->with('classe')
             ->first();
 
-        $notes = Note::where('eleve_id', $eleveId)
-            ->where('periode_id', $periodeId)
-            ->where('statut', 'valide')
-            ->with('matiere')
-            ->get();
-
-        $classeId          = $inscription?->classe?->id;
-        $totalPoints       = 0;
-        $totalCoefficients = 0;
-        $lignesNotes       = [];
-
-        foreach ($notes as $note) {
-            $coef = $this->coefficientPourClasse($classeId, $note->matiere_id, $note->matiere->coefficient);
-            $totalPoints        += $note->valeur * $coef;
-            $totalCoefficients  += $coef;
-
-            $lignesNotes[] = [
-                'matiere'     => $note->matiere->nom,
-                'coefficient' => $coef,
-                'note'        => $note->valeur,
-                'points'      => round($note->valeur * $coef, 2),
-                'mention'     => $this->mention($note->valeur),
-            ];
-        }
-
-        $moyenneGenerale = $totalCoefficients > 0
-            ? round($totalPoints / $totalCoefficients, 2)
-            : 0;
+        $classeId = $inscription?->classe?->id;
+        [$lignesNotes, $moyenneGenerale] = $this->moyennesMatieresEleve($classeId, $eleveId, $periodeId);
 
         // Récupérer l'appréciation existante
         $appreciation = AppreciationBulletin::where('eleve_id', $eleveId)

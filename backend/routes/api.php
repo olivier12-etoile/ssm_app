@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\AbsenceController;
 use App\Http\Controllers\Api\NotificationAttenteController;
 use App\Http\Controllers\Api\AppreciationController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\EvaluationController;
 
 
 
@@ -66,6 +67,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/classe-matieres',         [ClasseMatiereController::class, 'index']);
     Route::post('/classe-matieres',        [ClasseMatiereController::class, 'enregistrer']);
     Route::delete('/classe-matieres/{id}', [ClasseMatiereController::class, 'supprimer']);
+
+    // Évaluations (devoirs & compositions)
+    Route::get('/evaluations',                [EvaluationController::class, 'index']);
+    Route::post('/evaluations',               [EvaluationController::class, 'creer']);
+    Route::post('/evaluations/{id}/notes',    [EvaluationController::class, 'saisirNotes']);
+    Route::get('/evaluations/moyenne',        [EvaluationController::class, 'calculerMoyenne']);
+    Route::get('/evaluations/moyennes-classe', [EvaluationController::class, 'moyennesClasse']);
 
     // Affectations
     Route::get('/affectations',                [AffectationController::class, 'parClasse']);

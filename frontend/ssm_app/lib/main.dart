@@ -15,6 +15,7 @@ import 'screens/directeur/validation_notes_screen.dart';
 import 'screens/directeur/dashboard_censeur_screen.dart';
 import 'screens/enseignant/saisie_notes_screen.dart';
 import 'screens/enseignant/saisie_absences_screen.dart';
+import 'screens/enseignant/liste_presence_screen.dart';
 import 'screens/enseignant/dashboard_enseignant_screen.dart';
 import 'screens/secretaire/gestion_paiements_screen.dart';
 import 'screens/secretaire/liste_renvoi_screen.dart';
@@ -81,6 +82,14 @@ class SSMApp extends StatelessWidget {
         '/notes/validation':       (context) => const ValidationNotesScreen(),
         '/enseignant/notes':       (context) => const SaisieNotesScreen(),
         '/enseignant/absences':    (context) => const SaisieAbsencesScreen(),
+        '/enseignant/presence': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return ListePresenceScreen(
+            classeId:  args['classeId'] as int,
+            classeNom: args['classeNom'] as String,
+          );
+        },
         '/paiements':              (context) => const GestionPaiementsScreen(),
         '/paiements/renvoi':       (context) => const ListeRenvoiScreen(),
         '/profil':                 (context) => const ProfilScreen(),

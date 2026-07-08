@@ -4,7 +4,7 @@ import '../../models/utilisateur.dart';
 import '../../services/auth_service.dart';
 import '../../screens/dashboard/menu_lateral.dart';
 import '../enseignant/saisie_notes_screen.dart';
-import '../enseignant/saisie_absences_screen.dart';
+import '../enseignant/liste_presence_screen.dart';
 
 class DashboardEnseignantScreen extends StatefulWidget {
   const DashboardEnseignantScreen({super.key});
@@ -286,47 +286,110 @@ class _DashboardEnseignantScreenState
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SaisieNotesScreen()),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(14),
-                    ),
-                    icon: const Icon(Icons.edit_note),
-                    label: const Text('Saisir notes'),
-                  ),
+            if (_classesAffectees.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const SaisieAbsencesScreen()),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.brown,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(14),
-                    ),
-                    icon: const Icon(Icons.event_busy),
-                    label: const Text('Saisir absences'),
-                  ),
+                child: const Text(
+                  'Aucune classe affectée pour le moment.',
+                  style: TextStyle(color: Colors.grey),
+                  textAlign: TextAlign.center,
                 ),
-              ],
-            ),
+              )
+            else
+              ..._classesAffectees.map((classe) {
+                final classeId = classe['classe_id'] as int;
+                final classeNom = classe['classe_nom'] as String;
+                final matieres = (classe['matieres'] as List<String>).join(', ');
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          classeNom,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          matieres,
+                          style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ListePresenceScreen(
+                                      classeId: classeId,
+                                      classeNom: classeNom,
+                                    ),
+                                  ),
+                                ),
+                                icon: const Text('📋'),
+                                label: const Text('Liste de présence'),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => SaisieNotesScreen(
+                                      classeIdPreselectionne: classeId,
+                                    ),
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.indigo,
+                                  foregroundColor: Colors.white,
+                                ),
+                                icon: const Text('📝'),
+                                label: const Text('Saisir les notes'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
           ],
         ),
       ),
     );
+  }
+
+  List<Map<String, dynamic>> get _classesAffectees {
+    final affectations = (_donnees?['affectations'] as List?) ?? [];
+    final classesGroupees = <int, Map<String, dynamic>>{};
+
+    for (final a in affectations) {
+      final classeId = a['classe_id'] as int;
+      classesGroupees.putIfAbsent(classeId, () => {
+            'classe_id': classeId,
+            'classe_nom': a['classe_nom'],
+            'matieres': <String>[],
+          });
+      (classesGroupees[classeId]!['matieres'] as List<String>)
+          .add(a['matiere_nom'] as String);
+    }
+
+    return classesGroupees.values.toList();
   }
 
   Widget _carteStatutNote(String label, dynamic valeur, Color couleur) {

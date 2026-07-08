@@ -132,11 +132,12 @@
     <table class="notes">
         <thead>
             <tr>
-                <th style="width: 40%;">Matière</th>
-                <th style="width: 15%;">Coefficient</th>
-                <th style="width: 15%;">Note /20</th>
+                <th style="width: 28%;">Matière</th>
+                <th style="width: 12%;">Coefficient</th>
+                <th style="width: 15%;">Moy. Devoirs</th>
+                <th style="width: 15%;">Composition</th>
+                <th style="width: 15%;">Moyenne /20</th>
                 <th style="width: 15%;">Points</th>
-                <th style="width: 15%;">Mention</th>
             </tr>
         </thead>
         <tbody>
@@ -144,9 +145,10 @@
             <tr>
                 <td>{{ $note['matiere'] }}</td>
                 <td>{{ $note['coefficient'] }}</td>
-                <td><strong>{{ $note['note'] }}</strong></td>
-                <td>{{ $note['points'] }}</td>
-                <td>{{ $note['mention'] }}</td>
+                <td>{{ $note['moyenne_devoirs'] ?? '-' }}</td>
+                <td>{{ $note['note_composition'] ?? '-' }}</td>
+                <td><strong>{{ $note['moyenne_finale'] ?? '-' }}</strong></td>
+                <td>{{ $note['points'] ?? '-' }}</td>
             </tr>
             @endforeach
         </tbody>

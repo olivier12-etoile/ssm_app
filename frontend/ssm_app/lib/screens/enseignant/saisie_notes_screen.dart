@@ -1,43 +1,43 @@
 import 'package:flutter/material.dart';
-import '../../services/note_service.dart';
-import '../../services/classe_service.dart';
-import '../../services/annee_service.dart';
-import '../../services/matiere_service.dart';
-import '../../services/eleve_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/affectation_service.dart';
+import '../../services/annee_service.dart';
+import '../../services/eleve_service.dart';
+import '../../services/evaluation_service.dart';
+import '../../services/note_service.dart';
 
 class SaisieNotesScreen extends StatefulWidget {
-  const SaisieNotesScreen({super.key});
+  final int? classeIdPreselectionne;
+
+  const SaisieNotesScreen({super.key, this.classeIdPreselectionne});
 
   @override
   State<SaisieNotesScreen> createState() => _SaisieNotesScreenState();
 }
 
 class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
-  // Données
-  List<dynamic> _classes  = [];
-  List<dynamic> _annees   = [];
+  // ── Niveau 1 : filtres ──────────────────────────────────
+  int? _enseignantId;
+  List<dynamic> _affectations = [];
   List<dynamic> _periodes = [];
-  List<dynamic> _matieres = [];
-  List<dynamic> _eleves   = [];
-  List<dynamic> _notes    = [];
 
-  // Sélections
   int? _classeId;
-  int? _anneeId;
-  int? _periodeId;
   int? _matiereId;
+  int? _periodeId;
 
-  bool _chargement      = true;
-  bool _chargementNotes = false;
+  bool _chargementFiltres = true;
 
-  // Contrôleurs des notes
-  final Map<int, TextEditingController> _controllers = {};
+  // ── Niveau 2/3 : tableau ────────────────────────────────
+  List<dynamic> _eleves = [];
+  List<dynamic> _evaluations = [];
+  bool _chargementTableau = false;
+
+  final Map<String, TextEditingController> _controllers = {};
 
   @override
   void initState() {
     super.initState();
-    _chargerDonnees();
+    _chargerFiltres();
   }
 
   @override
@@ -48,164 +48,73 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     super.dispose();
   }
 
-  Future<void> _chargerDonnees() async {
+  Future<void> _chargerFiltres() async {
+    setState(() => _chargementFiltres = true);
     try {
-      final resultats = await Future.wait([
-        ClasseService.listerClasses(),
-        AnneeService.listerAnnees(),
-        MatiereService.listerMatieres(),
-      ]);
-      setState(() {
-        _classes  = resultats[0] as List;
-        _annees   = resultats[1] as List;
-        _matieres = resultats[2] as List;
-        _chargement = false;
-      });
-    } catch (e) {
-      setState(() => _chargement = false);
-      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-    }
-  }
+      final utilisateur = await AuthService.getUtilisateur();
+      _enseignantId = utilisateur!.id;
 
-  Future<void> _chargerPeriodes(int anneeId) async {
-    try {
-      final liste = await AnneeService.listerPeriodes(anneeId);
-      setState(() {
-        _periodes  = liste;
-        _periodeId = null;
-      });
-    } catch (e) {
-      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-    }
-  }
+      final donneesAffectations =
+          await AffectationService.listerAffectations(_enseignantId!);
+      final annees = await AnneeService.listerAnnees();
 
-  Future<void> _chargerNotes() async {
-    if (_classeId == null || _periodeId == null || _matiereId == null) return;
-
-    setState(() => _chargementNotes = true);
-
-    try {
-      // Charger élèves et notes en parallèle
-      final resultats = await Future.wait([
-        EleveService.elevesParClasse(_classeId!, _anneeId!),
-        NoteService.listerNotes(
-          classeId:  _classeId!,
-          periodeId: _periodeId!,
-          matiereId: _matiereId!,
-        ),
-      ]);
-
-      final eleves = resultats[0] as List;
-      final notes  = resultats[1] as List;
-
-      // Initialiser les contrôleurs
-      _controllers.forEach((_, c) => c.dispose());
-      _controllers.clear();
-
-      for (final eleve in eleves) {
-        final eleveId = eleve['id'] as int;
-        final note    = notes.firstWhere(
-          (n) => n['eleve_id'] == eleveId,
-          orElse: () => null,
-        );
-        _controllers[eleveId] = TextEditingController(
-          text: note != null ? note['valeur'].toString() : '',
-        );
-      }
-
-      setState(() {
-        _eleves          = eleves;
-        _notes           = notes;
-        _chargementNotes = false;
-      });
-    } catch (e) {
-      setState(() => _chargementNotes = false);
-      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-    }
-  }
-
-  String _statutNote(int eleveId) {
-    final note = _notes.firstWhere(
-      (n) => n['eleve_id'] == eleveId,
-      orElse: () => null,
-    );
-    return note?['statut'] ?? 'aucune';
-  }
-
-  Color _couleurStatut(String statut) {
-    switch (statut) {
-      case 'valide':    return Colors.green;
-      case 'soumis':    return Colors.blue;
-      case 'rejete':    return Colors.red;
-      case 'brouillon': return Colors.orange;
-      default:          return Colors.grey;
-    }
-  }
-
-  bool _peutModifier(String statut) {
-    return statut == 'aucune' || statut == 'brouillon' || statut == 'rejete';
-  }
-
-  Future<void> _sauvegarderNote(int eleveId) async {
-    final valeurStr = _controllers[eleveId]?.text ?? '';
-    if (valeurStr.isEmpty) return;
-
-    final valeur = double.tryParse(valeurStr);
-    if (valeur == null || valeur < 0 || valeur > 20) {
-      _afficherErreur('Note invalide (0 à 20)');
-      return;
-    }
-
-    try {
-      await NoteService.sauvegarderNote(
-        eleveId:   eleveId,
-        matiereId: _matiereId!,
-        periodeId: _periodeId!,
-        valeur:    valeur,
+      final periodesParAnnee = await Future.wait(
+        annees.map((a) => AnneeService.listerPeriodes(a['id'] as int)),
       );
-      _afficherSucces('Note sauvegardée');
-      _chargerNotes();
+
+      final periodes = <dynamic>[];
+      for (var i = 0; i < annees.length; i++) {
+        for (final periode in periodesParAnnee[i]) {
+          periodes.add({
+            ...periode as Map<String, dynamic>,
+            'annee_libelle': annees[i]['libelle'],
+          });
+        }
+      }
+
+      _affectations = donneesAffectations['affectations'] as List;
+
+      final classePreselectionneeValide = widget.classeIdPreselectionne != null &&
+          _affectations
+              .any((a) => a['classe_id'] == widget.classeIdPreselectionne);
+
+      setState(() {
+        _periodes = periodes;
+        if (classePreselectionneeValide) {
+          _classeId = widget.classeIdPreselectionne;
+        }
+        _chargementFiltres = false;
+      });
     } catch (e) {
+      setState(() => _chargementFiltres = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  Future<void> _soumettreNotes() async {
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Soumettre les notes'),
-        content: const Text(
-          'Voulez-vous soumettre toutes les notes ?\nVous ne pourrez plus les modifier.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Non'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-            child: const Text('Oui, soumettre',
-                style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirme == true) {
-      try {
-        await NoteService.soumettreNotes(
-          classeId:  _classeId!,
-          periodeId: _periodeId!,
-          matiereId: _matiereId!,
-        );
-        _afficherSucces('Notes soumises pour validation');
-        _chargerNotes();
-      } catch (e) {
-        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+  List<Map<String, dynamic>> get _classesDisponibles {
+    final vues = <int>{};
+    final liste = <Map<String, dynamic>>[];
+    for (final a in _affectations) {
+      final id = a['classe_id'] as int;
+      if (vues.add(id)) {
+        liste.add({'id': id, 'nom': a['classe_nom']});
       }
     }
+    return liste;
+  }
+
+  List<Map<String, dynamic>> get _matieresDisponibles {
+    if (_classeId == null) return [];
+    final vues = <int>{};
+    final liste = <Map<String, dynamic>>[];
+    for (final a in _affectations) {
+      if (a['classe_id'] != _classeId) continue;
+      final id = a['matiere_id'] as int;
+      if (vues.add(id)) {
+        liste.add({'id': id, 'nom': a['matiere_nom']});
+      }
+    }
+    return liste;
   }
 
   void _afficherErreur(String msg) {
@@ -220,6 +129,319 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     );
   }
 
+  String _cle(int eleveId, int evaluationId) => '${eleveId}_$evaluationId';
+
+  List<dynamic> _trierEvaluations(List<dynamic> evaluations) {
+    final devoirs = evaluations.where((e) => e['type'] == 'devoir').toList()
+      ..sort((a, b) => (a['numero'] as int).compareTo(b['numero'] as int));
+    final compositions =
+        evaluations.where((e) => e['type'] == 'composition').toList()
+          ..sort((a, b) => (a['numero'] as int).compareTo(b['numero'] as int));
+    return [...devoirs, ...compositions];
+  }
+
+  void _reconstruireControleurs() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    _controllers.clear();
+
+    for (final eleve in _eleves) {
+      final eleveId = eleve['id'] as int;
+      for (final evaluation in _evaluations) {
+        final evaluationId = evaluation['id'] as int;
+        final note = (evaluation['notes'] as List).firstWhere(
+          (n) => n['eleve_id'] == eleveId,
+          orElse: () => null,
+        );
+        _controllers[_cle(eleveId, evaluationId)] = TextEditingController(
+          text: note != null ? note['valeur'].toString() : '',
+        );
+      }
+    }
+  }
+
+  Future<void> _chargerTableau() async {
+    if (_classeId == null || _matiereId == null || _periodeId == null) return;
+
+    setState(() => _chargementTableau = true);
+
+    try {
+      final periode = _periodes.firstWhere((p) => p['id'] == _periodeId);
+      final anneeId = periode['annee_academique_id'] as int;
+
+      final resultats = await Future.wait([
+        EleveService.elevesParClasse(_classeId!, anneeId),
+        EvaluationService.listerEvaluations(
+          classeId: _classeId!,
+          matiereId: _matiereId!,
+          periodeId: _periodeId!,
+        ),
+      ]);
+
+      setState(() {
+        _eleves = resultats[0];
+        _evaluations = _trierEvaluations(resultats[1]);
+        _reconstruireControleurs();
+        _chargementTableau = false;
+      });
+    } catch (e) {
+      setState(() => _chargementTableau = false);
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<void> _afficherDialogAjoutEvaluation(String type) async {
+    final memeType =
+        _evaluations.where((e) => e['type'] == type).length;
+    final numeroParDefaut = type == 'devoir' ? memeType + 1 : 1;
+
+    final numeroController =
+        TextEditingController(text: numeroParDefaut.toString());
+    final libelleController = TextEditingController(
+      text: type == 'devoir' ? 'Devoir $numeroParDefaut' : 'Composition',
+    );
+    DateTime dateSelectionnee = DateTime.now();
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: Text(
+              type == 'devoir' ? 'Ajouter un devoir' : 'Ajouter une composition',
+            ),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: numeroController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      labelText: 'Numéro',
+                      prefixIcon: Icon(Icons.tag),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: libelleController,
+                    decoration: const InputDecoration(
+                      labelText: 'Libellé',
+                      prefixIcon: Icon(Icons.label_outline),
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_month),
+                    title: const Text('Date de l\'évaluation'),
+                    subtitle: Text(_formatDate(dateSelectionnee)),
+                    onTap: () async {
+                      final choisie = await showDatePicker(
+                        context: context,
+                        initialDate: dateSelectionnee,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2100),
+                      );
+                      if (choisie != null) {
+                        setStateDialog(() => dateSelectionnee = choisie);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.indigo,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: libelleController.text.isEmpty
+                    ? null
+                    : () async {
+                        try {
+                          await EvaluationService.creerEvaluation(
+                            classeId: _classeId!,
+                            matiereId: _matiereId!,
+                            periodeId: _periodeId!,
+                            type: type,
+                            numero: int.tryParse(numeroController.text) ??
+                                numeroParDefaut,
+                            libelle: libelleController.text,
+                            dateEvaluation: _formatDate(dateSelectionnee),
+                          );
+                          Navigator.pop(context);
+                          _afficherSucces('Évaluation créée avec succès');
+                          _chargerTableau();
+                        } catch (e) {
+                          Navigator.pop(context);
+                          _afficherErreur(
+                              e.toString().replaceAll('Exception: ', ''));
+                        }
+                      },
+                child: const Text('Créer'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  String _formatDate(DateTime d) {
+    return '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _enregistrerColonne(int evaluationId) async {
+    final notes = <Map<String, dynamic>>[];
+
+    for (final eleve in _eleves) {
+      final texte =
+          _controllers[_cle(eleve['id'] as int, evaluationId)]?.text.trim() ??
+              '';
+      if (texte.isEmpty) continue;
+
+      final valeur = double.tryParse(texte);
+      if (valeur == null || valeur < 0 || valeur > 20) {
+        _afficherErreur(
+            'Note invalide pour ${eleve['nom']} ${eleve['prenom']} (0 à 20)');
+        return;
+      }
+      notes.add({'eleve_id': eleve['id'], 'valeur': valeur});
+    }
+
+    if (notes.isEmpty) {
+      _afficherErreur('Aucune note à enregistrer pour cette colonne');
+      return;
+    }
+
+    try {
+      await EvaluationService.saisirNotes(
+        evaluationId: evaluationId,
+        notes: notes,
+      );
+      _afficherSucces('Notes enregistrées');
+      _chargerTableau();
+    } catch (e) {
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Map<String, double?> _moyennePourEleve(int eleveId) {
+    final notesDevoirs = <double>[];
+    double? noteComposition;
+
+    for (final evaluation in _evaluations) {
+      final note = (evaluation['notes'] as List).firstWhere(
+        (n) => n['eleve_id'] == eleveId,
+        orElse: () => null,
+      );
+      if (note == null) continue;
+
+      final valeur = double.tryParse(note['valeur'].toString()) ?? 0;
+      if (evaluation['type'] == 'devoir') {
+        notesDevoirs.add(valeur);
+      } else {
+        noteComposition = valeur;
+      }
+    }
+
+    final moyenneDevoirs = notesDevoirs.isEmpty
+        ? null
+        : notesDevoirs.reduce((a, b) => a + b) / notesDevoirs.length;
+
+    double? moyenneFinale;
+    if (moyenneDevoirs != null && noteComposition != null) {
+      moyenneFinale = (moyenneDevoirs + noteComposition) / 2;
+    } else if (moyenneDevoirs != null) {
+      moyenneFinale = moyenneDevoirs;
+    } else if (noteComposition != null) {
+      moyenneFinale = noteComposition;
+    }
+
+    return {
+      'moyenne_devoirs': moyenneDevoirs,
+      'note_composition': noteComposition,
+      'moyenne_finale': moyenneFinale,
+    };
+  }
+
+  Color _couleurMoyenne(double? m) {
+    if (m == null) return Colors.grey;
+    if (m >= 14) return Colors.green;
+    if (m >= 10) return Colors.orange;
+    return Colors.red;
+  }
+
+  Future<void> _soumettrePourValidation() async {
+    final confirme = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Soumettre pour validation'),
+        content: const Text(
+          'Voulez-vous soumettre les moyennes finales de tous les élèves ?\nVous ne pourrez plus les modifier après validation.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Oui, soumettre',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirme != true) return;
+
+    try {
+      var nombreEnvoyees = 0;
+      for (final eleve in _eleves) {
+        final moyenneFinale =
+            _moyennePourEleve(eleve['id'] as int)['moyenne_finale'];
+        if (moyenneFinale == null) continue;
+
+        await NoteService.sauvegarderNote(
+          eleveId: eleve['id'] as int,
+          matiereId: _matiereId!,
+          periodeId: _periodeId!,
+          valeur: moyenneFinale,
+        );
+        nombreEnvoyees++;
+      }
+
+      if (nombreEnvoyees == 0) {
+        _afficherErreur('Aucune moyenne calculable pour le moment');
+        return;
+      }
+
+      await NoteService.soumettreNotes(
+        classeId: _classeId!,
+        periodeId: _periodeId!,
+        matiereId: _matiereId!,
+      );
+
+      _afficherSucces('Notes soumises pour validation');
+    } catch (e) {
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -228,270 +450,259 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
         actions: [
-          if (_eleves.isNotEmpty)
-            TextButton.icon(
-              onPressed: _soumettreNotes,
-              icon: const Icon(Icons.send, color: Colors.white),
-              label: const Text('Soumettre',
-                  style: TextStyle(color: Colors.white)),
-            ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _chargerFiltres,
+          ),
         ],
       ),
-      body: _chargement
+      body: _chargementFiltres
           ? const Center(child: CircularProgressIndicator())
           : Column(
               children: [
-                // ── Filtres ──────────────────────────────────
+                // ── Niveau 1 : filtres ──────────────────────
                 Container(
                   color: Colors.indigo.withOpacity(0.05),
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // Classe + Année
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              value: _classeId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Classe',
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                              ),
-                              hint: const Text('Classe'),
-                              items: _classes.map((c) {
-                                return DropdownMenuItem<int>(
-                                  value: c['id'] as int,
-                                  child: Text(c['nom'] as String),
-                                );
-                              }).toList(),
-                              onChanged: (v) =>
-                                  setState(() => _classeId = v),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              value: _anneeId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Année',
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                              ),
-                              hint: const Text('Année'),
-                              items: _annees.map((a) {
-                                return DropdownMenuItem<int>(
-                                  value: a['id'] as int,
-                                  child: Text(a['libelle'] as String),
-                                );
-                              }).toList(),
-                              onChanged: (v) {
-                                setState(() {
-                                  _anneeId = v;
-                                  _periodeId = null;
-                                });
-                                if (v != null) _chargerPeriodes(v);
-                              },
-                            ),
-                          ),
-                        ],
+                      DropdownButtonFormField<int>(
+                        value: _classeId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Classe',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        hint: const Text('Choisir une classe'),
+                        items: _classesDisponibles.map((c) {
+                          return DropdownMenuItem<int>(
+                            value: c['id'] as int,
+                            child: Text(c['nom'] as String),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          setState(() {
+                            _classeId = v;
+                            _matiereId = null;
+                            _eleves = [];
+                            _evaluations = [];
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
-
-                      // Période + Matière
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              value: _periodeId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Période',
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                              ),
-                              hint: const Text('Période'),
-                              items: _periodes.map((p) {
-                                return DropdownMenuItem<int>(
-                                  value: p['id'] as int,
-                                  child: Text(p['nom'] as String),
-                                );
-                              }).toList(),
-                              onChanged: (v) =>
-                                  setState(() => _periodeId = v),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              value: _matiereId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Matière',
-                                border: OutlineInputBorder(),
-                                isDense: true,
-                              ),
-                              hint: const Text('Matière'),
-                              items: _matieres.map((m) {
-                                return DropdownMenuItem<int>(
-                                  value: m['id'] as int,
-                                  child: Text(m['nom'] as String),
-                                );
-                              }).toList(),
-                              onChanged: (v) =>
-                                  setState(() => _matiereId = v),
-                            ),
-                          ),
-                        ],
+                      DropdownButtonFormField<int>(
+                        value: _matiereId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Matière',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        hint: const Text('Choisir une matière'),
+                        items: _matieresDisponibles.map((m) {
+                          return DropdownMenuItem<int>(
+                            value: m['id'] as int,
+                            child: Text(m['nom'] as String),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          setState(() {
+                            _matiereId = v;
+                            _eleves = [];
+                            _evaluations = [];
+                          });
+                        },
                       ),
                       const SizedBox(height: 12),
-
-                      // Bouton charger
+                      DropdownButtonFormField<int>(
+                        value: _periodeId,
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Période',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        hint: const Text('Choisir une période'),
+                        items: _periodes.map((p) {
+                          return DropdownMenuItem<int>(
+                            value: p['id'] as int,
+                            child: Text('${p['nom']} (${p['annee_libelle']})'),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          setState(() {
+                            _periodeId = v;
+                            _eleves = [];
+                            _evaluations = [];
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 12),
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
                           onPressed: _classeId == null ||
-                                  _anneeId == null ||
-                                  _periodeId == null ||
-                                  _matiereId == null
+                                  _matiereId == null ||
+                                  _periodeId == null
                               ? null
-                              : _chargerNotes,
+                              : _chargerTableau,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.indigo,
                             foregroundColor: Colors.white,
                           ),
                           icon: const Icon(Icons.search),
-                          label: const Text('Charger les élèves'),
+                          label: const Text('Charger les notes'),
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // ── Liste des élèves + notes ──────────────
-                Expanded(
-                  child: _chargementNotes
-                      ? const Center(child: CircularProgressIndicator())
-                      : _eleves.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Sélectionnez une classe, une période\net une matière puis cliquez sur Charger',
-                                style: TextStyle(color: Colors.grey),
-                                textAlign: TextAlign.center,
-                              ),
-                            )
-                          : ListView.builder(
+                // ── Niveau 2/3 : tableau ─────────────────────
+                if (_chargementTableau)
+                  const Expanded(
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_eleves.isEmpty)
+                  const Expanded(
+                    child: Center(
+                      child: Text(
+                        'Sélectionnez une classe, une matière et une période\npuis cliquez sur "Charger les notes"',
+                        style: TextStyle(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  )
+                else ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                _afficherDialogAjoutEvaluation('devoir'),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Ajouter un devoir'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            onPressed: () =>
+                                _afficherDialogAjoutEvaluation('composition'),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Ajouter une composition'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: _evaluations.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Aucune évaluation pour cette matière/période.\nAjoutez un devoir ou une composition.',
+                              style: TextStyle(color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : SingleChildScrollView(
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
                               padding: const EdgeInsets.all(16),
-                              itemCount: _eleves.length,
-                              itemBuilder: (context, index) {
-                                final eleve  = _eleves[index];
-                                final eleveId = eleve['id'] as int;
-                                final statut  = _statutNote(eleveId);
-                                final peutModifier = _peutModifier(statut);
-
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Row(
-                                      children: [
-                                        // Avatar
-                                        CircleAvatar(
-                                          backgroundColor:
-                                              eleve['sexe'] == 'M'
-                                                  ? Colors.blue
-                                                  : Colors.pink,
-                                          child: Text(
-                                            eleve['prenom']
-                                                .toString()
-                                                .substring(0, 1),
-                                            style: const TextStyle(
-                                                color: Colors.white),
+                              child: DataTable(
+                                columns: [
+                                  const DataColumn(label: Text('Élève')),
+                                  ..._evaluations.map((evaluation) {
+                                    return DataColumn(
+                                      label: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(evaluation['libelle'] as String),
+                                          IconButton(
+                                            icon: const Icon(Icons.save,
+                                                size: 18, color: Colors.indigo),
+                                            tooltip: 'Enregistrer la colonne',
+                                            onPressed: () =>
+                                                _enregistrerColonne(
+                                                    evaluation['id'] as int),
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                  const DataColumn(label: Text('Moyenne')),
+                                ],
+                                rows: _eleves.map((eleve) {
+                                  final eleveId = eleve['id'] as int;
+                                  final resultat = _moyennePourEleve(eleveId);
+                                  final moyenneFinale =
+                                      resultat['moyenne_finale'];
+                                  final couleurMoyenne =
+                                      _couleurMoyenne(moyenneFinale);
 
-                                        // Nom
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${eleve['nom']} ${eleve['prenom']}',
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              ),
-                                              Container(
-                                                margin: const EdgeInsets
-                                                    .only(top: 4),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 2),
-                                                decoration: BoxDecoration(
-                                                  color: _couleurStatut(statut)
-                                                      .withOpacity(0.1),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  statut.toUpperCase(),
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    color:
-                                                        _couleurStatut(statut),
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        // Champ note
+                                  return DataRow(cells: [
+                                    DataCell(
+                                        Text('${eleve['nom']} ${eleve['prenom']}')),
+                                    ..._evaluations.map((evaluation) {
+                                      final evaluationId =
+                                          evaluation['id'] as int;
+                                      return DataCell(
                                         SizedBox(
-                                          width: 70,
+                                          width: 64,
                                           child: TextField(
-                                            controller:
-                                                _controllers[eleveId],
-                                            enabled: peutModifier,
-                                            keyboardType:
-                                                TextInputType.number,
+                                            controller: _controllers[
+                                                _cle(eleveId, evaluationId)],
+                                            keyboardType: TextInputType.number,
                                             textAlign: TextAlign.center,
-                                            decoration: InputDecoration(
+                                            decoration: const InputDecoration(
                                               hintText: '/20',
-                                              border:
-                                                  const OutlineInputBorder(),
                                               isDense: true,
-                                              filled: !peutModifier,
-                                              fillColor: Colors.grey[100],
+                                              border: OutlineInputBorder(),
                                             ),
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
-
-                                        // Bouton sauvegarder
-                                        if (peutModifier)
-                                          IconButton(
-                                            icon: const Icon(Icons.save,
-                                                color: Colors.indigo),
-                                            onPressed: () =>
-                                                _sauvegarderNote(eleveId),
-                                          ),
-                                      ],
+                                      );
+                                    }),
+                                    DataCell(
+                                      Text(
+                                        moyenneFinale != null
+                                            ? moyenneFinale.toStringAsFixed(2)
+                                            : '-',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: couleurMoyenne,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  ]);
+                                }).toList(),
+                              ),
                             ),
-                ),
+                          ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _evaluations.isEmpty
+                            ? null
+                            : _soumettrePourValidation,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        icon: const Icon(Icons.send),
+                        label: const Text('Soumettre pour validation'),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
     );
