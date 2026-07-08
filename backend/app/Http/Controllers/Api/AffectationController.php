@@ -3,12 +3,44 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Classe;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class AffectationController extends Controller
 {
+    // Liste des affectations d'une classe (et éventuellement d'une matière précise)
+    public function parClasse(Request $request)
+    {
+        $request->validate([
+            'classe_id'  => 'required|integer',
+            'matiere_id' => 'nullable|integer',
+        ]);
+
+        $classe = Classe::where('id', $request->classe_id)
+            ->where('ecole_id', $request->user()->ecole_id)
+            ->firstOrFail();
+
+        $affectations = DB::table('enseignant_classe_matiere')
+            ->where('enseignant_classe_matiere.classe_id', $classe->id)
+            ->when($request->matiere_id, function ($q) use ($request) {
+                $q->where('enseignant_classe_matiere.matiere_id', $request->matiere_id);
+            })
+            ->join('users', 'users.id', '=', 'enseignant_classe_matiere.enseignant_id')
+            ->join('matieres', 'matieres.id', '=', 'enseignant_classe_matiere.matiere_id')
+            ->select(
+                'enseignant_classe_matiere.id',
+                'matieres.id as matiere_id',
+                'matieres.nom as matiere_nom',
+                'users.id as enseignant_id',
+                'users.name as enseignant_nom',
+            )
+            ->get();
+
+        return response()->json($affectations);
+    }
+
     // Liste des affectations d'un enseignant
     public function index(Request $request, $enseignantId)
     {

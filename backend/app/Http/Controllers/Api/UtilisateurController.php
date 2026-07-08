@@ -15,6 +15,7 @@ class UtilisateurController extends Controller
     {
         $utilisateurs = User::where('ecole_id', $request->user()->ecole_id)
             ->where('id', '!=', $request->user()->id)
+            ->when($request->role, fn($q) => $q->where('role', $request->role))
             ->with('permissions')
             ->get();
 

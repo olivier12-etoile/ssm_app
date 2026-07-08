@@ -23,6 +23,26 @@ class AffectationService {
     throw Exception('Erreur chargement affectations');
   }
 
+  // Liste des affectations d'une classe (enseignant par matière)
+  static Future<List<dynamic>> listerParClasse(int classeId) async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/affectations?classe_id=$classeId'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement affectations de la classe');
+  }
+
+  // Liste des enseignants de l'école
+  static Future<List<dynamic>> listerEnseignants() async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/utilisateurs?role=enseignant'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement enseignants');
+  }
+
   // Ajouter une affectation
   static Future<void> ajouterAffectation({
     required int enseignantId,

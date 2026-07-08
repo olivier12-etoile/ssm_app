@@ -68,6 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/classe-matieres/{id}', [ClasseMatiereController::class, 'supprimer']);
 
     // Affectations
+    Route::get('/affectations',                [AffectationController::class, 'parClasse']);
     Route::get('/affectations/{enseignantId}', [AffectationController::class, 'index']);
     Route::post('/affectations',               [AffectationController::class, 'ajouter']);
     Route::delete('/affectations/{id}',        [AffectationController::class, 'supprimer']);

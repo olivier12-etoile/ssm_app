@@ -9,6 +9,8 @@ import 'screens/directeur/matieres_par_classe_screen.dart';
 import 'screens/directeur/gestion_annees_screen.dart';
 import 'screens/directeur/gestion_eleves_screen.dart';
 import 'screens/directeur/eleves_par_classe_screen.dart';
+import 'screens/directeur/gestion_affectations_screen.dart';
+import 'screens/directeur/affectations_classe_screen.dart';
 import 'screens/directeur/validation_notes_screen.dart';
 import 'screens/directeur/dashboard_censeur_screen.dart';
 import 'screens/enseignant/saisie_notes_screen.dart';
@@ -65,6 +67,15 @@ class SSMApp extends StatelessWidget {
           return ElevesParClasseScreen(
             classeId: args['classeId'] as int,
             anneeId:  args['anneeId'] as int,
+          );
+        },
+        '/directeur/affectations':       (context) => const GestionAffectationsScreen(),
+        '/directeur/affectations/classe': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return AffectationsClasseScreen(
+            classeId:  args['classeId'] as int,
+            classeNom: args['classeNom'] as String,
           );
         },
         '/notes/validation':       (context) => const ValidationNotesScreen(),
