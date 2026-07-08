@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Classe;
+use App\Models\ClasseMatiere;
 use App\Models\Ecole;
 use App\Models\Matiere;
 use App\Models\User;
@@ -89,6 +90,83 @@ class AffectationSeeder extends Seeder
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+            }
+        }
+
+        $coefficientsCollege = [
+            'Mathématiques' => 3,
+            'Français' => 3,
+            'Anglais' => 2,
+            'SVT' => 2,
+            'Histoire-Géographie' => 2,
+            'EPS' => 1,
+            'Informatique' => 2,
+        ];
+
+        $coefficientsParClasse = [
+            '6ème A' => $coefficientsCollege,
+            '5ème A' => $coefficientsCollege,
+            '4ème A' => $coefficientsCollege,
+            '3ème A' => $coefficientsCollege,
+            'Seconde A' => [
+                'Mathématiques' => 4,
+                'Français' => 3,
+                'Anglais' => 2,
+                'SVT' => 2,
+                'Physique-Chimie' => 3,
+                'Histoire-Géographie' => 2,
+                'EPS' => 1,
+                'Informatique' => 2,
+            ],
+            'Première A' => [
+                'Mathématiques' => 4,
+                'Français' => 3,
+                'Anglais' => 2,
+                'SVT' => 2,
+                'Physique-Chimie' => 3,
+                'Histoire-Géographie' => 2,
+                'Philosophie' => 2,
+                'EPS' => 1,
+                'Informatique' => 2,
+                'Espagnol' => 1,
+            ],
+            'Terminale A' => [
+                'Mathématiques' => 5,
+                'Français' => 3,
+                'Anglais' => 2,
+                'SVT' => 2,
+                'Physique-Chimie' => 3,
+                'Histoire-Géographie' => 2,
+                'Philosophie' => 3,
+                'EPS' => 1,
+                'Informatique' => 2,
+                'Espagnol' => 1,
+            ],
+        ];
+
+        foreach ($coefficientsParClasse as $nomClasse => $matieresCoefficients) {
+            $classe = $classes->get($nomClasse);
+
+            if (!$classe) {
+                continue;
+            }
+
+            foreach ($matieresCoefficients as $nomMatiere => $coefficient) {
+                $matiere = $matieres->get($nomMatiere);
+
+                if (!$matiere) {
+                    continue;
+                }
+
+                ClasseMatiere::firstOrCreate(
+                    [
+                        'classe_id' => $classe->id,
+                        'matiere_id' => $matiere->id,
+                    ],
+                    [
+                        'coefficient' => $coefficient,
+                    ]
+                );
             }
         }
     }

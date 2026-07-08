@@ -7,6 +7,7 @@ use App\Models\Eleve;
 use App\Models\Note;
 use App\Models\Inscription;
 use App\Models\PeriodeAcademique;
+use App\Models\ClasseMatiere;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -51,12 +52,13 @@ class BulletinController extends Controller
             ->get();
 
         // Calculer les moyennes
+        $classeId         = $inscription?->classe?->id;
         $totalPoints      = 0;
         $totalCoefficients = 0;
         $lignesNotes      = [];
 
         foreach ($notes as $note) {
-            $coef           = $note->matiere->coefficient;
+            $coef = $this->coefficientPourClasse($classeId, $note->matiere_id, $note->matiere->coefficient);
             $totalPoints    += $note->valeur * $coef;
             $totalCoefficients += $coef;
 
@@ -177,6 +179,20 @@ class BulletinController extends Controller
         ]);
     }
 
+    // Coefficient spécifique à la classe, avec repli sur le coefficient général de la matière
+    private function coefficientPourClasse(?int $classeId, int $matiereId, float $coefficientDefaut): float
+    {
+        if (!$classeId) {
+            return $coefficientDefaut;
+        }
+
+        $classeMatiere = ClasseMatiere::where('classe_id', $classeId)
+            ->where('matiere_id', $matiereId)
+            ->first();
+
+        return $classeMatiere?->coefficient ?? $coefficientDefaut;
+    }
+
     private function mention(float $note): string
     {
         if ($note >= 18) return 'Excellent';
@@ -217,12 +233,13 @@ class BulletinController extends Controller
             ->with('matiere')
             ->get();
 
+        $classeId          = $inscription?->classe?->id;
         $totalPoints       = 0;
         $totalCoefficients = 0;
         $lignesNotes       = [];
 
         foreach ($notes as $note) {
-            $coef               = $note->matiere->coefficient;
+            $coef = $this->coefficientPourClasse($classeId, $note->matiere_id, $note->matiere->coefficient);
             $totalPoints        += $note->valeur * $coef;
             $totalCoefficients  += $coef;
 

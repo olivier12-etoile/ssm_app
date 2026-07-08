@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Auth\ConnexionController;
 use App\Http\Controllers\Api\UtilisateurController;
 use App\Http\Controllers\Api\ClasseController;
 use App\Http\Controllers\Api\MatiereController;
+use App\Http\Controllers\Api\ClasseMatiereController;
 use App\Http\Controllers\Api\ChangerMotDePasseController;
 use App\Http\Controllers\Api\AffectationController;
 use App\Http\Controllers\Api\AnneeAcademiqueController;
@@ -60,6 +61,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/matieres',        [MatiereController::class, 'creer']);
     Route::patch('/matieres/{id}',  [MatiereController::class, 'modifier']);
     Route::delete('/matieres/{id}', [MatiereController::class, 'supprimer']);
+
+    // Matières par classe (coefficients)
+    Route::get('/classe-matieres',         [ClasseMatiereController::class, 'index']);
+    Route::post('/classe-matieres',        [ClasseMatiereController::class, 'enregistrer']);
+    Route::delete('/classe-matieres/{id}', [ClasseMatiereController::class, 'supprimer']);
 
     // Affectations
     Route::get('/affectations/{enseignantId}', [AffectationController::class, 'index']);
