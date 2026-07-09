@@ -39,6 +39,15 @@ static Future<String> uploaderPhoto(int eleveId, File photo) async {
   throw Exception('Erreur upload photo');
 }
 
+  static Future<Map<String, dynamic>> getEleve(int eleveId) async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/eleves/$eleveId'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement de l\'élève');
+  }
+
   static Future<List<dynamic>> listerEleves() async {
     final response = await http.get(
       Uri.parse('${AppConfig.apiBaseUrl}/eleves'),

@@ -47,6 +47,21 @@ class WhatsAppService {
         '$nomEcole';
   }
 
+  static String messageRecuPaiement({
+    required String nomParent,
+    required String nomEleve,
+    required String classe,
+    required String montant,
+    required String tranche,
+    required String nomEcole,
+  }) {
+    return 'Bonjour $nomParent,\n\n'
+        'Nous accusons réception de votre paiement de $montant FCFA '
+        '($tranche) pour $nomEleve ($classe).\n\n'
+        'Merci de votre confiance.\n\n'
+        '$nomEcole';
+  }
+
   static String messageRappelPaiement({
     required String nomParent,
     required String nomEleve,

@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../../screens/dashboard/menu_lateral.dart';
 import '../enseignant/saisie_notes_screen.dart';
 import '../enseignant/liste_presence_screen.dart';
+import '../emploi_du_temps/emploi_du_temps_enseignant_screen.dart';
 
 class DashboardEnseignantScreen extends StatefulWidget {
   const DashboardEnseignantScreen({super.key});
@@ -286,6 +287,22 @@ class _DashboardEnseignantScreenState
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    settings:
+                        const RouteSettings(name: '/emploi-du-temps/enseignant'),
+                    builder: (_) => const EmploiDuTempsEnseignantScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.calendar_view_week),
+                label: const Text('Mon emploi du temps'),
+              ),
+            ),
+            const SizedBox(height: 12),
             if (_classesAffectees.isEmpty)
               Container(
                 padding: const EdgeInsets.all(16),

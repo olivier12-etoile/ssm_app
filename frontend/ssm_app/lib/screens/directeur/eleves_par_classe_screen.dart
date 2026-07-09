@@ -255,6 +255,11 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
                           borderRadius: BorderRadius.circular(12)),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(12),
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          '/eleve/fiche',
+                          arguments: {'eleveId': eleveId},
+                        ),
                         leading: GestureDetector(
                           onTap: () => _changerPhoto(eleveId),
                           child: Stack(

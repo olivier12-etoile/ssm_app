@@ -19,7 +19,7 @@ class PaiementController extends Controller
         $paiements = Paiement::whereHas('eleve', function ($q) use ($request) {
                 $q->where('ecole_id', $request->user()->ecole_id);
             })
-            ->with(['eleve', 'annee'])
+            ->with(['eleve', 'annee', 'enregistrePar'])
             ->orderBy('date_paiement', 'desc')
             ->get();
 
@@ -30,7 +30,7 @@ class PaiementController extends Controller
     public function parEleve(Request $request, $eleveId)
     {
         $paiements = Paiement::where('eleve_id', $eleveId)
-            ->with('annee')
+            ->with(['annee', 'enregistrePar'])
             ->orderBy('date_paiement', 'desc')
             ->get();
 
@@ -61,6 +61,7 @@ class PaiementController extends Controller
         'tranche'             => $request->tranche,
         'date_paiement'       => $request->date_paiement,
         'reference'           => $request->reference,
+        'enregistre_par'      => $request->user()->id,
     ]);
 
     // ── Créer automatiquement la notification en attente ──

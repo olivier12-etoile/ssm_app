@@ -15,6 +15,7 @@ class Paiement extends Model
         'tranche',
         'date_paiement',
         'reference',
+        'enregistre_par',
     ];
 
     public function eleve()
@@ -25,5 +26,10 @@ class Paiement extends Model
     public function annee()
     {
         return $this->belongsTo(AnneeAcademique::class, 'annee_academique_id');
+    }
+
+    public function enregistrePar()
+    {
+        return $this->belongsTo(User::class, 'enregistre_par');
     }
 }

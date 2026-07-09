@@ -20,6 +20,22 @@ class EleveController extends Controller
         return response()->json($eleves);
     }
 
+    // Fiche complète d'un élève (toutes ses relations)
+    public function show(Request $request, $id)
+    {
+        $eleve = Eleve::where('id', $id)
+            ->where('ecole_id', $request->user()->ecole_id)
+            ->with([
+                'ecole',
+                'inscriptions.classe',
+                'paiements',
+                'absences',
+            ])
+            ->firstOrFail();
+
+        return response()->json($eleve);
+    }
+
     // Élèves d'une classe
     public function parClasse(Request $request, $classeId)
     {

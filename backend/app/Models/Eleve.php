@@ -47,4 +47,9 @@ public function getPhotoUrlAttribute()
     {
         return $this->hasMany(Paiement::class, 'eleve_id');
     }
+
+    public function absences()
+    {
+        return $this->hasMany(Absence::class, 'eleve_id');
+    }
 }

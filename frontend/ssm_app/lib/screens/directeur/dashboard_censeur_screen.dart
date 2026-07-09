@@ -185,6 +185,23 @@ class _DashboardCenseurScreenState extends State<DashboardCenseurScreen> {
               const SizedBox(height: 20),
             ],
 
+            // ── Emplois du temps ──────────────────────────────
+            Card(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.indigo,
+                  child: Icon(Icons.calendar_view_week, color: Colors.white),
+                ),
+                title: const Text('Emplois du temps',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pushNamed(context, '/emploi-du-temps'),
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // ── Mes Classes ──────────────────────────────────
             const Text(
               'Mes Classes',

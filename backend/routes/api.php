@@ -22,6 +22,8 @@ use App\Http\Controllers\Api\NotificationAttenteController;
 use App\Http\Controllers\Api\AppreciationController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EvaluationController;
+use App\Http\Controllers\Api\FraisScolaireController;
+use App\Http\Controllers\Api\EmploiDuTempsController;
 
 
 
@@ -75,6 +77,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/evaluations/moyenne',        [EvaluationController::class, 'calculerMoyenne']);
     Route::get('/evaluations/moyennes-classe', [EvaluationController::class, 'moyennesClasse']);
 
+    // Frais scolaires
+    Route::get('/frais-scolaires',                     [FraisScolaireController::class, 'index']);
+    Route::post('/frais-scolaires',                    [FraisScolaireController::class, 'enregistrer']);
+    Route::get('/frais-scolaires/situation/{eleveId}',  [FraisScolaireController::class, 'situationEleve']);
+    Route::get('/frais-scolaires/situation-classe',     [FraisScolaireController::class, 'situationClasse']);
+    Route::get('/frais-scolaires/rapport',              [FraisScolaireController::class, 'rapportFinancier']);
+    Route::get('/frais-scolaires/rapport-pdf',          [FraisScolaireController::class, 'genererRapportPdf']);
+
+    // Emploi du temps
+    Route::get('/emploi-du-temps/classe',              [EmploiDuTempsController::class, 'parClasse']);
+    Route::get('/emploi-du-temps/pdf-classe',           [EmploiDuTempsController::class, 'genererPdfClasse']);
+    Route::get('/emploi-du-temps/enseignant',           [EmploiDuTempsController::class, 'parEnseignant']);
+    Route::get('/emploi-du-temps/pdf-enseignant',       [EmploiDuTempsController::class, 'genererPdfEnseignant']);
+    Route::post('/emploi-du-temps',                     [EmploiDuTempsController::class, 'enregistrer']);
+    Route::delete('/emploi-du-temps/{id}',              [EmploiDuTempsController::class, 'supprimer']);
+    Route::post('/emploi-du-temps/verifier-conflits',   [EmploiDuTempsController::class, 'verifierConflits']);
+
     // Affectations
     Route::get('/affectations',                [AffectationController::class, 'parClasse']);
     Route::get('/affectations/{enseignantId}', [AffectationController::class, 'index']);
@@ -94,6 +113,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/eleves',                    [EleveController::class, 'index']);
     Route::get('/eleves/classe/{classeId}',  [EleveController::class, 'parClasse']);
     Route::post('/eleves',                   [EleveController::class, 'creer']);
+    Route::get('/eleves/{id}',               [EleveController::class, 'show']);
 
     // Notes
     Route::get('/notes',              [NoteController::class, 'index']);
