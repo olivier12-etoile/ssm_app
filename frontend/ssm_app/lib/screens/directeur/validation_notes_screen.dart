@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/note_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/matiere_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class ValidationNotesScreen extends StatefulWidget {
   final int? classeIdPreselectionne;
@@ -24,9 +26,12 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
   int? _anneeId;
   int? _periodeId;
   int? _matiereId;
+  String? _filtreStatut;
 
   bool _chargement      = true;
   bool _chargementNotes = false;
+
+  static const _statuts = ['soumis', 'valide', 'rejete'];
 
   @override
   void initState() {
@@ -86,24 +91,35 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
   Color _couleurStatut(String statut) {
     switch (statut) {
-      case 'valide':    return Colors.green;
-      case 'soumis':    return Colors.blue;
-      case 'rejete':    return Colors.red;
-      case 'brouillon': return Colors.orange;
-      default:          return Colors.grey;
+      case 'valide':    return const Color(0xFF16A34A);
+      case 'soumis':    return const Color(0xFF0284C7);
+      case 'rejete':    return const Color(0xFFDC2626);
+      case 'brouillon': return const Color(0xFFEA580C);
+      default:          return const Color(0xFF94A3B8);
     }
+  }
+
+  Color _couleurMention(double valeur) {
+    if (valeur >= 16) return const Color(0xFF16A34A);
+    if (valeur >= 10) return const Color(0xFFD97706);
+    return const Color(0xFFDC2626);
+  }
+
+  List<dynamic> get _notesFiltrees {
+    if (_filtreStatut == null) return _notes;
+    return _notes.where((n) => n['statut'] == _filtreStatut).toList();
   }
 
   bool _aNotesSoumises() {
@@ -125,9 +141,9 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('Valider',
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF16A34A)),
+            child: const Text('Valider', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -187,11 +203,45 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
                     e.toString().replaceAll('Exception: ', ''));
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Rejeter',
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626)),
+            child: const Text('Rejeter', style: TextStyle(color: Colors.white)),
           ),
         ],
+      ),
+    );
+  }
+
+  String _labelStatut(String statut) {
+    switch (statut) {
+      case 'valide':    return 'Validé';
+      case 'soumis':    return 'Soumis';
+      case 'rejete':    return 'Rejeté';
+      default:          return statut;
+    }
+  }
+
+  Widget _chipStatut(String? statut, String label) {
+    final selectionne = _filtreStatut == statut;
+    final couleur =
+        statut == null ? const Color(0xFF1E3A8A) : _couleurStatut(statut);
+    return GestureDetector(
+      onTap: () => setState(() => _filtreStatut = statut),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selectionne ? couleur : couleur.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(9999),
+          border: Border.all(color: couleur.withValues(alpha: selectionne ? 1 : 0.4)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selectionne ? Colors.white : couleur,
+          ),
+        ),
       ),
     );
   }
@@ -199,9 +249,13 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Validation des notes'),
-        backgroundColor: Colors.orange,
+        title: Text(
+          'Validation des notes',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
       ),
       body: _chargement
@@ -210,7 +264,7 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
               children: [
                 // ── Filtres ──────────────────────────────
                 Container(
-                  color: Colors.orange.withOpacity(0.05),
+                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.05),
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
@@ -321,7 +375,7 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
                               ? null
                               : _chargerNotes,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
+                            backgroundColor: const Color(0xFF1E3A8A),
                             foregroundColor: Colors.white,
                           ),
                           icon: const Icon(Icons.search),
@@ -332,17 +386,34 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
                   ),
                 ),
 
+                // ── Chips filtre statut ───────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _chipStatut(null, 'Tous'),
+                        ..._statuts.map((s) => Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: _chipStatut(s, _labelStatut(s)),
+                            )),
+                      ],
+                    ),
+                  ),
+                ),
+
                 // ── Boutons Valider / Rejeter ─────────────
                 if (_aNotesSoumises())
                   Padding(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: _valider,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
+                              backgroundColor: const Color(0xFF16A34A),
                               foregroundColor: Colors.white,
                             ),
                             icon: const Icon(Icons.check),
@@ -354,7 +425,7 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
                           child: ElevatedButton.icon(
                             onPressed: _rejeter,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red,
+                              backgroundColor: const Color(0xFFDC2626),
                               foregroundColor: Colors.white,
                             ),
                             icon: const Icon(Icons.close),
@@ -364,84 +435,91 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
                       ],
                     ),
                   ),
+                const SizedBox(height: 12),
 
                 // ── Liste des notes ───────────────────────
                 Expanded(
                   child: _chargementNotes
                       ? const Center(child: CircularProgressIndicator())
-                      : _notes.isEmpty
-                          ? const Center(
+                      : _notesFiltrees.isEmpty
+                          ? Center(
                               child: Text(
                                 'Aucune note trouvée\nSélectionnez les filtres et cliquez sur Charger',
-                                style: TextStyle(color: Colors.grey),
+                                style: GoogleFonts.inter(color: const Color(0xFF334155)),
                                 textAlign: TextAlign.center,
                               ),
                             )
                           : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _notes.length,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              itemCount: _notesFiltrees.length,
                               itemBuilder: (context, index) {
-                                final note   = _notes[index];
+                                final note   = _notesFiltrees[index];
                                 final statut = note['statut'] as String;
                                 final eleve  = note['eleve'];
-                                return Card(
-                                  margin:
-                                      const EdgeInsets.only(bottom: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(10),
+                                final valeur = double.tryParse(
+                                        note['valeur'].toString()) ??
+                                    0.0;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.05),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  child: ListTile(
-                                    contentPadding:
-                                        const EdgeInsets.all(12),
-                                    leading: CircleAvatar(
-                                      backgroundColor:
-                                          _couleurStatut(statut),
-                                      child: Text(
-                                        note['valeur'].toString(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        backgroundColor: _couleurMention(valeur),
+                                        child: Text(
+                                          note['valeur'].toString(),
+                                          style: GoogleFonts.sora(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    title: Text(
-                                      eleve != null
-                                          ? '${eleve['nom']} ${eleve['prenom']}'
-                                          : 'Élève inconnu',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: note['motif_rejet'] != null
-                                        ? Text(
-                                            'Motif : ${note['motif_rejet']}',
-                                            style: const TextStyle(
-                                                color: Colors.red),
-                                          )
-                                        : null,
-                                    trailing: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 10, vertical: 4),
-                                      decoration: BoxDecoration(
-                                        color: _couleurStatut(statut)
-                                            .withOpacity(0.1),
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: _couleurStatut(statut)
-                                              .withOpacity(0.5),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              eleve != null
+                                                  ? '${eleve['nom']} ${eleve['prenom']}'
+                                                  : 'Élève inconnu',
+                                              style: GoogleFonts.sora(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize: 14,
+                                                color: const Color(0xFF0F172A),
+                                              ),
+                                            ),
+                                            if (note['motif_rejet'] != null) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Motif : ${note['motif_rejet']}',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                  color: const Color(0xFFDC2626),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
                                         ),
                                       ),
-                                      child: Text(
-                                        statut.toUpperCase(),
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: _couleurStatut(statut),
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                      SSMBadge(
+                                        label: _labelStatut(statut).toUpperCase(),
+                                        couleur: _couleurStatut(statut),
                                       ),
-                                    ),
+                                    ],
                                   ),
                                 );
                               },

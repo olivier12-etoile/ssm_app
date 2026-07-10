@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
+import '../../widgets/ssm_widgets.dart';
 import 'eleves_par_classe_screen.dart';
 
 class GestionElevesScreen extends StatefulWidget {
@@ -112,9 +114,13 @@ class _GestionElevesScreenState extends State<GestionElevesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Gestion des élèves'),
-        backgroundColor: Colors.deepOrange,
+        title: Text(
+          'Gestion des élèves',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -170,55 +176,26 @@ class _GestionElevesScreenState extends State<GestionElevesScreen> {
                           itemBuilder: (context, index) {
                             final classe = _classes[index];
                             final classeId = classe['id'] as int;
-                            final effectif = _effectifs[classeId];
+                            final effectif = _effectifs[classeId] ?? 0;
+                            final capaciteMax =
+                                (classe['capacite_max'] as int?) ?? 50;
 
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(12),
-                                onTap: () => _ouvrirClasse(classe),
-                                leading: CircleAvatar(
-                                  backgroundColor: Colors.deepOrange,
-                                  child: Text(
-                                    classe['niveau'].toString().substring(0, 1),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                title: Text(
-                                  classe['nom'] as String,
-                                  style:
-                                      const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Text('Niveau : ${classe['niveau']}'),
-                                trailing: _chargementEffectifs
-                                    ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: _chargementEffectifs
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(12),
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2),
-                                      )
-                                    : Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.people,
-                                              size: 16, color: Colors.grey),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '${effectif ?? 0} élève${(effectif ?? 0) > 1 ? 's' : ''}',
-                                            style: const TextStyle(
-                                                color: Colors.grey),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Icon(Icons.chevron_right),
-                                        ],
                                       ),
-                              ),
+                                    )
+                                  : SSMCarteClasse(
+                                      nom: classe['nom'] as String,
+                                      nombreEleves: effectif,
+                                      capaciteMax: capaciteMax,
+                                      onTap: () => _ouvrirClasse(classe),
+                                    ),
                             );
                           },
                         ),

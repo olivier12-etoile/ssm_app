@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/bulletin_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/appreciation_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class BulletinsScreen extends StatefulWidget {
   const BulletinsScreen({super.key});
@@ -267,7 +269,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepPurple,
+                  backgroundColor: const Color(0xFF1E3A8A),
                   foregroundColor: Colors.white,
                 ),
                 onPressed: () async {
@@ -311,21 +313,28 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
   Color _couleurMention(String mention) {
     switch (mention) {
-      case 'Excellent':   return Colors.green[700]!;
-      case 'Très Bien':   return Colors.green;
-      case 'Bien':        return Colors.lightGreen;
-      case 'Assez Bien':  return Colors.orange;
-      case 'Passable':    return Colors.amber;
-      default:            return Colors.red;
+      case 'Excellent':
+      case 'Très Bien':
+      case 'Bien':
+        return SSMBadge.succes;
+      case 'Assez Bien':
+      case 'Passable':
+        return SSMBadge.avertissement;
+      default:
+        return SSMBadge.erreur;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Bulletins'),
-        backgroundColor: Colors.deepPurple,
+        title: Text(
+          'Bulletins',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         bottom: TabBar(
           controller: _tabController,
@@ -434,7 +443,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                     child: ElevatedButton.icon(
                       onPressed: _genererBulletinEleve,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: const Color(0xFF1E3A8A),
                         foregroundColor: Colors.white,
                       ),
                       icon: const Icon(Icons.description),
@@ -477,7 +486,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.deepPurple,
+                color: const Color(0xFF1E3A8A),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -525,7 +534,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
               padding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.deepPurple,
+                color: const Color(0xFF1E3A8A),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -575,7 +584,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                     horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: i % 2 == 0
-                      ? Colors.deepPurple.withOpacity(0.05)
+                      ? const Color(0xFF1E3A8A).withOpacity(0.05)
                       : Colors.white,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -603,14 +612,10 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                     ),
                     SizedBox(
                       width: 80,
-                      child: Text(
-                        note['mention'] as String,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _couleurMention(
-                              note['mention'] as String),
-                          fontWeight: FontWeight.bold,
+                      child: Center(
+                        child: SSMBadge(
+                          label: note['mention'] as String,
+                          couleur: _couleurMention(note['mention'] as String),
                         ),
                       ),
                     ),
@@ -670,10 +675,10 @@ class _BulletinsScreenState extends State<BulletinsScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.05),
+                  color: const Color(0xFF1E3A8A).withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: Colors.deepPurple.withOpacity(0.2)),
+                      color: const Color(0xFF1E3A8A).withOpacity(0.2)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -683,7 +688,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                         (bulletin['observation'] as String).toUpperCase(),
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple,
+                          color: Color(0xFF1E3A8A),
                           letterSpacing: 1,
                         ),
                       ),
@@ -717,8 +722,8 @@ class _BulletinsScreenState extends State<BulletinsScreen>
               child: OutlinedButton.icon(
                 onPressed: () => _afficherDialogAppreciation(bulletin),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.deepPurple,
-                  side: const BorderSide(color: Colors.deepPurple),
+                  foregroundColor: const Color(0xFF1E3A8A),
+                  side: const BorderSide(color: Color(0xFF1E3A8A)),
                   padding: const EdgeInsets.all(14),
                 ),
                 icon: const Icon(Icons.rate_review),
@@ -899,7 +904,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                     child: ElevatedButton.icon(
                       onPressed: _genererBulletinsClasse,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.deepPurple,
+                        backgroundColor: const Color(0xFF1E3A8A),
                         foregroundColor: Colors.white,
                       ),
                       icon: const Icon(Icons.list_alt),
@@ -939,7 +944,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
               style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
-                color: Colors.deepPurple,
+                color: Color(0xFF1E3A8A),
               ),
             ),
             const SizedBox(height: 4),
@@ -954,7 +959,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
               padding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: Colors.deepPurple,
+                color: const Color(0xFF1E3A8A),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Row(
@@ -1009,7 +1014,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                   color: rang <= 3
                       ? Colors.amber.withOpacity(0.1)
                       : i % 2 == 0
-                          ? Colors.deepPurple.withOpacity(0.03)
+                          ? const Color(0xFF1E3A8A).withOpacity(0.03)
                           : Colors.white,
                   borderRadius: BorderRadius.circular(4),
                 ),
@@ -1021,7 +1026,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                         radius: 14,
                         backgroundColor: rang <= 3
                             ? Colors.amber
-                            : Colors.deepPurple.withOpacity(0.1),
+                            : const Color(0xFF1E3A8A).withOpacity(0.1),
                         child: Text(
                           '$rang',
                           style: TextStyle(
@@ -1029,7 +1034,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                             fontWeight: FontWeight.bold,
                             color: rang <= 3
                                 ? Colors.white
-                                : Colors.deepPurple,
+                                : const Color(0xFF1E3A8A),
                           ),
                         ),
                       ),
@@ -1054,13 +1059,10 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                     ),
                     SizedBox(
                       width: 80,
-                      child: Text(
-                        mention,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: _couleurMention(mention),
-                          fontWeight: FontWeight.bold,
+                      child: Center(
+                        child: SSMBadge(
+                          label: mention,
+                          couleur: _couleurMention(mention),
                         ),
                       ),
                     ),

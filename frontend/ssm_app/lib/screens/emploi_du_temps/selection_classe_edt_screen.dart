@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/classe_service.dart';
+import '../../services/annee_service.dart';
+import '../../services/eleve_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class SelectionClasseEdtScreen extends StatefulWidget {
   const SelectionClasseEdtScreen({super.key});
@@ -11,6 +15,8 @@ class SelectionClasseEdtScreen extends StatefulWidget {
 
 class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
   List<dynamic> _classes = [];
+  Map<int, int> _effectifs = {};
+  int? _anneeId;
   bool _chargement = true;
 
   @override
@@ -21,28 +27,67 @@ class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
 
   Future<void> _chargerClasses() async {
     try {
-      final liste = await ClasseService.listerClasses();
+      final resultats = await Future.wait([
+        ClasseService.listerClasses(),
+        AnneeService.listerAnnees(),
+      ]);
+      final liste  = resultats[0];
+      final annees = resultats[1];
+      final anneeEnCours = annees.firstWhere(
+        (a) => a['statut'] == 'en_cours',
+        orElse: () => annees.isNotEmpty ? annees.first : null,
+      );
+
       setState(() {
-        _classes = liste;
+        _classes    = liste;
+        _anneeId    = anneeEnCours?['id'] as int?;
         _chargement = false;
       });
+
+      if (_anneeId != null) await _chargerEffectifs();
     } catch (e) {
       setState(() => _chargement = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
+  }
+
+  Future<void> _chargerEffectifs() async {
+    if (_anneeId == null || _classes.isEmpty) return;
+    try {
+      final listes = await Future.wait(_classes.map((classe) {
+        return EleveService.elevesParClasse(classe['id'] as int, _anneeId!);
+      }));
+
+      final effectifs = <int, int>{};
+      for (var i = 0; i < _classes.length; i++) {
+        effectifs[_classes[i]['id'] as int] = listes[i].length;
+      }
+
+      setState(() => _effectifs = effectifs);
+    } catch (e) {
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  void _afficherErreur(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFDC2626),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Emplois du temps'),
-        backgroundColor: Colors.indigo,
+        title: Text(
+          'Emplois du temps',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -54,52 +99,40 @@ class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
           : _classes.isEmpty
-              ? const Center(
-                  child: Text('Aucune classe pour l\'instant',
-                      style: TextStyle(color: Colors.grey)),
+              ? Center(
+                  child: Text(
+                    'Aucune classe pour l\'instant',
+                    style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                  ),
                 )
-              : ListView.builder(
+              : ListView(
                   padding: const EdgeInsets.all(16),
-                  itemCount: _classes.length,
-                  itemBuilder: (context, index) {
-                    final classe = _classes[index];
-                    final classeId = classe['id'] as int;
-                    final classeNom = classe['nom'] as String;
+                  children: [
+                    SSMSectionTitre(titre: 'Sélectionnez une classe'),
+                    ..._classes.map((classe) {
+                      final classeId   = classe['id'] as int;
+                      final classeNom  = classe['nom'] as String;
+                      final effectif   = _effectifs[classeId] ?? 0;
+                      final capaciteMax = (classe['capacite_max'] as int?) ?? 50;
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          '/emploi-du-temps/classe',
-                          arguments: {
-                            'classeId': classeId,
-                            'classeNom': classeNom,
-                          },
-                        ),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.indigo,
-                          child: Text(
-                            classe['niveau'].toString().substring(0, 1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: SSMCarteClasse(
+                          nom: classeNom,
+                          nombreEleves: effectif,
+                          capaciteMax: capaciteMax,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/emploi-du-temps/classe',
+                            arguments: {
+                              'classeId': classeId,
+                              'classeNom': classeNom,
+                            },
                           ),
                         ),
-                        title: Text(
-                          classeNom,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text('Niveau : ${classe['niveau']}'),
-                        trailing: const Icon(Icons.chevron_right),
-                      ),
-                    );
-                  },
+                      );
+                    }),
+                  ],
                 ),
     );
   }

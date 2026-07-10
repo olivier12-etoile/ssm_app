@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/paiement_service.dart';
 import '../../services/frais_scolaire_service.dart';
@@ -7,6 +8,7 @@ import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 const List<String> _moisFrancais = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -24,9 +26,9 @@ String _libelleStatut(String statut) {
 
 Color _couleurStatut(String statut) {
   switch (statut) {
-    case 'en_regle': return Colors.green;
-    case 'partiel':  return Colors.orange;
-    case 'non_paye': return Colors.red;
+    case 'en_regle': return SSMBadge.succes;
+    case 'partiel':  return SSMBadge.avertissement;
+    case 'non_paye': return SSMBadge.erreur;
     default:         return Colors.grey;
   }
 }
@@ -123,13 +125,13 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
@@ -596,22 +598,9 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
                                                 fontWeight: FontWeight.bold),
                                           ),
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: _couleurStatut(statut)
-                                                .withOpacity(0.15),
-                                            borderRadius: BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            _libelleStatut(statut),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: _couleurStatut(statut),
-                                            ),
-                                          ),
+                                        SSMBadge(
+                                          label: _libelleStatut(statut),
+                                          couleur: _couleurStatut(statut),
                                         ),
                                       ],
                                     ),
@@ -790,34 +779,38 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
           if (_chargementRapport)
             const Center(child: CircularProgressIndicator())
           else if (_rapportData != null) ...[
-            // ── Carte résumé ────────────────────────────
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.indigo,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _statRapport('Attendu', totalAttendu),
-                      _statRapport('Encaissé', totalEncaisse),
-                      _statRapport('Restant', totalRestant),
-                    ],
+            // ── Cartes résumé ────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: SSMStatCard(
+                    titre: 'Attendu',
+                    valeur: '${totalAttendu.toStringAsFixed(0)} F',
+                    icone: Icons.account_balance_wallet,
+                    couleurIcone: const Color(0xFF1E3A8A),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Recouvrement : ${pourcentageRecouvrement.toStringAsFixed(1)}%',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SSMStatCard(
+                    titre: 'Encaissé',
+                    valeur: '${totalEncaisse.toStringAsFixed(0)} F',
+                    icone: Icons.payments,
+                    couleurIcone: const Color(0xFF0D9488),
+                    variation:
+                        '${pourcentageRecouvrement.toStringAsFixed(0)}% recouvré',
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: SSMStatCard(
+                    titre: 'Restant',
+                    valeur: '${totalRestant.toStringAsFixed(0)} F',
+                    icone: Icons.warning_amber,
+                    couleurIcone: const Color(0xFFEA580C),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 20),
 
@@ -858,7 +851,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
             ElevatedButton.icon(
               onPressed: _exportEnCours ? null : _exporterPdf,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
+                backgroundColor: const Color(0xFF1E3A8A),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
@@ -878,28 +871,16 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
     );
   }
 
-  Widget _statRapport(String label, double valeur) {
-    return Column(
-      children: [
-        Text(
-          valeur.toStringAsFixed(0),
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-        ),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Gestion des paiements'),
-        backgroundColor: Colors.teal,
+        title: Text(
+          'Gestion des paiements',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF0D9488),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -920,7 +901,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
       floatingActionButton: _tabController.index == 0
           ? FloatingActionButton.extended(
               onPressed: () => _afficherDialogPaiement(),
-              backgroundColor: Colors.teal,
+              backgroundColor: const Color(0xFF0D9488),
               icon: const Icon(Icons.add),
               label: const Text('Nouveau paiement'),
             )

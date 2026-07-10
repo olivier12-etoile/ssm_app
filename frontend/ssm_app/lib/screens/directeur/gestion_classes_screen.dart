@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/classe_service.dart';
+import '../../services/annee_service.dart';
+import '../../services/eleve_service.dart';
+import '../../widgets/ssm_widgets.dart';
+import 'eleves_par_classe_screen.dart';
 
 class GestionClassesScreen extends StatefulWidget {
   const GestionClassesScreen({super.key});
@@ -10,7 +15,10 @@ class GestionClassesScreen extends StatefulWidget {
 
 class _GestionClassesScreenState extends State<GestionClassesScreen> {
   List<dynamic> _classes = [];
+  Map<int, int> _effectifs = {};
+  int? _anneeId;
   bool _chargement = true;
+  bool _chargementEffectifs = false;
 
   @override
   void initState() {
@@ -20,13 +28,51 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
 
   Future<void> _chargerClasses() async {
     try {
-      final liste = await ClasseService.listerClasses();
+      final resultats = await Future.wait([
+        ClasseService.listerClasses(),
+        AnneeService.listerAnnees(),
+      ]);
+      final liste = resultats[0];
+      final annees = resultats[1];
+      final anneeEnCours = annees.firstWhere(
+        (a) => a['statut'] == 'en_cours',
+        orElse: () => annees.isNotEmpty ? annees.first : null,
+      );
+
       setState(() {
-        _classes   = liste;
+        _classes    = liste;
+        _anneeId    = anneeEnCours?['id'] as int?;
         _chargement = false;
       });
+
+      if (_anneeId != null) await _chargerEffectifs();
     } catch (e) {
       setState(() => _chargement = false);
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<void> _chargerEffectifs() async {
+    if (_anneeId == null || _classes.isEmpty) return;
+
+    setState(() => _chargementEffectifs = true);
+
+    try {
+      final listes = await Future.wait(_classes.map((classe) {
+        return EleveService.elevesParClasse(classe['id'] as int, _anneeId!);
+      }));
+
+      final effectifs = <int, int>{};
+      for (var i = 0; i < _classes.length; i++) {
+        effectifs[_classes[i]['id'] as int] = listes[i].length;
+      }
+
+      setState(() {
+        _effectifs = effectifs;
+        _chargementEffectifs = false;
+      });
+    } catch (e) {
+      setState(() => _chargementEffectifs = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
   }
@@ -117,9 +163,13 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Gestion des classes'),
-        backgroundColor: Colors.green,
+        title: Text(
+          'Gestion des classes',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -130,7 +180,7 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _afficherDialogCreation,
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF1E3A8A),
         icon: const Icon(Icons.add),
         label: const Text('Ajouter'),
       ),
@@ -155,40 +205,41 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                   itemCount: _classes.length,
                   itemBuilder: (context, index) {
                     final classe = _classes[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.green,
-                          child: Text(
-                            classe['niveau'].toString().substring(0, 1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                    final classeId = classe['id'] as int;
+                    final effectif = _effectifs[classeId] ?? 0;
+                    final capaciteMax = (classe['capacite_max'] as int?) ?? 50;
+
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _chargementEffectifs
+                          ? const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(12),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : SSMCarteClasse(
+                              nom: classe['nom'] as String,
+                              nombreEleves: effectif,
+                              capaciteMax: capaciteMax,
+                              onTap: () {
+                                if (_anneeId == null) {
+                                  _afficherErreur(
+                                      'Aucune année académique active');
+                                  return;
+                                }
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ElevesParClasseScreen(
+                                      classeId: classeId,
+                                      anneeId: _anneeId!,
+                                      nomClasse: classe['nom'] as String,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
-                          ),
-                        ),
-                        title: Text(
-                          classe['nom'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text('Niveau : ${classe['niveau']}'),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.people, size: 16, color: Colors.grey),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${classe['capacite_max']} élèves max',
-                              style: const TextStyle(color: Colors.grey),
-                            ),
-                          ],
-                        ),
-                      ),
                     );
                   },
                 ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/utilisateur_service.dart';
+import '../../widgets/ssm_widgets.dart';
 import 'affectation_enseignant_screen.dart';
 
 class GestionUtilisateursScreen extends StatefulWidget {
@@ -14,6 +16,9 @@ class _GestionUtilisateursScreenState
     extends State<GestionUtilisateursScreen> {
   List<dynamic> _utilisateurs = [];
   bool _chargement = true;
+  String? _filtreRole;
+
+  static const _roles = ['directeur', 'censeur', 'secretaire', 'enseignant'];
 
   @override
   void initState() {
@@ -36,23 +41,23 @@ class _GestionUtilisateursScreenState
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
   Color _couleurRole(String role) {
     switch (role) {
-      case 'directeur':  return Colors.blue;
-      case 'censeur':    return Colors.purple;
-      case 'secretaire': return Colors.teal;
-      case 'enseignant': return Colors.orange;
-      default:           return Colors.grey;
+      case 'directeur':  return const Color(0xFF1E3A8A);
+      case 'censeur':    return const Color(0xFF0284C7);
+      case 'secretaire': return const Color(0xFF0D9488);
+      case 'enseignant': return const Color(0xFFD97706);
+      default:           return const Color(0xFF94A3B8);
     }
   }
 
@@ -64,6 +69,11 @@ class _GestionUtilisateursScreenState
       case 'enseignant': return Icons.school;
       default:           return Icons.person;
     }
+  }
+
+  List<dynamic> get _utilisateursFiltres {
+    if (_filtreRole == null) return _utilisateurs;
+    return _utilisateurs.where((u) => u['role'] == _filtreRole).toList();
   }
 
   Future<void> _modifierRole(int id, String roleActuel) async {
@@ -131,13 +141,13 @@ class _GestionUtilisateursScreenState
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.green[50],
+                        color: const Color(0xFF16A34A).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.green),
+                        border: Border.all(color: const Color(0xFF16A34A)),
                       ),
                       child: Column(
                         children: [
-                          const Icon(Icons.check_circle, color: Colors.green),
+                          const Icon(Icons.check_circle, color: Color(0xFF16A34A)),
                           const SizedBox(height: 8),
                           const Text(
                             'Compte créé avec succès !',
@@ -240,9 +250,13 @@ class _GestionUtilisateursScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Gestion des utilisateurs'),
-        backgroundColor: Colors.blue,
+        title: Text(
+          'Gestion des utilisateurs',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -253,117 +267,153 @@ class _GestionUtilisateursScreenState
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _afficherDialogCreation,
+        backgroundColor: const Color(0xFF1E3A8A),
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Ajouter'),
       ),
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
-          : _utilisateurs.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'Aucun utilisateur pour l\'instant',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
+          : Column(
+              children: [
+                // ── Chips filtre rôles ────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _chipRole(null, 'Tous'),
+                        ..._roles.map((r) => Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: _chipRole(r, _labelRole(r)),
+                            )),
+                      ],
+                    ),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _utilisateurs.length,
-                  itemBuilder: (context, index) {
-                    final u    = _utilisateurs[index];
-                    final role = u['role'] as String;
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: CircleAvatar(
-                          backgroundColor: _couleurRole(role),
-                          child: Icon(
-                            _iconeRole(role),
-                            color: Colors.white,
-                          ),
-                        ),
-                        title: Text(
-                          u['name'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(u['email'] as String),
-                            const SizedBox(height: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: _couleurRole(role).withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: _couleurRole(role).withOpacity(0.5),
-                                ),
-                              ),
-                              child: Text(
-                                role.toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: _couleurRole(role),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // ← MODIFIÉ : boutons selon le rôle
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Bouton affectation uniquement pour les enseignants
-                            if (role == 'enseignant')
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.assignment_ind,
-                                  color: Colors.indigo,
-                                ),
-                                tooltip: 'Gérer les affectations',
-                                onPressed: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        AffectationEnseignantScreen(
-                                      enseignantId:  u['id'] as int,
-                                      enseignantNom: u['name'] as String,
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            // Bouton modifier rôle — tout le monde sauf directeur
-                            if (role != 'directeur')
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit,
-                                  color: Colors.blue,
-                                ),
-                                tooltip: 'Modifier le rôle',
-                                onPressed: () =>
-                                    _modifierRole(u['id'] as int, role),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
                 ),
+
+                Expanded(
+                  child: _utilisateursFiltres.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.people_outline,
+                                  size: 64, color: Color(0xFF94A3B8)),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Aucun utilisateur pour l\'instant',
+                                style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemCount: _utilisateursFiltres.length,
+                          itemBuilder: (context, index) {
+                            final u    = _utilisateursFiltres[index];
+                            final role = u['role'] as String;
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: SSMListeTile(
+                                titre: u['name'] as String,
+                                sousTitre: u['email'] as String,
+                                icone: _iconeRole(role),
+                                couleurIcone: _couleurRole(role),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (role == 'enseignant')
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.assignment_ind,
+                                          color: Color(0xFF1E3A8A),
+                                          size: 20,
+                                        ),
+                                        tooltip: 'Gérer les affectations',
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                AffectationEnseignantScreen(
+                                              enseignantId:  u['id'] as int,
+                                              enseignantNom: u['name'] as String,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    if (role != 'directeur')
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: Color(0xFF1E3A8A),
+                                          size: 20,
+                                        ),
+                                        tooltip: 'Modifier le rôle',
+                                        onPressed: () =>
+                                            _modifierRole(u['id'] as int, role),
+                                      ),
+                                    SSMBadge(
+                                      label: role.toUpperCase(),
+                                      couleur: _couleurRole(role),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  String _labelRole(String role) {
+    switch (role) {
+      case 'directeur':  return 'Directeur';
+      case 'censeur':    return 'Censeur';
+      case 'secretaire': return 'Secrétaire';
+      case 'enseignant': return 'Enseignant';
+      default:           return role;
+    }
+  }
+
+  Widget _chipRole(String? role, String label) {
+    final selectionne = _filtreRole == role;
+    final couleur = role == null ? const Color(0xFF1E3A8A) : _couleurRole(role);
+    return GestureDetector(
+      onTap: () => setState(() => _filtreRole = role),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: selectionne ? couleur : couleur.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(9999),
+          border: Border.all(color: couleur.withValues(alpha: selectionne ? 1 : 0.4)),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: selectionne ? Colors.white : couleur,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../../config/app_config.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class ProfilScreen extends StatefulWidget {
   const ProfilScreen({super.key});
@@ -193,32 +195,26 @@ class _ProfilScreenState extends State<ProfilScreen> {
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
     );
-  }
-
-  Color _couleurRole(String role) {
-    switch (role) {
-      case 'directeur':  return Colors.blue;
-      case 'censeur':    return Colors.purple;
-      case 'secretaire': return Colors.teal;
-      case 'enseignant': return Colors.orange;
-      default:           return Colors.grey;
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Mon profil'),
-        backgroundColor: Colors.blueGrey,
+        title: Text(
+          'Mon profil',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
       ),
       body: _chargement
@@ -229,116 +225,179 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
-                      // ── Avatar ────────────────────────────
+                      // ── En-tête profil ─────────────────────
                       CircleAvatar(
-                        radius: 48,
-                        backgroundColor: _couleurRole(
-                            _profil!['role'] as String),
+                        radius: 50,
+                        backgroundColor: const Color(0xFF1E3A8A),
                         child: Text(
                           (_profil!['nom'] as String)
                               .substring(0, 1)
                               .toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 40,
+                          style: GoogleFonts.sora(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w700,
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         _profil!['nom'] as String,
-                        style: const TextStyle(
+                        style: GoogleFonts.sora(
                           fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _couleurRole(_profil!['role'] as String)
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _couleurRole(
-                                    _profil!['role'] as String)
-                                .withOpacity(0.5),
-                          ),
-                        ),
-                        child: Text(
-                          (_profil!['role'] as String).toUpperCase(),
-                          style: TextStyle(
-                            color: _couleurRole(
-                                _profil!['role'] as String),
-                            fontWeight: FontWeight.bold,
-                          ),
+                      const SizedBox(height: 8),
+                      SSMBadge(
+                        label: (_profil!['role'] as String).toUpperCase(),
+                        couleur: const Color(0xFF1E3A8A),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _profil!['email'] as String,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: const Color(0xFF334155),
                         ),
                       ),
                       const SizedBox(height: 32),
 
-                      // ── Infos personnelles ────────────────
-                      _sectionCard(
-                        titre: 'Informations personnelles',
-                        enfants: [
-                          _infoLigne(
-                              Icons.email, 'Email', _profil!['email']),
-                          _infoLigne(
-                              Icons.badge, 'Rôle', _profil!['role']),
-                        ],
-                        bouton: TextButton.icon(
-                          onPressed: _afficherDialogModifierNom,
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: const Text('Modifier le nom'),
-                        ),
+                      // ── Informations personnelles ──────────
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: SSMSectionTitre(titre: 'Informations personnelles'),
                       ),
-                      const SizedBox(height: 16),
-
-                      // ── Infos école ───────────────────────
-                      if (_profil!['ecole'] != null)
-                        _sectionCard(
-                          titre: 'Mon école',
-                          enfants: [
-                            _infoLigne(
-                                Icons.school,
-                                'Nom',
-                                _profil!['ecole']['nom']),
-                            _infoLigne(
-                                Icons.qr_code,
-                                'Code école',
-                                _profil!['ecole']['code_ecole']),
-                            if (_profil!['ecole']['telephone'] != null)
-                              _infoLigne(
-                                  Icons.phone,
-                                  'Téléphone',
-                                  _profil!['ecole']['telephone']),
-                            if (_profil!['ecole']['adresse'] != null)
-                              _infoLigne(
-                                  Icons.location_on,
-                                  'Adresse',
-                                  _profil!['ecole']['adresse']),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
                           ],
                         ),
-                      const SizedBox(height: 16),
-
-                      // ── Sécurité ──────────────────────────
-                      _sectionCard(
-                        titre: 'Sécurité',
-                        enfants: [
-                          _infoLigne(
-                            Icons.lock,
-                            'Mot de passe',
-                            '••••••••',
-                          ),
-                        ],
-                        bouton: TextButton.icon(
-                          onPressed: _afficherDialogMotDePasse,
-                          icon: const Icon(Icons.edit, size: 16),
-                          label: const Text('Changer le mot de passe'),
+                        child: Column(
+                          children: [
+                            SSMListeTile(
+                              titre: 'Email',
+                              sousTitre: _profil!['email'] as String,
+                              icone: Icons.email,
+                              couleurIcone: const Color(0xFF1E3A8A),
+                            ),
+                            SSMListeTile(
+                              titre: 'Rôle',
+                              sousTitre: _profil!['role'] as String,
+                              icone: Icons.badge,
+                              couleurIcone: const Color(0xFF1E3A8A),
+                            ),
+                            if (_profil!['ecole'] != null) ...[
+                              SSMListeTile(
+                                titre: 'École',
+                                sousTitre: _profil!['ecole']['nom'] as String,
+                                icone: Icons.school,
+                                couleurIcone: const Color(0xFF1E3A8A),
+                              ),
+                              SSMListeTile(
+                                titre: 'Code école',
+                                icone: Icons.qr_code,
+                                couleurIcone: const Color(0xFF1E3A8A),
+                                trailing: Text(
+                                  _profil!['ecole']['code_ecole'] as String,
+                                  style: GoogleFonts.jetBrainsMono(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
+                              if (_profil!['ecole']['telephone'] != null)
+                                SSMListeTile(
+                                  titre: 'Téléphone',
+                                  sousTitre:
+                                      _profil!['ecole']['telephone'] as String,
+                                  icone: Icons.phone,
+                                  couleurIcone: const Color(0xFF1E3A8A),
+                                ),
+                              if (_profil!['ecole']['adresse'] != null)
+                                SSMListeTile(
+                                  titre: 'Adresse',
+                                  sousTitre:
+                                      _profil!['ecole']['adresse'] as String,
+                                  icone: Icons.location_on,
+                                  couleurIcone: const Color(0xFF1E3A8A),
+                                ),
+                            ],
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _afficherDialogModifierNom,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1E3A8A),
+                            side: const BorderSide(color: Color(0xFF1E3A8A)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text('Modifier'),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // ── Sécurité ────────────────────────────
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: SSMSectionTitre(titre: 'Sécurité'),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: SSMListeTile(
+                          titre: 'Mot de passe',
+                          sousTitre: '••••••••',
+                          icone: Icons.lock,
+                          couleurIcone: const Color(0xFF1E3A8A),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _afficherDialogMotDePasse,
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1E3A8A),
+                            side: const BorderSide(color: Color(0xFF1E3A8A)),
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          icon: const Icon(Icons.edit, size: 16),
+                          label: const Text('Modifier'),
+                        ),
+                      ),
+                      const SizedBox(height: 28),
 
                       // ── Déconnexion ───────────────────────
                       SizedBox(
@@ -352,76 +411,26 @@ class _ProfilScreenState extends State<ProfilScreen> {
                             }
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
+                            backgroundColor: const Color(0xFFDC2626),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.all(14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           icon: const Icon(Icons.logout),
-                          label: const Text('Se déconnecter',
-                              style: TextStyle(fontSize: 16)),
+                          label: Text(
+                            'Se déconnecter',
+                            style: GoogleFonts.sora(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-    );
-  }
-
-  Widget _sectionCard({
-    required String titre,
-    required List<Widget> enfants,
-    Widget? bouton,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  titre,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    color: Colors.blueGrey,
-                  ),
-                ),
-                if (bouton != null) bouton,
-              ],
-            ),
-            const Divider(),
-            ...enfants,
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoLigne(IconData icone, String label, String valeur) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(icone, size: 18, color: Colors.blueGrey),
-          const SizedBox(width: 12),
-          Text(
-            '$label : ',
-            style: const TextStyle(color: Colors.grey),
-          ),
-          Expanded(
-            child: Text(
-              valeur,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

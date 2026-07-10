@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/absence_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class SaisieAbsencesScreen extends StatefulWidget {
   const SaisieAbsencesScreen({super.key});
@@ -172,13 +174,13 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
@@ -188,9 +190,13 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
         _absents.values.where((v) => v == true).length;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Saisie des absences'),
-        backgroundColor: Colors.brown,
+        title: Text(
+          'Saisie des absences',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF0D9488),
         foregroundColor: Colors.white,
       ),
       body: _chargement
@@ -199,7 +205,7 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
               children: [
                 // ── Filtres ──────────────────────────────
                 Container(
-                  color: Colors.brown.withOpacity(0.05),
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.05),
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
@@ -277,7 +283,7 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
                               ? null
                               : _chargerEleves,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.brown,
+                            backgroundColor: const Color(0xFF0D9488),
                             foregroundColor: Colors.white,
                           ),
                           icon: const Icon(Icons.search),
@@ -293,17 +299,18 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(8),
-                    color: nombreAbsents > 0
-                        ? Colors.orange[100]
-                        : Colors.green[100],
+                    color: (nombreAbsents > 0
+                            ? SSMBadge.avertissement
+                            : SSMBadge.succes)
+                        .withValues(alpha: 0.12),
                     child: Text(
                       '$nombreAbsents absent(s) sur ${_eleves.length} élève(s)',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         color: nombreAbsents > 0
-                            ? Colors.orange[900]
-                            : Colors.green[900],
+                            ? SSMBadge.avertissement
+                            : SSMBadge.succes,
                       ),
                     ),
                   ),
@@ -332,15 +339,22 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
                                     (eleve['telephone_parent'] as String)
                                         .isNotEmpty;
 
-                                return Card(
-                                  margin:
-                                      const EdgeInsets.only(bottom: 8),
-                                  color: estAbsent
-                                      ? Colors.red[50]
-                                      : null,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(10),
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  decoration: BoxDecoration(
+                                    color: estAbsent
+                                        ? const Color(0xFFDC2626)
+                                            .withValues(alpha: 0.05)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black
+                                            .withValues(alpha: 0.05),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(8),
@@ -348,7 +362,7 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
                                       children: [
                                         Checkbox(
                                           value: estAbsent,
-                                          activeColor: Colors.red,
+                                          activeColor: const Color(0xFFDC2626),
                                           onChanged: (v) {
                                             setState(() {
                                               _absents[eleveId] = v ?? false;
@@ -362,45 +376,50 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
                                             children: [
                                               Text(
                                                 '${eleve['nom']} ${eleve['prenom']}',
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(0xFF0F172A),
+                                                ),
                                               ),
                                               if (!aTelephone)
-                                                const Text(
+                                                Text(
                                                   'Pas de numéro parent',
-                                                  style: TextStyle(
+                                                  style: GoogleFonts.inter(
                                                     fontSize: 11,
-                                                    color: Colors.orange,
+                                                    color: SSMBadge.avertissement,
                                                   ),
                                                 ),
                                             ],
                                           ),
                                         ),
-                                        // Bouton WhatsApp si absent
+                                        // Statut de notification si absent
                                         if (estAbsent && aTelephone)
                                           estNotifie
-                                              ? const Chip(
-                                                  label: Text(
-                                                    'Notifié ✓',
-                                                    style: TextStyle(
-                                                        fontSize: 11,
-                                                        color: Colors.white),
-                                                  ),
-                                                  backgroundColor:
-                                                      Colors.green,
-                                                  visualDensity:
-                                                      VisualDensity.compact,
+                                              ? const SSMBadge(
+                                                  label: 'Notifié ✓',
+                                                  couleur: SSMBadge.succes,
                                                 )
-                                              : IconButton(
-                                                  icon: const Icon(
-                                                    Icons.message,
-                                                    color: Colors.green,
-                                                  ),
-                                                  tooltip:
-                                                      'Notifier via WhatsApp',
-                                                  onPressed: () =>
-                                                      _notifierParent(eleve),
+                                              : Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const SSMBadge(
+                                                      label: 'Non notifié',
+                                                      couleur: SSMBadge
+                                                          .avertissement,
+                                                    ),
+                                                    IconButton(
+                                                      icon: const Icon(
+                                                        Icons.message,
+                                                        color: Color(0xFF16A34A),
+                                                      ),
+                                                      tooltip:
+                                                          'Notifier via WhatsApp',
+                                                      onPressed: () =>
+                                                          _notifierParent(eleve),
+                                                    ),
+                                                  ],
                                                 ),
                                       ],
                                     ),
@@ -419,7 +438,7 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _enregistrer,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.brown,
+                          backgroundColor: const Color(0xFF0D9488),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.all(14),
                         ),

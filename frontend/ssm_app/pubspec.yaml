@@ -25,6 +25,9 @@ dependencies:
   open_file: ^4.0.0
   image_picker: ^1.2.2
 
+  # Design system
+  google_fonts: ^6.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

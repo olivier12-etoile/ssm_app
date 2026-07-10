@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/notification_attente_service.dart';
 import '../../services/whatsapp_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class NotificationsAttenteScreen extends StatefulWidget {
   const NotificationsAttenteScreen({super.key});
@@ -44,13 +46,13 @@ class _NotificationsAttenteScreenState
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
@@ -146,9 +148,13 @@ class _NotificationsAttenteScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Notifications à envoyer'),
-        backgroundColor: Colors.green[700],
+        title: Text(
+          'Notifications à envoyer',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF16A34A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -163,7 +169,7 @@ class _NotificationsAttenteScreenState
               children: [
                 // ── Filtres ──────────────────────────────
                 Container(
-                  color: Colors.green[50],
+                  color: const Color(0xFF16A34A).withValues(alpha: 0.05),
                   padding: const EdgeInsets.all(12),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -196,7 +202,7 @@ class _NotificationsAttenteScreenState
                       child: ElevatedButton.icon(
                         onPressed: _demarrerEnvoiChaine,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[700],
+                          backgroundColor: const Color(0xFF16A34A),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.all(14),
                         ),
@@ -260,43 +266,34 @@ class _NotificationsAttenteScreenState
                             final type  = notif['type'] as String;
                             final eleve = notif['eleve'];
 
-                            return Card(
+                            return Container(
                               margin: const EdgeInsets.only(bottom: 8),
-                              shape: RoundedRectangleBorder(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.05),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(12),
-                                leading: CircleAvatar(
-                                  backgroundColor: _couleurType(type),
-                                  child: Icon(
-                                    _iconeType(type),
-                                    color: Colors.white,
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Text(
-                                  eleve != null
-                                      ? '${eleve['nom']} ${eleve['prenom']}'
-                                      : 'Élève inconnu',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Text(
-                                  type.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: _couleurType(type),
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              child: SSMListeTile(
+                                titre: eleve != null
+                                    ? '${eleve['nom']} ${eleve['prenom']}'
+                                    : 'Élève inconnu',
+                                sousTitre: type.toUpperCase(),
+                                icone: _iconeType(type),
+                                couleurIcone: _couleurType(type),
                                 trailing: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
                                       icon: const Icon(
                                         Icons.message,
-                                        color: Colors.green,
+                                        color: Color(0xFF16A34A),
                                       ),
                                       tooltip: 'Envoyer via WhatsApp',
                                       onPressed: () => _envoyerUne(notif),
@@ -304,7 +301,7 @@ class _NotificationsAttenteScreenState
                                     IconButton(
                                       icon: const Icon(
                                         Icons.close,
-                                        color: Colors.red,
+                                        color: Color(0xFFDC2626),
                                       ),
                                       tooltip: 'Supprimer',
                                       onPressed: () =>
@@ -329,15 +326,19 @@ class _NotificationsAttenteScreenState
         setState(() => _filtreActuel = valeur);
         _chargerNotifications();
       },
-      child: Chip(
-        label: Text('$label ($compteur)'),
-        backgroundColor: actif ? Colors.green[700] : Colors.white,
-        labelStyle: TextStyle(
-          color: actif ? Colors.white : Colors.black87,
-          fontWeight: actif ? FontWeight.bold : FontWeight.normal,
-        ),
-        side: BorderSide(
-          color: actif ? Colors.green[700]! : Colors.grey[300]!,
+      child: Container(
+        decoration: actif
+            ? BoxDecoration(
+                borderRadius: BorderRadius.circular(9999),
+                border: const Border.fromBorderSide(
+                  BorderSide(color: Color(0xFF16A34A), width: 2),
+                ),
+              )
+            : null,
+        padding: actif ? const EdgeInsets.all(2) : EdgeInsets.zero,
+        child: SSMBadge(
+          label: '$label ($compteur)',
+          couleur: const Color(0xFF16A34A),
         ),
       ),
     );

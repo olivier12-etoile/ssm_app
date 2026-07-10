@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/classe_service.dart';
 import '../../services/classe_matiere_service.dart';
 import '../../services/annee_service.dart';
@@ -104,9 +105,13 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Gestion des matières'),
-        backgroundColor: Colors.purple,
+        title: Text(
+          'Gestion des matières',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -161,30 +166,41 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
                             final classeId = classe['id'] as int;
                             final nombre = _nombreMatieres[classeId];
 
-                            return Card(
+                            return Container(
                               margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
+                                border: const Border(
+                                  left: BorderSide(
+                                      color: Color(0xFF1E3A8A), width: 4),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(12),
                                 onTap: () => _ouvrirClasse(classe),
-                                leading: CircleAvatar(
-                                  backgroundColor: Colors.purple,
-                                  child: Text(
-                                    classe['niveau'].toString().substring(0, 1),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
                                 title: Text(
                                   classe['nom'] as String,
-                                  style:
-                                      const TextStyle(fontWeight: FontWeight.bold),
+                                  style: GoogleFonts.sora(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF0F172A),
+                                  ),
                                 ),
-                                subtitle: Text('Niveau : ${classe['niveau']}'),
+                                subtitle: Text(
+                                  'Niveau : ${classe['niveau']}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 13,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
                                 trailing: _chargementCompteurs
                                     ? const SizedBox(
                                         width: 16,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'config/theme_config.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/changement_mdp_screen.dart';
 import 'screens/dashboard/tableau_de_bord_screen.dart';
@@ -44,10 +45,7 @@ class SSMApp extends StatelessWidget {
     return MaterialApp(
       title: 'Smart School Manager',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
+      theme: SSMTheme.themeClaire,
       routes: {
         '/login':                  (context) => const LoginScreen(),
         '/changer-mot-de-passe':   (context) => const ChangementMdpScreen(),

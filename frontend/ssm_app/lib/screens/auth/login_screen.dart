@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -87,104 +88,217 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+      body: Stack(
+        children: [
+          // ── Fond dégradé ─────────────────────────────────
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.0, 0.6, 1.0],
+                  colors: [
+                    Color(0xFF1E3A8A),
+                    Color(0xFF1E3A8A),
+                    Color(0xFFF1F5F9),
+                  ],
+                ),
+              ),
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
+          ),
+
+          SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo
-                    const Icon(Icons.school, size: 64, color: Colors.blue),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Smart School Manager',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                    // ── Logo SSM ─────────────────────────────
+                    const Icon(Icons.school, size: 64, color: Colors.white),
+                    const SizedBox(height: 12),
+                    Text(
+                      'SSM',
+                      style: GoogleFonts.sora(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Connectez-vous à votre espace',
-                      style: TextStyle(color: Colors.grey[600]),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // Code école
-                    TextField(
-                      controller: _codeEcoleController,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Code école',
-                        prefixIcon: Icon(Icons.business),
-                        border: OutlineInputBorder(),
+                      'Smart School Manager',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        color: Colors.white.withValues(alpha: 0.7),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 40),
 
-                    // Email
-                    TextField(
-                      controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
-                      decoration: const InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Mot de passe
-                    TextField(
-                      controller: _motDePasseController,
-                      obscureText: !_motDePasseVisible,
-                      decoration: InputDecoration(
-                        labelText: 'Mot de passe',
-                        prefixIcon: const Icon(Icons.lock),
-                        border: const OutlineInputBorder(),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _motDePasseVisible
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                          ),
-                          onPressed: () => setState(
-                            () => _motDePasseVisible = !_motDePasseVisible,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Bouton connexion
-                    SizedBox(
+                    // ── Carte formulaire ─────────────────────
+                    Container(
                       width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _chargement ? null : _connecter,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                            blurRadius: 40,
+                            offset: const Offset(0, 20),
                           ),
-                        ),
-                        child: _chargement
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text(
-                                'Se connecter',
-                                style: TextStyle(fontSize: 16),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Connexion',
+                            style: GoogleFonts.sora(
+                              fontSize: 24,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Accédez à votre espace école',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
+                          const SizedBox(height: 32),
+
+                          // Code école
+                          TextField(
+                            controller: _codeEcoleController,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: const InputDecoration(
+                              labelText: 'Code école',
+                              prefixIcon: Icon(Icons.business_outlined,
+                                  color: Color(0xFF1E3A8A)),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Email
+                          TextField(
+                            controller: _emailController,
+                            keyboardType: TextInputType.emailAddress,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(Icons.email_outlined,
+                                  color: Color(0xFF1E3A8A)),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Mot de passe
+                          TextField(
+                            controller: _motDePasseController,
+                            obscureText: !_motDePasseVisible,
+                            decoration: InputDecoration(
+                              labelText: 'Mot de passe',
+                              prefixIcon: const Icon(Icons.lock_outlined,
+                                  color: Color(0xFF1E3A8A)),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _motDePasseVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () => setState(
+                                  () => _motDePasseVisible = !_motDePasseVisible,
+                                ),
                               ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // ── Bouton connexion ──────────────
+                          Container(
+                            width: double.infinity,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF1E3A8A)
+                                      .withValues(alpha: 0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: ElevatedButton(
+                              onPressed: _chargement ? null : _connecter,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1E3A8A),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: _chargement
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(
+                                      'Se connecter',
+                                      style: GoogleFonts.sora(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // ── Lien inscription ──────────────
+                          Center(
+                            child: GestureDetector(
+                              onTap: () {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Fonctionnalité d\'inscription à venir'),
+                                  ),
+                                );
+                              },
+                              child: RichText(
+                                text: TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: 'Pas encore inscrit ? ',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: const Color(0xFF334155),
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Inscrire mon école',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFFD97706),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -192,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/sync_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class SyncScreen extends StatefulWidget {
   const SyncScreen({super.key});
@@ -41,8 +43,8 @@ class _SyncScreenState extends State<SyncScreen> {
         SnackBar(
           content: Text(resultat.message),
           backgroundColor: resultat.succes > 0
-              ? Colors.green
-              : Colors.red,
+              ? const Color(0xFF16A34A)
+              : const Color(0xFFDC2626),
         ),
       );
     }
@@ -63,10 +65,9 @@ class _SyncScreenState extends State<SyncScreen> {
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style:
-                ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Oui',
-                style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626)),
+            child: const Text('Oui', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -81,9 +82,13 @@ class _SyncScreenState extends State<SyncScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Synchronisation'),
-        backgroundColor: Colors.blueGrey,
+        title: Text(
+          'Synchronisation',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF334155),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -99,48 +104,65 @@ class _SyncScreenState extends State<SyncScreen> {
               child: Column(
                 children: [
                   // ── Statut connexion ──────────────────────
-                  Card(
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: _estConnecte
-                                ? Colors.green
-                                : Colors.red,
-                            child: Icon(
-                              _estConnecte
-                                  ? Icons.wifi
-                                  : Icons.wifi_off,
-                              color: Colors.white,
-                            ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: _estConnecte
+                          ? const Color(0xFF16A34A).withValues(alpha: 0.08)
+                          : const Color(0xFFDC2626).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _estConnecte
+                            ? const Color(0xFF16A34A).withValues(alpha: 0.3)
+                            : const Color(0xFFDC2626).withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: _estConnecte
+                              ? const Color(0xFF16A34A)
+                              : const Color(0xFFDC2626),
+                          child: Icon(
+                            _estConnecte ? Icons.wifi : Icons.wifi_off,
+                            color: Colors.white,
                           ),
-                          const SizedBox(width: 16),
-                          Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
                                 _estConnecte
                                     ? 'Connecté à Internet'
                                     : 'Hors ligne',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
+                                style: GoogleFonts.sora(
+                                  fontWeight: FontWeight.w700,
                                   fontSize: 16,
+                                  color: const Color(0xFF0F172A),
                                 ),
                               ),
+                              const SizedBox(height: 4),
                               Text(
                                 '${_queue.length} requête(s) en attente',
-                                style: const TextStyle(
-                                    color: Colors.grey),
+                                style: GoogleFonts.inter(
+                                  color: const Color(0xFF334155),
+                                ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        _estConnecte
+                            ? const SSMBadge(
+                                label: 'CONNECTÉ',
+                                couleur: Color(0xFF16A34A),
+                              )
+                            : const SSMBadge(
+                                label: 'HORS LIGNE',
+                                couleur: Color(0xFFDC2626),
+                              ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -154,8 +176,12 @@ class _SyncScreenState extends State<SyncScreen> {
                               ? _synchroniser
                               : null,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: const Color(0xFF16A34A),
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           icon: _synchronisation
                               ? const SizedBox(
@@ -167,9 +193,12 @@ class _SyncScreenState extends State<SyncScreen> {
                                   ),
                                 )
                               : const Icon(Icons.sync),
-                          label: Text(_synchronisation
-                              ? 'Synchronisation...'
-                              : 'Synchroniser'),
+                          label: Text(
+                            _synchronisation
+                                ? 'Synchronisation...'
+                                : 'Synchroniser',
+                            style: GoogleFonts.sora(fontWeight: FontWeight.w600),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -177,11 +206,19 @@ class _SyncScreenState extends State<SyncScreen> {
                         ElevatedButton.icon(
                           onPressed: _viderQueue,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
+                            backgroundColor: const Color(0xFFDC2626),
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                           ),
                           icon: const Icon(Icons.delete),
-                          label: const Text('Vider'),
+                          label: Text(
+                            'Vider',
+                            style: GoogleFonts.sora(fontWeight: FontWeight.w600),
+                          ),
                         ),
                     ],
                   ),
@@ -189,15 +226,15 @@ class _SyncScreenState extends State<SyncScreen> {
 
                   // ── File d'attente ─────────────────────────
                   if (_queue.isEmpty)
-                    const Center(
+                    Center(
                       child: Column(
                         children: [
-                          Icon(Icons.check_circle_outline,
-                              size: 64, color: Colors.green),
-                          SizedBox(height: 16),
+                          const Icon(Icons.check_circle_outline,
+                              size: 64, color: Color(0xFF16A34A)),
+                          const SizedBox(height: 16),
                           Text(
                             'Toutes les données sont synchronisées',
-                            style: TextStyle(color: Colors.grey),
+                            style: GoogleFonts.inter(color: const Color(0xFF334155)),
                           ),
                         ],
                       ),
@@ -206,50 +243,31 @@ class _SyncScreenState extends State<SyncScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Données en attente',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        SSMSectionTitre(titre: 'Données en attente'),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: _queue.map((r) {
+                              return SSMListeTile(
+                                titre: '${r['methode']} — ${r['url']}',
+                                icone: Icons.cloud_upload_outlined,
+                                couleurIcone: const Color(0xFF334155),
+                                dateHeure: r['timestamp'] as String?,
+                              );
+                            }).toList(),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        ..._queue.asMap().entries.map((entry) {
-                          final i = entry.key;
-                          final r = entry.value;
-                          return Card(
-                            margin:
-                                const EdgeInsets.only(bottom: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    Colors.blueGrey,
-                                child: Text(
-                                  '${i + 1}',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                              title: Text(
-                                '${r['methode']} — ${r['url']}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                r['timestamp'] as String,
-                                style: const TextStyle(
-                                    fontSize: 11),
-                              ),
-                            ),
-                          );
-                        }),
                       ],
                     ),
                 ],

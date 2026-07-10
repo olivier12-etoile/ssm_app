@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/annee_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class GestionAnneesScreen extends StatefulWidget {
   const GestionAnneesScreen({super.key});
@@ -33,13 +35,13 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen> {
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
@@ -148,9 +150,13 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('Années académiques'),
-        backgroundColor: Colors.teal,
+        title: Text(
+          'Années académiques',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
@@ -161,22 +167,23 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _afficherDialogAnnee,
-        backgroundColor: Colors.teal,
+        backgroundColor: const Color(0xFF1E3A8A),
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Nouvelle année'),
       ),
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
           : _annees.isEmpty
-              ? const Center(
+              ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.calendar_month_outlined,
-                          size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
+                      const Icon(Icons.calendar_month_outlined,
+                          size: 64, color: Color(0xFF94A3B8)),
+                      const SizedBox(height: 16),
                       Text('Aucune année académique',
-                          style: TextStyle(color: Colors.grey)),
+                          style: GoogleFonts.inter(color: const Color(0xFF334155))),
                     ],
                   ),
                 )
@@ -186,29 +193,81 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen> {
                   itemBuilder: (context, index) {
                     final annee  = _annees[index];
                     final nb     = (annee['periodes'] as List?)?.length ?? 0;
-                    return Card(
+                    final enCours = annee['statut'] == 'en_cours';
+                    final couleurStatut =
+                        enCours ? const Color(0xFF16A34A) : const Color(0xFF94A3B8);
+
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: const CircleAvatar(
-                          backgroundColor: Colors.teal,
-                          child: Icon(Icons.calendar_month,
-                              color: Colors.white),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border(
+                          left: BorderSide(color: couleurStatut, width: 4),
                         ),
-                        title: Text(
-                          annee['libelle'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text('$nb période(s)'),
-                        trailing: ElevatedButton(
-                          onPressed: () => _voirPeriodes(annee),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.teal,
-                            foregroundColor: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
                           ),
-                          child: const Text('Périodes'),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF1E3A8A),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.calendar_month,
+                                  color: Colors.white),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    annee['libelle'] as String,
+                                    style: GoogleFonts.sora(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$nb période(s)',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: const Color(0xFF334155),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  SSMBadge(
+                                    label: enCours ? 'EN COURS' : 'TERMINÉE',
+                                    couleur: couleurStatut,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton(
+                              onPressed: () => _voirPeriodes(annee),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1E3A8A),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text('Périodes'),
+                            ),
+                          ],
                         ),
                       ),
                     );
@@ -252,21 +311,29 @@ class _PeriodeScreenState extends State<_PeriodeScreen> {
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
+      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
   Color _couleurStatut(String statut) {
     switch (statut) {
-      case 'actif':    return Colors.green;
-      case 'cloture':  return Colors.red;
-      default:         return Colors.orange;
+      case 'actif':    return const Color(0xFF16A34A);
+      case 'cloture':  return const Color(0xFF94A3B8);
+      default:         return const Color(0xFF0284C7);
+    }
+  }
+
+  String _labelStatut(String statut) {
+    switch (statut) {
+      case 'actif':    return 'ACTIF';
+      case 'cloture':  return 'CLÔTURÉ';
+      default:         return 'PLANIFIÉ';
     }
   }
 
@@ -411,23 +478,28 @@ class _PeriodeScreenState extends State<_PeriodeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text('Périodes — ${widget.annee['libelle']}'),
-        backgroundColor: Colors.teal,
+        title: Text(
+          'Périodes — ${widget.annee['libelle']}',
+          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _afficherDialogPeriode,
-        backgroundColor: Colors.teal,
+        backgroundColor: const Color(0xFF1E3A8A),
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Nouvelle période'),
       ),
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
           : _periodes.isEmpty
-              ? const Center(
+              ? Center(
                   child: Text('Aucune période',
-                      style: TextStyle(color: Colors.grey)),
+                      style: GoogleFonts.inter(color: const Color(0xFF334155))),
                 )
               : ListView.builder(
                   padding: const EdgeInsets.all(16),
@@ -435,46 +507,63 @@ class _PeriodeScreenState extends State<_PeriodeScreen> {
                   itemBuilder: (context, index) {
                     final p      = _periodes[index];
                     final statut = p['statut'] as String;
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: CircleAvatar(
-                          backgroundColor: _couleurStatut(statut),
-                          child: const Icon(Icons.segment,
-                              color: Colors.white),
-                        ),
-                        title: Text(
-                          p['nom'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text(
-                            '${p['date_debut']} → ${p['date_fin']}'),
-                        trailing: GestureDetector(
-                          onTap: () => _changerStatut(
-                              p['id'] as int, statut),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
                             decoration: BoxDecoration(
-                              color: _couleurStatut(statut).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                  color:
-                                      _couleurStatut(statut).withOpacity(0.5)),
+                              color: _couleurStatut(statut),
+                              shape: BoxShape.circle,
                             ),
-                            child: Text(
-                              statut.toUpperCase(),
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: _couleurStatut(statut),
-                                fontWeight: FontWeight.bold,
-                              ),
+                            child: const Icon(Icons.segment, color: Colors.white),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  p['nom'] as String,
+                                  style: GoogleFonts.sora(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${p['date_debut']} → ${p['date_fin']}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
+                          GestureDetector(
+                            onTap: () => _changerStatut(p['id'] as int, statut),
+                            child: SSMBadge(
+                              label: _labelStatut(statut),
+                              couleur: _couleurStatut(statut),
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
