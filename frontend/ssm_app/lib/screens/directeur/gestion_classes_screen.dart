@@ -4,7 +4,7 @@ import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/eleve_service.dart';
 import '../../widgets/ssm_widgets.dart';
-import 'eleves_par_classe_screen.dart';
+import 'fiche_classe_screen.dart';
 
 class GestionClassesScreen extends StatefulWidget {
   const GestionClassesScreen({super.key});
@@ -222,23 +222,15 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                               nom: classe['nom'] as String,
                               nombreEleves: effectif,
                               capaciteMax: capaciteMax,
-                              onTap: () {
-                                if (_anneeId == null) {
-                                  _afficherErreur(
-                                      'Aucune année académique active');
-                                  return;
-                                }
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ElevesParClasseScreen(
-                                      classeId: classeId,
-                                      anneeId: _anneeId!,
-                                      nomClasse: classe['nom'] as String,
-                                    ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => FicheClasseScreen(
+                                    classeId:  classeId,
+                                    classeNom: classe['nom'] as String,
                                   ),
-                                );
-                              },
+                                ),
+                              ).then((_) => _chargerClasses()),
                             ),
                     );
                   },

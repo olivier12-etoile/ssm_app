@@ -29,14 +29,28 @@ class AffectationController extends Controller
             })
             ->join('users', 'users.id', '=', 'enseignant_classe_matiere.enseignant_id')
             ->join('matieres', 'matieres.id', '=', 'enseignant_classe_matiere.matiere_id')
+            ->leftJoin('classe_matiere', function ($join) {
+                $join->on('classe_matiere.classe_id', '=', 'enseignant_classe_matiere.classe_id')
+                     ->on('classe_matiere.matiere_id', '=', 'enseignant_classe_matiere.matiere_id');
+            })
             ->select(
                 'enseignant_classe_matiere.id',
                 'matieres.id as matiere_id',
                 'matieres.nom as matiere_nom',
                 'users.id as enseignant_id',
                 'users.name as enseignant_nom',
+                'users.telephone as enseignant_telephone',
+                'users.photo_path as enseignant_photo_path',
+                'classe_matiere.coefficient',
             )
-            ->get();
+            ->get()
+            ->map(function ($a) {
+                $a->enseignant_photo_url = $a->enseignant_photo_path
+                    ? asset('storage/' . $a->enseignant_photo_path)
+                    : null;
+                unset($a->enseignant_photo_path);
+                return $a;
+            });
 
         return response()->json($affectations);
     }
@@ -53,12 +67,17 @@ class AffectationController extends Controller
             ->where('enseignant_id', $enseignantId)
             ->join('classes', 'classes.id', '=', 'enseignant_classe_matiere.classe_id')
             ->join('matieres', 'matieres.id', '=', 'enseignant_classe_matiere.matiere_id')
+            ->leftJoin('classe_matiere', function ($join) {
+                $join->on('classe_matiere.classe_id', '=', 'enseignant_classe_matiere.classe_id')
+                     ->on('classe_matiere.matiere_id', '=', 'enseignant_classe_matiere.matiere_id');
+            })
             ->select(
                 'enseignant_classe_matiere.id',
                 'classes.id as classe_id',
                 'classes.nom as classe_nom',
                 'matieres.id as matiere_id',
                 'matieres.nom as matiere_nom',
+                'classe_matiere.coefficient',
             )
             ->get();
 

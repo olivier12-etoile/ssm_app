@@ -1,16 +1,19 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/affectation_service.dart';
 import '../../services/classe_service.dart';
-import '../../services/matiere_service.dart';
+import '../../services/classe_matiere_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
 class AffectationEnseignantScreen extends StatefulWidget {
-  final int enseignantId;
-  final String enseignantNom;
+  final int userId;
+  final String userName;
 
   const AffectationEnseignantScreen({
     super.key,
-    required this.enseignantId,
-    required this.enseignantNom,
+    required this.userId,
+    required this.userName,
   });
 
   @override
@@ -20,11 +23,13 @@ class AffectationEnseignantScreen extends StatefulWidget {
 
 class _AffectationEnseignantScreenState
     extends State<AffectationEnseignantScreen> {
-  List<dynamic> _affectations = [];
-  List<dynamic> _classes      = [];
-  List<dynamic> _matieres     = [];
-  bool _chargement            = true;
-  String? _erreur;
+  List<dynamic> _classes = [];
+  Map<int, List<dynamic>> _matieresParClasse = {};
+  Map<int, Map<int, int>> _affectationsParClasse = {}; // classeId -> {matiereId: affectationId}
+  Map<int, Set<int>> _selections = {}; // classeId -> matiereIds cochées dans l'UI
+
+  bool _chargement = true;
+  int? _classeEnEnregistrement;
 
   @override
   void initState() {
@@ -33,311 +38,302 @@ class _AffectationEnseignantScreenState
   }
 
   Future<void> _chargerDonnees() async {
-    setState(() {
-      _chargement = true;
-      _erreur     = null;
-    });
-
+    setState(() => _chargement = true);
     try {
-      // Charger classes et matières en parallèle
-      final resultats = await Future.wait([
-        ClasseService.listerClasses(),
-        MatiereService.listerMatieres(),
-      ]);
+      final classes = await ClasseService.listerClasses();
 
-      _classes  = resultats[0] as List;
-      _matieres = resultats[1] as List;
+      final matieresParClasse = <int, List<dynamic>>{};
+      await Future.wait(classes.map((c) async {
+        final classeId = c['id'] as int;
+        matieresParClasse[classeId] =
+            await ClasseMatiereService.listerParClasse(classeId);
+      }));
 
-      // Charger les affectations séparément pour mieux gérer l'erreur
-      try {
-        final data = await AffectationService.listerAffectations(
-            widget.enseignantId);
-        _affectations = data['affectations'] as List? ?? [];
-      } catch (e) {
-        _affectations = [];
+      final donneesAffectations =
+          await AffectationService.listerAffectations(widget.userId);
+      final affectations =
+          (donneesAffectations['affectations'] as List?) ?? [];
+
+      final affectationsParClasse = <int, Map<int, int>>{};
+      final selections = <int, Set<int>>{};
+      for (final classe in classes) {
+        final classeId = classe['id'] as int;
+        affectationsParClasse[classeId] = {};
+        selections[classeId] = {};
+      }
+      for (final a in affectations) {
+        final classeId = a['classe_id'] as int;
+        final matiereId = a['matiere_id'] as int;
+        affectationsParClasse.putIfAbsent(classeId, () => {});
+        affectationsParClasse[classeId]![matiereId] = a['id'] as int;
+        selections.putIfAbsent(classeId, () => {});
+        selections[classeId]!.add(matiereId);
       }
 
-      setState(() => _chargement = false);
-    } catch (e) {
       setState(() {
-        _chargement = false;
-        _erreur     = e.toString().replaceAll('Exception: ', '');
+        _classes                = classes;
+        _matieresParClasse      = matieresParClasse;
+        _affectationsParClasse  = affectationsParClasse;
+        _selections             = selections;
+        _chargement             = false;
       });
+    } catch (e) {
+      setState(() => _chargement = false);
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.green),
+      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
     );
   }
 
-  Future<void> _afficherDialogAffectation() async {
-    // ✅ Variables LOCALES au dialog — c'est ça qui corrige le dropdown
-    int? classeSelectionnee;
-    int? matiereSelectionnee;
+  Future<void> _enregistrerClasse(int classeId) async {
+    setState(() => _classeEnEnregistrement = classeId);
 
-    if (_classes.isEmpty) {
-      _afficherErreur('Aucune classe disponible. Créez des classes d\'abord.');
-      return;
-    }
+    final affecteesInitiales = _affectationsParClasse[classeId] ?? {};
+    final selectionActuelle  = _selections[classeId] ?? {};
 
-    if (_matieres.isEmpty) {
-      _afficherErreur('Aucune matière disponible. Créez des matières d\'abord.');
-      return;
-    }
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return AlertDialog(
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Nouvelle affectation'),
-                Text(
-                  widget.enseignantNom,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.normal,
-                  ),
-                ),
-              ],
-            ),
-            content: SizedBox(
-              width: 400,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ✅ Dropdown Classe
-                  DropdownButtonFormField<int>(
-                    value: classeSelectionnee,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Choisir une classe',
-                      prefixIcon: Icon(Icons.class_),
-                      border: OutlineInputBorder(),
-                    ),
-                    hint: const Text('Sélectionner une classe'),
-                    items: _classes.map((c) {
-                      return DropdownMenuItem<int>(
-                        value: c['id'] as int,
-                        child: Text(c['nom'] as String),
-                      );
-                    }).toList(),
-                    onChanged: (v) {
-                      setStateDialog(() => classeSelectionnee = v);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ✅ Dropdown Matière
-                  DropdownButtonFormField<int>(
-                    value: matiereSelectionnee,
-                    isExpanded: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Choisir une matière',
-                      prefixIcon: Icon(Icons.book),
-                      border: OutlineInputBorder(),
-                    ),
-                    hint: const Text('Sélectionner une matière'),
-                    items: _matieres.map((m) {
-                      return DropdownMenuItem<int>(
-                        value: m['id'] as int,
-                        child: Text(m['nom'] as String),
-                      );
-                    }).toList(),
-                    onChanged: (v) {
-                      setStateDialog(() => matiereSelectionnee = v);
-                    },
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                ),
-                onPressed: classeSelectionnee == null || matiereSelectionnee == null
-                    ? null
-                    : () async {
-                        try {
-                          await AffectationService.ajouterAffectation(
-                            enseignantId: widget.enseignantId,
-                            classeId:     classeSelectionnee!,
-                            matiereId:    matiereSelectionnee!,
-                          );
-                          if (context.mounted) Navigator.pop(context);
-                          _afficherSucces('Affectation ajoutée avec succès');
-                          _chargerDonnees();
-                        } catch (e) {
-                          if (context.mounted) Navigator.pop(context);
-                          _afficherErreur(
-                              e.toString().replaceAll('Exception: ', ''));
-                        }
-                      },
-                child: const Text('Affecter'),
-              ),
-            ],
+    try {
+      // Nouvelles cases cochées → créer l'affectation
+      for (final matiereId in selectionActuelle) {
+        if (!affecteesInitiales.containsKey(matiereId)) {
+          await AffectationService.ajouterAffectation(
+            enseignantId: widget.userId,
+            classeId:     classeId,
+            matiereId:    matiereId,
           );
-        },
-      ),
-    );
-  }
-
-  Future<void> _supprimer(int id) async {
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous supprimer cette affectation ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Non'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Oui', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirme == true) {
-      try {
-        await AffectationService.supprimerAffectation(id);
-        _afficherSucces('Affectation supprimée');
-        _chargerDonnees();
-      } catch (e) {
-        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+        }
       }
+      // Cases décochées → supprimer l'affectation
+      for (final entry in affecteesInitiales.entries) {
+        if (!selectionActuelle.contains(entry.key)) {
+          await AffectationService.supprimerAffectation(entry.value);
+        }
+      }
+
+      _afficherSucces('Affectations mises à jour');
+      await _chargerDonnees();
+    } catch (e) {
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _classeEnEnregistrement = null);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Affectations',
-                style: TextStyle(fontSize: 18)),
-            Text(
-              widget.enseignantNom,
-              style: const TextStyle(fontSize: 13),
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Stack(
+        children: [
+          Positioned(
+            top: -80,
+            right: -60,
+            child: _blob(size: 260, couleur: const Color(0xFF1E3A8A).withValues(alpha: 0.06)),
+          ),
+          Positioned(
+            bottom: -60,
+            left: -60,
+            child: _blob(size: 200, couleur: const Color(0xFF0D9488).withValues(alpha: 0.08)),
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                _appBarGlass(context),
+                Expanded(
+                  child: _chargement
+                      ? const Center(child: CircularProgressIndicator())
+                      : RefreshIndicator(
+                          onRefresh: _chargerDonnees,
+                          child: ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              SSMSectionTitre(titre: 'Classes et matières affectées'),
+                              if (_classes.isEmpty)
+                                Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Text(
+                                    'Aucune classe pour l\'instant',
+                                    style: TextStyle(color: Colors.grey),
+                                  ),
+                                )
+                              else
+                                ..._classes.map((c) => _carteClasse(c)),
+                            ],
+                          ),
+                        ),
+                ),
+              ],
             ),
-          ],
-        ),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _chargerDonnees,
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _afficherDialogAffectation,
-        backgroundColor: Colors.indigo,
-        icon: const Icon(Icons.add),
-        label: const Text('Nouvelle affectation'),
+    );
+  }
+
+  Widget _blob({required double size, required Color couleur}) {
+    return IgnorePointer(
+      child: ImageFiltered(
+        imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: couleur),
+        ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator())
-          : _erreur != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(_erreur!,
-                          style: const TextStyle(color: Colors.red)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _chargerDonnees,
-                        child: const Text('Réessayer'),
-                      ),
-                    ],
+    );
+  }
+
+  Widget _appBarGlass(BuildContext context) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.6),
+            border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.7))),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 16),
+            ],
+          ),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+                onPressed: () => Navigator.pop(context),
+              ),
+              Expanded(
+                child: Text(
+                  'Affectations — ${widget.userName}',
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
                   ),
-                )
-              : _affectations.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.assignment_outlined,
-                              size: 64, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Aucune affectation pour\n${widget.enseignantNom}',
-                            style: const TextStyle(color: Colors.grey),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: _afficherDialogAffectation,
-                            icon: const Icon(Icons.add),
-                            label: const Text('Ajouter une affectation'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.indigo,
-                              foregroundColor: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _affectations.length,
-                      itemBuilder: (context, index) {
-                        final a = _affectations[index];
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(12),
-                            leading: const CircleAvatar(
-                              backgroundColor: Colors.indigo,
-                              child: Icon(Icons.link, color: Colors.white),
-                            ),
-                            title: Text(
-                              a['classe_nom'] as String,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(a['matiere_nom'] as String),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: Colors.red),
-                              onPressed: () =>
-                                  _supprimer(a['id'] as int),
-                            ),
-                          ),
-                        );
-                      },
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Color(0xFF1E3A8A)),
+                onPressed: _chargerDonnees,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _carteClasse(dynamic classe) {
+    final classeId  = classe['id'] as int;
+    final classeNom = classe['nom'] as String;
+    final matieres  = _matieresParClasse[classeId] ?? [];
+    final selection = _selections[classeId] ?? {};
+    final enregistrementEnCours = _classeEnEnregistrement == classeId;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  classeNom,
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                if (matieres.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Aucune matière configurée pour cette classe',
+                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
                     ),
+                  )
+                else
+                  ...matieres.map((m) {
+                    final matiereId  = m['matiere_id'] as int;
+                    final matiereNom = m['matiere_nom'] as String;
+                    return CheckboxListTile(
+                      value: selection.contains(matiereId),
+                      onChanged: (v) {
+                        setState(() {
+                          final ensemble = _selections.putIfAbsent(classeId, () => {});
+                          if (v == true) {
+                            ensemble.add(matiereId);
+                          } else {
+                            ensemble.remove(matiereId);
+                          }
+                        });
+                      },
+                      activeColor: const Color(0xFF1E3A8A),
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                      dense: true,
+                      title: Text(
+                        matiereNom,
+                        style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF334155)),
+                      ),
+                    );
+                  }),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: enregistrementEnCours ? null : () => _enregistrerClasse(classeId),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: enregistrementEnCours
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text('Enregistrer', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

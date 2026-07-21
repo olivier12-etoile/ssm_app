@@ -48,10 +48,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/changer-mot-de-passe', [ChangerMotDePasseController::class, 'changer']);
 
     // Utilisateurs
-    Route::get('/utilisateurs',                [UtilisateurController::class, 'index']);
-    Route::post('/utilisateurs',               [UtilisateurController::class, 'creer']);
-    Route::patch('/utilisateurs/{id}/role',    [UtilisateurController::class, 'modifierRole']);
-    Route::patch('/utilisateurs/{id}/modules', [UtilisateurController::class, 'modifierModules']);
+    Route::get('/utilisateurs/tableau-de-bord',    [UtilisateurController::class, 'tableau_de_bord']);
+    Route::get('/utilisateurs/exporter-pdf',       [UtilisateurController::class, 'exporterPdf']);
+    Route::get('/utilisateurs/exporter-excel',     [UtilisateurController::class, 'exporterExcel']);
+    Route::post('/utilisateurs/importer',          [UtilisateurController::class, 'importerExcel']);
+    Route::get('/utilisateurs',                    [UtilisateurController::class, 'index']);
+    Route::get('/utilisateurs/{id}',                [UtilisateurController::class, 'show']);
+    Route::post('/utilisateurs',                   [UtilisateurController::class, 'creer']);
+    Route::patch('/utilisateurs/{id}',             [UtilisateurController::class, 'modifier']);
+    Route::patch('/utilisateurs/{id}/desactiver',  [UtilisateurController::class, 'desactiver']);
+    Route::patch('/utilisateurs/{id}/reactiver',   [UtilisateurController::class, 'reactiver']);
+    Route::patch('/utilisateurs/{id}/reinitialiser-mdp', [UtilisateurController::class, 'reinitialiserMotDePasse']);
+    Route::patch('/utilisateurs/{id}/role',        [UtilisateurController::class, 'modifierRole']);
+    Route::patch('/utilisateurs/{id}/modules',     [UtilisateurController::class, 'modifierModules']);
 
     // Classes
     Route::get('/classes',         [ClasseController::class, 'index']);

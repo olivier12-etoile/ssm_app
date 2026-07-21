@@ -241,7 +241,10 @@ class _StatistiquesScreenState extends State<StatistiquesScreen> {
                       ],
 
                       // ── Notes par statut ───────────────────────
-                      if (_stats?['notes']?['par_statut'] != null) ...[
+                      // Laravel sérialise un pluck() vide en `[]` (liste) et
+                      // non en `{}` (objet) — on ne peut donc pas caster
+                      // directement en Map.
+                      if (_stats?['notes']?['par_statut'] is Map) ...[
                         SSMSectionTitre(titre: 'Notes par statut'),
                         Container(
                           padding: const EdgeInsets.all(16),
@@ -257,8 +260,8 @@ class _StatistiquesScreenState extends State<StatistiquesScreen> {
                             ],
                           ),
                           child: Column(
-                            children: (_stats!['notes']['par_statut']
-                                    as Map<String, dynamic>)
+                            children: Map<String, dynamic>.from(
+                                    _stats!['notes']['par_statut'] as Map)
                                 .entries
                                 .map((e) {
                               return _ligneStatut(

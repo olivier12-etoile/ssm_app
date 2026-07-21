@@ -4,7 +4,9 @@ import 'screens/auth/login_screen.dart';
 import 'screens/auth/changement_mdp_screen.dart';
 import 'screens/dashboard/tableau_de_bord_screen.dart';
 import 'screens/directeur/gestion_utilisateurs_screen.dart';
+import 'screens/directeur/fiche_utilisateur_screen.dart';
 import 'screens/directeur/gestion_classes_screen.dart';
+import 'screens/directeur/fiche_classe_screen.dart';
 import 'screens/directeur/gestion_matieres_screen.dart';
 import 'screens/directeur/matieres_par_classe_screen.dart';
 import 'screens/directeur/gestion_annees_screen.dart';
@@ -62,7 +64,20 @@ class SSMApp extends StatelessWidget {
         },
         '/dashboard/secretaire':   (context) => const DashboardSecretaireScreen(),
         '/directeur/utilisateurs': (context) => const GestionUtilisateursScreen(),
+        '/directeur/utilisateur/fiche': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return FicheUtilisateurScreen(userId: args['userId'] as int);
+        },
         '/directeur/classes':      (context) => const GestionClassesScreen(),
+        '/directeur/classe/fiche': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return FicheClasseScreen(
+            classeId:  args['classeId'] as int,
+            classeNom: args['classeNom'] as String,
+          );
+        },
         '/directeur/matieres':     (context) => const GestionMatieresScreen(),
         '/directeur/matieres/classe': (context) {
           final args = ModalRoute.of(context)!.settings.arguments

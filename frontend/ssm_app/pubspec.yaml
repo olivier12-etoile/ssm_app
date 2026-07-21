@@ -24,9 +24,11 @@ dependencies:
   path_provider: ^2.1.6
   open_file: ^4.0.0
   image_picker: ^1.2.2
+  file_picker: ^8.1.2
 
   # Design system
   google_fonts: ^6.0.0
+  fl_chart: ^0.68.0
 
 dev_dependencies:
   flutter_test:

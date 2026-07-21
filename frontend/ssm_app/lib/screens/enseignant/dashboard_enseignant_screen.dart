@@ -99,7 +99,12 @@ class _DashboardEnseignantScreenState
       );
     }
 
-    final notes = _donnees?['notes'] as Map<String, dynamic>? ?? {};
+    // Laravel sérialise un pluck() vide en `[]` (liste) et non en `{}`
+    // (objet) — on ne peut donc pas caster directement en Map.
+    final notesBrut = _donnees?['notes'];
+    final notes = notesBrut is Map
+        ? Map<String, dynamic>.from(notesBrut)
+        : <String, dynamic>{};
     final absencesJour = (_donnees?['absences_aujourdhui'] as List?) ?? [];
     final notesRejetees = (_donnees?['notes_rejetees'] as List?) ?? [];
 

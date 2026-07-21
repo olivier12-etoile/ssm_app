@@ -60,8 +60,12 @@ class _DashboardSecretaireScreenState
     final encaisseJour  = _donnees?['encaisse_aujourdhui'] ?? 0;
     final encaisseMois  = _donnees?['encaisse_mois'] ?? 0;
     final derniers      = (_donnees?['derniers_paiements'] as List?) ?? [];
-    final notifications =
-        _donnees?['notifications'] as Map<String, dynamic>? ?? {};
+    // Laravel sérialise un pluck() vide en `[]` (liste) et non en `{}`
+    // (objet) — on ne peut donc pas caster directement en Map.
+    final notificationsBrut = _donnees?['notifications'];
+    final notifications = notificationsBrut is Map
+        ? Map<String, dynamic>.from(notificationsBrut)
+        : <String, dynamic>{};
     final totalEleves = _donnees?['total_eleves'] ?? 0;
     final totalNotif  = (notifications['total'] as int?) ?? 0;
 

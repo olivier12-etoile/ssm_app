@@ -33,10 +33,22 @@ class ConnexionController extends Controller
             ], 401);
         }
 
+        // Vérifier que le compte est actif
+        if (!$utilisateur->actif) {
+            return response()->json([
+                'message' => 'Compte désactivé. Contactez votre directeur.'
+            ], 403);
+        }
+
         // Supprimer les anciens tokens
         $utilisateur->tokens()->delete();
 
         $token = $utilisateur->createToken('ssm_token')->plainTextToken;
+
+        $utilisateur->update([
+            'derniere_connexion' => now(),
+            'derniere_activite'  => now(),
+        ]);
 
         return response()->json([
             'token' => $token,

@@ -18,6 +18,16 @@ class User extends Authenticatable
         'role',
         'ecole_id',
         'mot_de_passe_change',
+        'prenom',
+        'sexe',
+        'telephone',
+        'adresse',
+        'fonction',
+        'photo_path',
+        'actif',
+        'derniere_connexion',
+        'derniere_activite',
+        'mot_de_passe_temporaire',
     ];
 
     protected $hidden = [
@@ -25,13 +35,25 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    protected $appends = ['photo_url'];
+
     protected function casts(): array
     {
         return [
             'email_verified_at'    => 'datetime',
             'password'             => 'hashed',
             'mot_de_passe_change'  => 'boolean',
+            'actif'                => 'boolean',
+            'derniere_connexion'   => 'datetime',
+            'derniere_activite'    => 'datetime',
         ];
+    }
+
+    public function getPhotoUrlAttribute()
+    {
+        return $this->photo_path
+            ? asset('storage/' . $this->photo_path)
+            : null;
     }
 
     public function ecole()
