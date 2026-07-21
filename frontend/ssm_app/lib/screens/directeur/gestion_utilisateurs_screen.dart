@@ -201,84 +201,84 @@ class _GestionUtilisateursScreenState
     final actifs      = _tableauDeBord!['actifs'] as int? ?? 0;
     final desactives  = _tableauDeBord!['desactives'] as int? ?? 0;
 
+    final large = MediaQuery.of(context).size.width > 700;
+    final grille = _grilleMiniCartes(parRole, total, actifs, desactives);
+    final donut = _carteDonut(parRole);
+
     return RefreshIndicator(
       onRefresh: _chargerApercu,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── En-tête ──────────────────────────
+          // ── En-tête gradient ────────────────────
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E3A8A),
-              borderRadius: BorderRadius.circular(14),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Gestion des utilisateurs',
-                  style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Utilisateurs',
+                      style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$total membres au total',
+                      style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '$total utilisateurs au total',
-                  style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('$total', style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white)),
+                      Text('utilisateurs', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 20),
 
-          // ── Grille stats 2x3 ───────────────────
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.7,
-            children: [
-              _carteStatGlass('Total', '$total', Icons.people, const Color(0xFF1E3A8A)),
-              _carteStatGlass('Enseignants', '${parRole['enseignant'] ?? 0}', Icons.school, const Color(0xFF0D9488)),
-              _carteStatGlass('Censeurs', '${parRole['censeur'] ?? 0}', Icons.admin_panel_settings, const Color(0xFFD97706)),
-              _carteStatGlass('Secrétaires', '${parRole['secretaire'] ?? 0}', Icons.assignment_ind, const Color(0xFF7C3AED)),
-              _carteStatGlass('Actifs', '$actifs', Icons.check_circle, const Color(0xFF16A34A)),
-              _carteStatGlass('Désactivés', '$desactives', Icons.block, const Color(0xFFDC2626)),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          // ── Donut répartition par rôle ─────────
-          SSMSectionTitre(titre: 'Répartition par rôle'),
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
-              ],
-            ),
-            child: Column(
+          // ── Mini-cartes stats + donut ───────────
+          if (large)
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 160, child: _donutRepartitionRole(parRole)),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
-                  alignment: WrapAlignment.center,
-                  children: [
-                    _legende('Directeur', const Color(0xFF1E3A8A)),
-                    _legende('Enseignants', const Color(0xFF0D9488)),
-                    _legende('Censeurs', const Color(0xFFD97706)),
-                    _legende('Secrétaires', const Color(0xFF7C3AED)),
-                  ],
-                ),
+                Expanded(flex: 3, child: grille),
+                const SizedBox(width: 16),
+                Expanded(flex: 2, child: donut),
+              ],
+            )
+          else
+            Column(
+              children: [
+                grille,
+                const SizedBox(height: 20),
+                donut,
               ],
             ),
-          ),
           const SizedBox(height: 24),
 
           // ── Derniers inscrits ──────────────────
@@ -291,7 +291,7 @@ class _GestionUtilisateursScreenState
             )
           else
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
@@ -300,20 +300,7 @@ class _GestionUtilisateursScreenState
                 ],
               ),
               child: Column(
-                children: _derniersInscrits.map((u) {
-                  final creeLe = u['created_at'] as String?;
-                  return SSMListeTile(
-                    titre: '${u['name']} ${u['prenom'] ?? ''}'.trim(),
-                    sousTitre: _labelRole(u['role'] as String),
-                    icone: _iconeRole(u['role'] as String),
-                    couleurIcone: _couleurRole(u['role'] as String),
-                    dateHeure: creeLe != null ? creeLe.split('T').first : null,
-                    trailing: SSMBadge(
-                      label: (u['actif'] == true) ? 'ACTIF' : 'INACTIF',
-                      couleur: (u['actif'] == true) ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                    ),
-                  );
-                }).toList(),
+                children: _derniersInscrits.map(_itemDernierInscrit).toList(),
               ),
             ),
         ],
@@ -321,44 +308,158 @@ class _GestionUtilisateursScreenState
     );
   }
 
-  Widget _carteStatGlass(String label, String valeur, IconData icone, Color couleur) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-            boxShadow: [
-              BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 6)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: couleur.withValues(alpha: 0.15), shape: BoxShape.circle),
-                child: Icon(icone, color: couleur, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(valeur, style: GoogleFonts.sora(fontSize: 26, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
-                    Text(label, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
+  Widget _grilleMiniCartes(Map<String, dynamic> parRole, int total, int actifs, int desactives) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final largeurCarte = (constraints.maxWidth - 24) / 3;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _miniCarteStat('TOTAL', '$total', Icons.people, const Color(0xFF1E3A8A), largeurCarte),
+            _miniCarteStat('ENSEIGNANTS', '${parRole['enseignant'] ?? 0}', Icons.school, const Color(0xFF0D9488), largeurCarte),
+            _miniCarteStat('CENSEURS', '${parRole['censeur'] ?? 0}', Icons.verified_user, const Color(0xFFD97706), largeurCarte),
+            _miniCarteStat('SECRÉTAIRES', '${parRole['secretaire'] ?? 0}', Icons.badge, const Color(0xFF7C3AED), largeurCarte),
+            _miniCarteStat('ACTIFS', '$actifs', Icons.check_circle, const Color(0xFF16A34A), largeurCarte),
+            _miniCarteStat('INACTIFS', '$desactives', Icons.block, const Color(0xFFDC2626), largeurCarte),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _miniCarteStat(String label, String valeur, IconData icone, Color couleur, double largeur) {
+    return SizedBox(
+      width: largeur,
+      height: 80,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        label,
+                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600, letterSpacing: 0.3),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        valeur,
+                        style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                  child: Icon(icone, color: couleur, size: 18),
+                ),
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _carteDonut(Map<String, dynamic> parRole) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text('Répartition par rôle',
+              style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+          const SizedBox(height: 8),
+          SizedBox(height: 160, child: _donutRepartitionRole(parRole)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            alignment: WrapAlignment.center,
+            children: [
+              _legende('Directeur', const Color(0xFF1E3A8A)),
+              _legende('Enseignants', const Color(0xFF0D9488)),
+              _legende('Censeurs', const Color(0xFFD97706)),
+              _legende('Secrétaires', const Color(0xFF7C3AED)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _itemDernierInscrit(dynamic u) {
+    final role       = u['role'] as String;
+    final couleur    = _couleurRole(role);
+    final photoUrl   = u['photo_url'] as String?;
+    final nomComplet = '${u['name']} ${u['prenom'] ?? ''}'.trim();
+    final creeLe     = (u['created_at'] as String?)?.split('T').first;
+    final actif      = u['actif'] == true;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: couleur.withValues(alpha: 0.15),
+            backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+            child: photoUrl == null ? Icon(_iconeRole(role), size: 16, color: couleur) : null,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nomComplet,
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  creeLe != null ? '${_labelRole(role)} • $creeLe' : _labelRole(role),
+                  style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF334155)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          SSMBadge(
+            label: actif ? 'ACTIF' : 'INACTIF',
+            couleur: actif ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+          ),
+        ],
       ),
     );
   }
