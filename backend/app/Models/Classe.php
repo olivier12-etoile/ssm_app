@@ -14,8 +14,10 @@ class Classe extends Model
         'niveau',
         'capacite_max',
         'serie',
+        'indice',
         'salle',
         'statut',
+        'cycle',
         'professeur_principal_id',
         'annee_academique_id',
     ];

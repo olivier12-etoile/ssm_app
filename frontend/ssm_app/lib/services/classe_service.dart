@@ -15,21 +15,20 @@ class ClasseService {
     };
   }
 
-  // ── Liste paginée des classes ──────────────────────────
+  // ── Liste des classes groupées par cycle ───────────────
+  // Renvoie {college: [...], lycee_moderne: [...], lycee_technique: [...]}
   static Future<Map<String, dynamic>> lister({
     String? statut,
     String? niveau,
+    String? cycle,
     int? anneeId,
     String? recherche,
     String tri = 'nom',
-    int page = 1,
   }) async {
-    final query = <String, String>{
-      'tri':  tri,
-      'page': '$page',
-    };
+    final query = <String, String>{'tri': tri};
     if (statut != null)    query['statut']    = statut;
     if (niveau != null)    query['niveau']    = niveau;
+    if (cycle != null)     query['cycle']     = cycle;
     if (anneeId != null)   query['annee_id']  = '$anneeId';
     if (recherche != null && recherche.isNotEmpty) query['search'] = recherche;
 
@@ -52,13 +51,16 @@ class ClasseService {
   }
 
   // ── Créer une classe ───────────────────────────────────
+  // Le nom est généré côté backend à partir de niveau + série + indice —
+  // il n'est jamais envoyé par le client.
   static Future<void> creer({
-    required String nom,
     required String niveau,
     String? serie,
+    String? indice,
     String? salle,
-    required int capaciteMax,
+    int capaciteMax = 40,
     String statut = 'active',
+    String cycle = 'college',
     int? professeurPrincipalId,
     int? anneeAcademiqueId,
   }) async {
@@ -66,12 +68,13 @@ class ClasseService {
       Uri.parse('${AppConfig.apiBaseUrl}/classes'),
       headers: await _headers(),
       body: jsonEncode({
-        'nom':                     nom,
         'niveau':                  niveau,
         'serie':                   serie,
+        'indice':                  indice,
         'salle':                   salle,
         'capacite_max':            capaciteMax,
         'statut':                  statut,
+        'cycle':                   cycle,
         'professeur_principal_id': professeurPrincipalId,
         'annee_academique_id':     anneeAcademiqueId,
       }),
@@ -94,6 +97,7 @@ class ClasseService {
     String? salle,
     int? capaciteMax,
     String? statut,
+    String? cycle,
     int? professeurPrincipalId,
   }) async {
     final donnees = <String, dynamic>{};
@@ -103,6 +107,7 @@ class ClasseService {
     if (salle != null)                  donnees['salle']                   = salle;
     if (capaciteMax != null)            donnees['capacite_max']            = capaciteMax;
     if (statut != null)                 donnees['statut']                  = statut;
+    if (cycle != null)                  donnees['cycle']                   = cycle;
     if (professeurPrincipalId != null)  donnees['professeur_principal_id'] = professeurPrincipalId;
 
     final response = await http.put(
@@ -206,28 +211,27 @@ class ClasseService {
   }
 
   // ── Compatibilité écrans existants ─────────────────────
-  // `GET /classes` renvoie désormais une réponse paginée. Les écrans
-  // qui attendent encore un tableau simple (non paginé) continuent
-  // de fonctionner via ces deux méthodes, qui s'appuient sur la
-  // nouvelle API ci-dessus sans dupliquer la logique réseau.
+  // `GET /classes` renvoie désormais les classes groupées par cycle,
+  // puis par niveau, puis par série pour les lycées (cycle → niveau →
+  // [classes] pour le collège ; cycle → niveau → série → [classes]
+  // pour les lycées). Les écrans qui attendent encore un tableau
+  // simple continuent de fonctionner via cette méthode, qui aplatit
+  // récursivement cette structure quel que soit son niveau d'imbrication.
   static Future<List<dynamic>> listerClasses() async {
+    final resultat = await lister();
     final toutes = <dynamic>[];
-    var page = 1;
-    while (true) {
-      final resultat = await lister(page: page);
-      toutes.addAll((resultat['data'] as List?) ?? []);
-      final dernierePage = resultat['last_page'] as int? ?? 1;
-      if (page >= dernierePage) break;
-      page++;
-    }
-    return toutes;
-  }
 
-  static Future<void> creerClasse({
-    required String nom,
-    required String niveau,
-    int capaciteMax = 50,
-  }) async {
-    await creer(nom: nom, niveau: niveau, capaciteMax: capaciteMax);
+    void aplatir(dynamic valeur) {
+      if (valeur is List) {
+        toutes.addAll(valeur);
+      } else if (valeur is Map) {
+        for (final v in valeur.values) {
+          aplatir(v);
+        }
+      }
+    }
+
+    aplatir(resultat);
+    return toutes;
   }
 }

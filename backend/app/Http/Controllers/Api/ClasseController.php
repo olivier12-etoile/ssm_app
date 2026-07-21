@@ -39,6 +39,7 @@ class ClasseController extends Controller
             ])
             ->when($request->statut, fn($q) => $q->where('statut', $request->statut))
             ->when($request->niveau, fn($q) => $q->where('niveau', $request->niveau))
+            ->when($request->cycle, fn($q) => $q->where('cycle', $request->cycle))
             ->when($request->annee_id, fn($q) => $q->where('annee_academique_id', $request->annee_id))
             ->when($request->search, function ($q) use ($request) {
                 $recherche = $request->search;
@@ -51,33 +52,83 @@ class ClasseController extends Controller
 
         $query->orderBy($tri === 'effectif' ? 'nombre_eleves' : $tri, $direction);
 
-        return response()->json($query->paginate(20));
+        $classes = $query->get();
+
+        // Regroupement cycle → niveau → (série → classes, pour les lycées
+        // uniquement — le collège n'a pas de série).
+        $groupes = ['college' => [], 'lycee_moderne' => [], 'lycee_technique' => []];
+
+        foreach ($classes as $classe) {
+            $cycle  = $classe->cycle ?? 'college';
+            $niveau = $classe->niveau;
+
+            if ($cycle === 'college') {
+                $groupes[$cycle][$niveau] ??= [];
+                $groupes[$cycle][$niveau][] = $classe;
+            } else {
+                $serie = $classe->serie ?? '—';
+                $groupes[$cycle][$niveau][$serie] ??= [];
+                $groupes[$cycle][$niveau][$serie][] = $classe;
+            }
+        }
+
+        return response()->json($groupes);
     }
 
     // ── 2. Créer une classe ───────────────────────────────────────
+    // Le nom n'est jamais fourni par le client : il est généré ici à
+    // partir du niveau, de la série (lycées uniquement) et de l'indice.
     public function store(Request $request)
     {
         $data = $request->validate([
-            'nom'                     => 'required|string|max:50',
             'niveau'                  => 'required|string|max:20',
             'serie'                   => 'nullable|string|max:20',
+            'indice'                  => 'nullable|string|max:5',
             'salle'                   => 'nullable|string|max:50',
             'capacite_max'            => 'nullable|integer|min:1',
             'statut'                  => 'nullable|in:active,inactive',
+            'cycle'                   => 'nullable|in:college,lycee_moderne,lycee_technique',
             'professeur_principal_id' => 'nullable|integer|exists:users,id',
             'annee_academique_id'     => 'nullable|integer|exists:annees_academiques,id',
         ]);
 
+        $cycle  = $data['cycle'] ?? 'college';
+        $indice = $data['indice'] ?? null;
+        $serie  = $data['serie'] ?? null;
+
+        $nom = $cycle === 'college'
+            ? trim($data['niveau'] . ' ' . ($indice ?? ''))
+            : trim($data['niveau'] . ' ' . ($serie ?? '') . ' ' . ($indice ?? ''));
+
+        $anneeId = $data['annee_academique_id'] ?? null;
+
+        $existe = Classe::where('ecole_id', $request->user()->ecole_id)
+            ->where('nom', $nom)
+            ->when(
+                $anneeId,
+                fn($q) => $q->where('annee_academique_id', $anneeId),
+                fn($q) => $q->whereNull('annee_academique_id')
+            )
+            ->exists();
+
+        if ($existe) {
+            return response()->json([
+                'message' => "Une classe nommée \"{$nom}\" existe déjà pour cette année académique",
+            ], 409);
+        }
+
         $classe = Classe::create([
             'ecole_id'                => $request->user()->ecole_id,
-            'nom'                     => $data['nom'],
+            'nom'                     => $nom,
             'niveau'                  => $data['niveau'],
-            'serie'                   => $data['serie'] ?? null,
+            'serie'                   => $serie,
+            'indice'                  => $indice,
             'salle'                   => $data['salle'] ?? null,
-            'capacite_max'            => $data['capacite_max'] ?? 50,
+            'capacite_max'            => $data['capacite_max'] ?? 40,
             'statut'                  => $data['statut'] ?? 'active',
+            'cycle'                   => $cycle,
             'professeur_principal_id' => $data['professeur_principal_id'] ?? null,
-            'annee_academique_id'     => $data['annee_academique_id'] ?? null,
+            'annee_academique_id'     => $anneeId,
         ]);
 
         return response()->json([
@@ -203,6 +254,7 @@ class ClasseController extends Controller
             'salle'                   => 'nullable|string|max:50',
             'capacite_max'            => 'nullable|integer|min:1',
             'statut'                  => 'nullable|in:active,inactive',
+            'cycle'                   => 'nullable|in:college,lycee_moderne,lycee_technique',
             'professeur_principal_id' => 'nullable|integer|exists:users,id',
             'annee_academique_id'     => 'nullable|integer|exists:annees_academiques,id',
         ]);

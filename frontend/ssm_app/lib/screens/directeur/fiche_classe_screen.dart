@@ -146,15 +146,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         page++;
       }
 
-      final toutesClasses = <dynamic>[];
-      page = 1;
-      while (true) {
-        final resultat = await ClasseService.lister(page: page);
-        toutesClasses.addAll((resultat['data'] as List?) ?? []);
-        final dernierePage = resultat['last_page'] as int? ?? 1;
-        if (page >= dernierePage) break;
-        page++;
-      }
+      final toutesClasses = await ClasseService.listerClasses();
 
       setState(() {
         _toutesMatieres  = toutesMatieres;
