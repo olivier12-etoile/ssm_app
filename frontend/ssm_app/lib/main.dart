@@ -73,10 +73,7 @@ class SSMApp extends StatelessWidget {
         '/directeur/classe/fiche': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>;
-          return FicheClasseScreen(
-            classeId:  args['classeId'] as int,
-            classeNom: args['classeNom'] as String,
-          );
+          return FicheClasseScreen(classeId: args['classeId'] as int);
         },
         '/directeur/matieres':     (context) => const GestionMatieresScreen(),
         '/directeur/matieres/classe': (context) {

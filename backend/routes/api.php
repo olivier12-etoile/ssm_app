@@ -24,6 +24,8 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EvaluationController;
 use App\Http\Controllers\Api\FraisScolaireController;
 use App\Http\Controllers\Api\EmploiDuTempsController;
+use App\Http\Controllers\Api\CahierTexteController;
+use App\Http\Controllers\Api\DisciplineController;
 
 
 
@@ -63,10 +65,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/utilisateurs/{id}/modules',     [UtilisateurController::class, 'modifierModules']);
 
     // Classes
-    Route::get('/classes',         [ClasseController::class, 'index']);
-    Route::post('/classes',        [ClasseController::class, 'creer']);
-    Route::patch('/classes/{id}',  [ClasseController::class, 'modifier']);
-    Route::delete('/classes/{id}', [ClasseController::class, 'supprimer']);
+    Route::get('/classes',                     [ClasseController::class, 'index']);
+    Route::post('/classes',                    [ClasseController::class, 'store']);
+    Route::post('/classes/transferer-eleve',   [ClasseController::class, 'transfererEleve']);
+    Route::get('/classes/{id}',                [ClasseController::class, 'show']);
+    Route::put('/classes/{id}',                [ClasseController::class, 'update']);
+    Route::patch('/classes/{id}/archiver',     [ClasseController::class, 'archiverClasse']);
+    Route::patch('/classes/{id}/activer',      [ClasseController::class, 'activerClasse']);
+    Route::get('/classes/{id}/exporter-pdf',   [ClasseController::class, 'exporterListePdf']);
+    Route::get('/classes/{id}/exporter-excel', [ClasseController::class, 'exporterListeExcel']);
 
     // Matières
     Route::get('/matieres',         [MatiereController::class, 'index']);
@@ -186,5 +193,18 @@ Route::get('/appreciations/suggerer',           [AppreciationController::class, 
 
 // Dans le groupe auth:sanctum
 Route::get('/dashboard', [DashboardController::class, 'index']);
+
+// Cahier de texte
+Route::get('/cahier-texte',              [CahierTexteController::class, 'index']);
+Route::post('/cahier-texte',             [CahierTexteController::class, 'store']);
+Route::put('/cahier-texte/{id}',         [CahierTexteController::class, 'update']);
+Route::get('/cahier-texte/classe/{classeId}', [CahierTexteController::class, 'historiqueClasse']);
+
+// Discipline
+Route::get('/sanctions',                  [DisciplineController::class, 'index']);
+Route::post('/sanctions',                 [DisciplineController::class, 'store']);
+Route::get('/sanctions/eleve/{eleveId}',  [DisciplineController::class, 'historiqueEleve']);
+Route::get('/sanctions/statistiques',     [DisciplineController::class, 'statistiques']);
+Route::patch('/sanctions/{id}/notifier',  [DisciplineController::class, 'notifier']);
 
 });

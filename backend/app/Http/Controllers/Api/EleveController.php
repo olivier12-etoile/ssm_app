@@ -41,15 +41,23 @@ class EleveController extends Controller
     {
         $anneeId = $request->query('annee_id');
 
+        $filtreInscription = function ($q) use ($classeId, $anneeId) {
+            $q->where('classe_id', $classeId);
+            if ($anneeId) {
+                $q->where('annee_academique_id', $anneeId);
+            }
+        };
+
         $eleves = Eleve::where('ecole_id', $request->user()->ecole_id)
-            ->whereHas('inscriptions', function ($q) use ($classeId, $anneeId) {
-                $q->where('classe_id', $classeId);
-                if ($anneeId) {
-                    $q->where('annee_academique_id', $anneeId);
-                }
-            })
+            ->whereHas('inscriptions', $filtreInscription)
+            ->with(['inscriptions' => $filtreInscription])
             ->orderBy('nom')
-            ->get();
+            ->get()
+            ->map(function ($eleve) {
+                $eleve->inscription_statut = optional($eleve->inscriptions->first())->statut;
+                unset($eleve->inscriptions);
+                return $eleve;
+            });
 
         return response()->json($eleves);
     }
