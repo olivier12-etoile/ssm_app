@@ -9,6 +9,7 @@ import 'screens/directeur/gestion_classes_screen.dart';
 import 'screens/directeur/fiche_classe_screen.dart';
 import 'screens/directeur/gestion_matieres_screen.dart';
 import 'screens/directeur/matieres_par_classe_screen.dart';
+import 'screens/directeur/catalogue_matieres_screen.dart';
 import 'screens/directeur/gestion_annees_screen.dart';
 import 'screens/directeur/gestion_eleves_screen.dart';
 import 'screens/directeur/eleves_par_classe_screen.dart';
@@ -76,6 +77,7 @@ class SSMApp extends StatelessWidget {
           return FicheClasseScreen(classeId: args['classeId'] as int);
         },
         '/directeur/matieres':     (context) => const GestionMatieresScreen(),
+        '/directeur/catalogue-matieres': (context) => const CatalogueMatieresScreen(),
         '/directeur/matieres/classe': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>;

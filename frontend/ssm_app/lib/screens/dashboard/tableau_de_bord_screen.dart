@@ -269,7 +269,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
                       _separateurGlass('Administration'),
                       _menuItemGlass(context, icone: Icons.people, titre: 'Utilisateurs', route: '/directeur/utilisateurs', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.class_, titre: 'Classes', route: '/directeur/classes', routeActuelle: routeActuelle),
-                      _menuItemGlass(context, icone: Icons.book, titre: 'Matières', route: '/directeur/matieres', routeActuelle: routeActuelle),
+                      _menuItemGlass(context, icone: Icons.library_books_outlined, titre: 'Catalogue des matières', route: '/directeur/catalogue-matieres', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.calendar_month, titre: 'Années & Périodes', route: '/directeur/annees', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.people_outline, titre: 'Élèves', route: '/directeur/eleves', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.price_change, titre: 'Frais scolaires', route: '/directeur/frais', routeActuelle: routeActuelle),
