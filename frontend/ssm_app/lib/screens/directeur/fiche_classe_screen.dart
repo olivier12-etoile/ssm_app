@@ -1501,9 +1501,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             crossAxisCount: 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.1,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 1.45,
             children: [
               _carteStatGrid('Effectif', '${garcons + filles}', 'G: $garcons · F: $filles', Icons.people, const Color(0xFF1E3A8A)),
               _carteStatGraphMoyenne(moyenne),
@@ -1548,15 +1548,22 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
   Widget _carteStatGrid(String label, String valeur, String sousLabel, IconData icone, Color couleur) {
     return _carteGlass(
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icone, color: couleur, size: 22),
-          const SizedBox(height: 8),
-          Text(valeur, style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
-          Text(label, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
-          Text(sousLabel, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+            child: Icon(icone, color: couleur, size: 16),
+          ),
+          const SizedBox(height: 6),
+          Text(valeur, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155)), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(sousLabel, style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8)), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -1564,26 +1571,35 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
   Widget _carteStatGraphMoyenne(double? moyenne) {
     return _carteGlass(
+      padding: const EdgeInsets.all(12),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Moyenne générale', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
+          Text('Moyenne générale', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
           const SizedBox(height: 4),
           Expanded(
             child: moyenne == null
-                ? Center(child: Text('—', style: GoogleFonts.sora(fontSize: 20, color: const Color(0xFF94A3B8))))
-                : Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      PieChart(PieChartData(
-                        sectionsSpace: 0,
-                        centerSpaceRadius: 28,
-                        sections: [
-                          PieChartSectionData(value: moyenne, color: const Color(0xFF1E3A8A), showTitle: false, radius: 14),
-                          PieChartSectionData(value: (20 - moyenne).clamp(0, 20), color: const Color(0xFFF1F5F9), showTitle: false, radius: 14),
-                        ],
-                      )),
-                      Text('${moyenne.toStringAsFixed(1)}/20', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700)),
-                    ],
+                ? Center(child: Text('—', style: GoogleFonts.sora(fontSize: 18, color: const Color(0xFF94A3B8))))
+                : Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 64,
+                          height: 64,
+                          child: PieChart(PieChartData(
+                            sectionsSpace: 0,
+                            centerSpaceRadius: 20,
+                            sections: [
+                              PieChartSectionData(value: moyenne, color: const Color(0xFF1E3A8A), showTitle: false, radius: 11),
+                              PieChartSectionData(value: (20 - moyenne).clamp(0, 20), color: const Color(0xFFF1F5F9), showTitle: false, radius: 11),
+                            ],
+                          )),
+                        ),
+                        Text(moyenne.toStringAsFixed(1), style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700)),
+                      ],
+                    ),
                   ),
           ),
         ],
@@ -1593,17 +1609,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
   Widget _carteStatProgression(String label, double valeur, String texte, Color couleur) {
     return _carteGlass(
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
-          const SizedBox(height: 10),
-          Text(texte, style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.w700, color: couleur)),
-          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155)), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 6),
+          Text(texte, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: couleur)),
+          const SizedBox(height: 6),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(value: valeur.clamp(0.0, 1.0), minHeight: 8, backgroundColor: const Color(0xFFF1F5F9), color: couleur),
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(value: valeur.clamp(0.0, 1.0), minHeight: 6, backgroundColor: const Color(0xFFF1F5F9), color: couleur),
           ),
         ],
       ),

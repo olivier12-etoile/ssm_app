@@ -12,6 +12,7 @@ class Matiere extends Model
         'ecole_id',
         'nom',
         'code',
+        'couleur',
         'coefficient',
     ];
 
@@ -23,5 +24,25 @@ class Matiere extends Model
     public function notes()
     {
         return $this->hasMany(Note::class, 'matiere_id');
+    }
+
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class, 'matiere_id');
+    }
+
+    public function classeMatieres()
+    {
+        return $this->hasMany(ClasseMatiere::class, 'matiere_id');
+    }
+
+    public function enseignants()
+    {
+        return $this->belongsToMany(
+            User::class,
+            'enseignant_classe_matiere',
+            'matiere_id',
+            'enseignant_id'
+        )->distinct();
     }
 }

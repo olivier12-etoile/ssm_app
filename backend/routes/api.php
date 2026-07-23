@@ -76,10 +76,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/classes/{id}/exporter-excel', [ClasseController::class, 'exporterListeExcel']);
 
     // Matières
-    Route::get('/matieres',         [MatiereController::class, 'index']);
-    Route::post('/matieres',        [MatiereController::class, 'creer']);
-    Route::patch('/matieres/{id}',  [MatiereController::class, 'modifier']);
-    Route::delete('/matieres/{id}', [MatiereController::class, 'supprimer']);
+    Route::get('/matieres/statistiques', [MatiereController::class, 'statistiques']);
+    Route::get('/matieres',              [MatiereController::class, 'index']);
+    Route::post('/matieres',             [MatiereController::class, 'store']);
+    Route::put('/matieres/{id}',         [MatiereController::class, 'update']);
+    Route::delete('/matieres/{id}',      [MatiereController::class, 'destroy']);
 
     // Matières par classe (coefficients)
     Route::get('/classe-matieres',         [ClasseMatiereController::class, 'index']);
