@@ -134,6 +134,13 @@ class AbsenceController extends Controller
             ->where('date_absence', now()->format('Y-m-d'))
             ->count();
 
+        $nonJustifieesAujourdhui = Absence::whereHas('eleve', function ($q) use ($ecoleId) {
+                $q->where('ecole_id', $ecoleId);
+            })
+            ->where('date_absence', now()->format('Y-m-d'))
+            ->where('justifiee', false)
+            ->count();
+
         $cetteSemaine = Absence::whereHas('eleve', function ($q) use ($ecoleId) {
                 $q->where('ecole_id', $ecoleId);
             })
@@ -144,8 +151,9 @@ class AbsenceController extends Controller
             ->count();
 
         return response()->json([
-            'absents_aujourdhui' => $aujourdhui,
-            'absents_semaine'    => $cetteSemaine,
+            'absents_aujourdhui'          => $aujourdhui,
+            'non_justifiees_aujourdhui'   => $nonJustifieesAujourdhui,
+            'absents_semaine'             => $cetteSemaine,
         ]);
     }
 }

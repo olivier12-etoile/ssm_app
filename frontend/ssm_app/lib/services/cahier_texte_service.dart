@@ -88,6 +88,17 @@ class CahierTexteService {
     }
   }
 
+  // ── Supprimer une entrée ────────────────────────────────
+  static Future<void> supprimer(int id) async {
+    final response = await http.delete(
+      Uri.parse('${AppConfig.apiBaseUrl}/cahier-texte/$id'),
+      headers: await _headers(),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Erreur suppression entrée cahier de texte');
+    }
+  }
+
   // ── Historique complet d'une classe ─────────────────────
   static Future<List<dynamic>> historiqueClasse(int classeId) async {
     final response = await http.get(

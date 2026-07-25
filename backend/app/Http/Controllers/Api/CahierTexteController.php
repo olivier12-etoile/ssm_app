@@ -84,6 +84,18 @@ class CahierTexteController extends Controller
         ]);
     }
 
+    // DELETE /cahier-texte/{id}
+    public function destroy(Request $request, $id)
+    {
+        $entree = CahierTexte::where('id', $id)
+            ->whereHas('classe', fn($q) => $q->where('ecole_id', $request->user()->ecole_id))
+            ->firstOrFail();
+
+        $entree->delete();
+
+        return response()->json(['message' => 'Entrée du cahier de texte supprimée avec succès']);
+    }
+
     // GET /cahier-texte/classe/{classeId}
     public function historiqueClasse(Request $request, $classeId)
     {

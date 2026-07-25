@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/dashboard_service.dart';
@@ -11,6 +12,15 @@ import '../enseignant/saisie_notes_screen.dart';
 import '../enseignant/liste_presence_screen.dart';
 import '../emploi_du_temps/emploi_du_temps_enseignant_screen.dart';
 
+Color _couleurDepuisHex(String? hex) {
+  if (hex == null || hex.isEmpty) return const Color(0xFF1E3A8A);
+  try {
+    return Color(int.parse(hex.replaceAll('#', '0xFF')));
+  } catch (_) {
+    return const Color(0xFF1E3A8A);
+  }
+}
+
 class DashboardEnseignantScreen extends StatefulWidget {
   const DashboardEnseignantScreen({super.key});
 
@@ -19,11 +29,11 @@ class DashboardEnseignantScreen extends StatefulWidget {
       _DashboardEnseignantScreenState();
 }
 
-class _DashboardEnseignantScreenState
-    extends State<DashboardEnseignantScreen> {
+class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
   Map<String, dynamic>? _donnees;
   Utilisateur? _utilisateur;
   int _totalEleves = 0;
+  Map<int, int> _nombreElevesParClasse = {};
   bool _chargement = true;
 
   @override
@@ -44,6 +54,7 @@ class _DashboardEnseignantScreenState
       }
 
       var totalEleves = 0;
+      final nombreElevesParClasse = <int, int>{};
       if (classesGroupees.isNotEmpty) {
         try {
           final annees = await AnneeService.listerAnnees();
@@ -54,9 +65,15 @@ class _DashboardEnseignantScreenState
           final anneeId = anneeEnCours?['id'] as int?;
 
           if (anneeId != null) {
-            final listes = await Future.wait(classesGroupees.map(
-              (classeId) => EleveService.elevesParClasse(classeId, anneeId),
-            ));
+            final classesListe = classesGroupees.toList();
+            final listes = await Future.wait(
+              classesListe.map(
+                (classeId) => EleveService.elevesParClasse(classeId, anneeId),
+              ),
+            );
+            for (var i = 0; i < classesListe.length; i++) {
+              nombreElevesParClasse[classesListe[i]] = listes[i].length;
+            }
             totalEleves = listes.fold<int>(0, (total, l) => total + l.length);
           }
         } catch (_) {
@@ -68,6 +85,7 @@ class _DashboardEnseignantScreenState
         _utilisateur = u;
         _donnees = data;
         _totalEleves = totalEleves;
+        _nombreElevesParClasse = nombreElevesParClasse;
         _chargement = false;
       });
     } catch (e) {
@@ -83,20 +101,23 @@ class _DashboardEnseignantScreenState
 
   Color _couleurStatut(String statut) {
     switch (statut) {
-      case 'valide':    return SSMBadge.succes;
-      case 'soumis':    return SSMBadge.info;
-      case 'rejete':    return SSMBadge.erreur;
-      case 'brouillon': return SSMBadge.avertissement;
-      default:          return Colors.grey;
+      case 'valide':
+        return SSMBadge.succes;
+      case 'soumis':
+        return SSMBadge.info;
+      case 'rejete':
+        return SSMBadge.erreur;
+      case 'brouillon':
+        return SSMBadge.avertissement;
+      default:
+        return Colors.grey;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_chargement || _utilisateur == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     // Laravel sérialise un pluck() vide en `[]` (liste) et non en `{}`
@@ -113,7 +134,10 @@ class _DashboardEnseignantScreenState
       appBar: AppBar(
         title: Text(
           'Mon espace',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.sora(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
@@ -151,7 +175,8 @@ class _DashboardEnseignantScreenState
                         context,
                         MaterialPageRoute(
                           settings: const RouteSettings(
-                              name: '/emploi-du-temps/enseignant'),
+                            name: '/emploi-du-temps/enseignant',
+                          ),
                           builder: (_) => const EmploiDuTempsEnseignantScreen(),
                         ),
                       ),
@@ -169,15 +194,18 @@ class _DashboardEnseignantScreenState
                         color: const Color(0xFFDC2626).withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: const Color(0xFFDC2626).withValues(alpha: 0.3)),
+                          color: const Color(0xFFDC2626).withValues(alpha: 0.3),
+                        ),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.warning_amber,
-                                  color: Color(0xFFDC2626)),
+                              const Icon(
+                                Icons.warning_amber,
+                                color: Color(0xFFDC2626),
+                              ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
@@ -214,7 +242,9 @@ class _DashboardEnseignantScreenState
                               ),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: const Color(0xFFDC2626),
-                                side: const BorderSide(color: Color(0xFFDC2626)),
+                                side: const BorderSide(
+                                  color: Color(0xFFDC2626),
+                                ),
                               ),
                               icon: const Icon(Icons.edit),
                               label: const Text('Corriger maintenant'),
@@ -229,7 +259,10 @@ class _DashboardEnseignantScreenState
                   // ── Statut de mes notes ─────────────────────
                   Text(
                     'Statut de mes notes',
-                    style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600),
+                    style: GoogleFonts.sora(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   GridView.count(
@@ -288,83 +321,139 @@ class _DashboardEnseignantScreenState
                       final classeId = classe['classe_id'] as int;
                       final classeNom = classe['classe_nom'] as String;
                       final matieres =
-                          (classe['matieres'] as List<String>).join(', ');
+                          classe['matieres'] as List<Map<String, dynamic>>;
+                      final nombreEleves =
+                          _nombreElevesParClasse[classeId] ?? 0;
 
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: const Border(
-                            left: BorderSide(
-                                color: Color(0xFF1E3A8A), width: 4),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              classeNom,
-                              style: GoogleFonts.sora(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF0F172A),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              matieres,
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                color: const Color(0xFF334155),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _boutonCarteClasse(
-                                    icone: Icons.event_available,
-                                    label: 'Présences',
-                                    couleur: const Color(0xFF0D9488),
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => ListePresenceScreen(
-                                          classeId: classeId,
-                                          classeNom: classeNom,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                      return ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(14),
+                              border: const Border(
+                                left: BorderSide(
+                                  color: Color(0xFF1E3A8A),
+                                  width: 4,
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: _boutonCarteClasse(
-                                    icone: Icons.edit_note,
-                                    label: 'Notes',
-                                    couleur: const Color(0xFF1E3A8A),
-                                    onTap: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => SaisieNotesScreen(
-                                          classeIdPreselectionne: classeId,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
                                 ),
                               ],
                             ),
-                          ],
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        classeNom,
+                                        style: GoogleFonts.sora(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ),
+                                    SSMBadge(
+                                      label: '$nombreEleves élèves',
+                                      couleur: const Color(0xFF1E3A8A),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: matieres.map((m) {
+                                    final couleur = _couleurDepuisHex(
+                                      m['couleur'] as String?,
+                                    );
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: couleur.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '${m['matiere_nom']} (coef ${m['coefficient']})',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: couleur,
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _boutonCarteClasse(
+                                        icone: Icons.how_to_reg,
+                                        label: 'Présences',
+                                        couleur: const Color(0xFF0D9488),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => ListePresenceScreen(
+                                              classeId: classeId,
+                                              classeNom: classeNom,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _boutonCarteClasse(
+                                        icone: Icons.grade_outlined,
+                                        label: 'Notes',
+                                        couleur: const Color(0xFF1E3A8A),
+                                        onTap: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => SaisieNotesScreen(
+                                              classeIdPreselectionne: classeId,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: _boutonCarteClasse(
+                                        icone: Icons.menu_book_outlined,
+                                        label: 'Cahier',
+                                        couleur: const Color(0xFFD97706),
+                                        onTap: () => _choisirMatiereCahier(
+                                          classeId,
+                                          classeNom,
+                                          matieres,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     }),
@@ -436,22 +525,26 @@ class _DashboardEnseignantScreenState
     required VoidCallback onTap,
   }) {
     return Material(
-      color: couleur.withValues(alpha: 0.12),
+      color: couleur.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: onTap,
-        child: Padding(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: couleur.withValues(alpha: 0.4)),
+          ),
           padding: const EdgeInsets.symmetric(vertical: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icone, size: 18, color: couleur),
+              Icon(icone, size: 16, color: couleur),
               const SizedBox(width: 6),
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  fontSize: 13,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: couleur,
                 ),
@@ -469,15 +562,108 @@ class _DashboardEnseignantScreenState
 
     for (final a in affectations) {
       final classeId = a['classe_id'] as int;
-      classesGroupees.putIfAbsent(classeId, () => {
-            'classe_id': classeId,
-            'classe_nom': a['classe_nom'],
-            'matieres': <String>[],
+      classesGroupees.putIfAbsent(
+        classeId,
+        () => {
+          'classe_id': classeId,
+          'classe_nom': a['classe_nom'],
+          'matieres': <Map<String, dynamic>>[],
+        },
+      );
+      (classesGroupees[classeId]!['matieres'] as List<Map<String, dynamic>>)
+          .add({
+            'matiere_id': a['matiere_id'],
+            'matiere_nom': a['matiere_nom'],
+            'coefficient': a['coefficient'],
+            'couleur': a['couleur'],
           });
-      (classesGroupees[classeId]!['matieres'] as List<String>)
-          .add(a['matiere_nom'] as String);
     }
 
     return classesGroupees.values.toList();
+  }
+
+  // ── Choix de la matière pour ouvrir son cahier de texte ─
+  Future<void> _choisirMatiereCahier(
+    int classeId,
+    String classeNom,
+    List<Map<String, dynamic>> matieres,
+  ) async {
+    if (matieres.length == 1) {
+      _ouvrirCahierMatiere(classeId, classeNom, matieres.first);
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+              child: Text(
+                'Cahier de texte — $classeNom',
+                style: GoogleFonts.sora(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            ...matieres.map((m) {
+              final couleur = _couleurDepuisHex(m['couleur'] as String?);
+              return ListTile(
+                leading: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: couleur.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.book, color: couleur, size: 18),
+                ),
+                title: Text(
+                  '${m['matiere_nom']}',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Text(
+                  'Coef. ${m['coefficient']}',
+                  style: GoogleFonts.inter(fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _ouvrirCahierMatiere(classeId, classeNom, m);
+                },
+              );
+            }),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _ouvrirCahierMatiere(
+    int classeId,
+    String classeNom,
+    Map<String, dynamic> matiere,
+  ) {
+    Navigator.pushNamed(
+      context,
+      '/directeur/matiere/fiche',
+      arguments: {
+        'classeId': classeId,
+        'classeNom': classeNom,
+        'matiereId': matiere['matiere_id'] as int,
+        'matiereNom': matiere['matiere_nom'] as String,
+        'couleurMatiere': _couleurDepuisHex(matiere['couleur'] as String?),
+        'coefficient':
+            double.tryParse(matiere['coefficient'].toString()) ?? 1.0,
+        'enseignantNom': _utilisateur?.nom,
+      },
+    );
   }
 }

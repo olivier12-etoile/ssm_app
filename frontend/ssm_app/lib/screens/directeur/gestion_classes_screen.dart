@@ -8,42 +8,48 @@ import '../../services/utilisateur_service.dart';
 import 'fiche_classe_screen.dart';
 
 const Map<String, List<String>> _niveauxParCycle = {
-  'college':          ['6ème', '5ème', '4ème', '3ème'],
-  'lycee_moderne':    ['Seconde', 'Première', 'Terminale'],
-  'lycee_technique':  ['Seconde', 'Première', 'Terminale'],
+  'college': ['6ème', '5ème', '4ème', '3ème'],
+  'lycee_moderne': ['Seconde', 'Première', 'Terminale'],
+  'lycee_technique': ['Seconde', 'Première', 'Terminale'],
 };
 
 const Map<String, List<String>> _seriesParCycle = {
-  'college':          [],
-  'lycee_moderne':    ['A4', 'D', 'C', 'A', 'B'],
-  'lycee_technique':  ['G1', 'G2', 'G3', 'F3', 'TH', 'TP', 'H', 'F1'],
+  'college': [],
+  'lycee_moderne': ['A4', 'D', 'C', 'A', 'B'],
+  'lycee_technique': ['G1', 'G2', 'G3', 'F3', 'TH', 'TP', 'H', 'F1'],
 };
 
 const Map<String, String> _labelsCycle = {
-  'college':         'Collège',
-  'lycee_moderne':   'Lycée Moderne',
+  'college': 'Collège',
+  'lycee_moderne': 'Lycée Moderne',
   'lycee_technique': 'Lycée Technique',
 };
 
 const Map<String, String> _emojisCycle = {
-  'college':         '🏫',
-  'lycee_moderne':   '🎓',
+  'college': '🏫',
+  'lycee_moderne': '🎓',
   'lycee_technique': '🔧',
 };
 
 const Map<String, Color> _couleursCycle = {
-  'college':         Color(0xFF0D9488),
-  'lycee_moderne':   Color(0xFF1E3A8A),
+  'college': Color(0xFF0D9488),
+  'lycee_moderne': Color(0xFF1E3A8A),
   'lycee_technique': Color(0xFFD97706),
 };
 
-const List<String> _ordreCycles = ['college', 'lycee_moderne', 'lycee_technique'];
+const List<String> _ordreCycles = [
+  'college',
+  'lycee_moderne',
+  'lycee_technique',
+];
 
 String _genererNom(String cycle, String niveau, String? serie, String indice) {
   if (cycle == 'college') {
     return '$niveau $indice'.trim();
   }
-  return '$niveau ${serie ?? ''} $indice'.replaceAll(RegExp(r'\s+'), ' ').trim();
+  return '$niveau ${serie ?? ''} $indice'
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
 }
 
 class GestionClassesScreen extends StatefulWidget {
@@ -55,17 +61,21 @@ class GestionClassesScreen extends StatefulWidget {
 
 class _GestionClassesScreenState extends State<GestionClassesScreen> {
   static const Map<String, String> _labelsTri = {
-    'nom':      'Nom',
-    'niveau':   'Niveau',
+    'nom': 'Nom',
+    'niveau': 'Niveau',
     'effectif': 'Effectif',
   };
 
   // college : {niveau: [classes]} — lycées : {niveau: {serie: [classes]}}
   Map<String, dynamic> _groupes = {
-    'college': {}, 'lycee_moderne': {}, 'lycee_technique': {},
+    'college': {},
+    'lycee_moderne': {},
+    'lycee_technique': {},
   };
   int _totalClasses = 0;
   int _totalActives = 0;
+  List<String> _cyclesDisponibles = [];
+  String? _filtreCycle;
 
   bool _chargementListe = true;
   String? _filtreStatut;
@@ -94,7 +104,10 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
       final enseignants = <dynamic>[];
       var page = 1;
       while (true) {
-        final resultat = await UtilisateurService.lister(role: 'enseignant', page: page);
+        final resultat = await UtilisateurService.lister(
+          role: 'enseignant',
+          page: page,
+        );
         enseignants.addAll((resultat['data'] as List?) ?? []);
         final dernierePage = resultat['last_page'] as int? ?? 1;
         if (page >= dernierePage) break;
@@ -103,7 +116,7 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
       final annees = await AnneeService.listerAnnees();
       setState(() {
         _enseignants = enseignants;
-        _annees      = annees;
+        _annees = annees;
       });
     } catch (_) {
       // Listes de référence non bloquantes pour l'affichage.
@@ -122,6 +135,7 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
         }
       }
     }
+
     parcourir(valeur);
     return resultat;
   }
@@ -130,22 +144,34 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
     setState(() => _chargementListe = true);
     try {
       final resultat = await ClasseService.lister(
-        statut:    _filtreStatut,
+        statut: _filtreStatut,
         recherche: _recherche.isEmpty ? null : _recherche,
-        tri:       _tri,
+        tri: _tri,
       );
 
       final groupes = <String, dynamic>{
-        'college':         resultat['college'] is Map ? resultat['college'] : {},
-        'lycee_moderne':   resultat['lycee_moderne'] is Map ? resultat['lycee_moderne'] : {},
-        'lycee_technique': resultat['lycee_technique'] is Map ? resultat['lycee_technique'] : {},
+        'college': resultat['college'] is Map ? resultat['college'] : {},
+        'lycee_moderne': resultat['lycee_moderne'] is Map
+            ? resultat['lycee_moderne']
+            : {},
+        'lycee_technique': resultat['lycee_technique'] is Map
+            ? resultat['lycee_technique']
+            : {},
       };
       final toutes = _aplatir(groupes);
 
+      final cyclesDisponibles = _ordreCycles
+          .where((cycle) => toutes.any((c) => c['cycle'] == cycle))
+          .toList();
+
       setState(() {
-        _groupes         = groupes;
-        _totalClasses    = toutes.length;
-        _totalActives    = toutes.where((c) => c['statut'] == 'active').length;
+        _groupes = groupes;
+        _totalClasses = toutes.length;
+        _totalActives = toutes.where((c) => c['statut'] == 'active').length;
+        _cyclesDisponibles = cyclesDisponibles;
+        if (_filtreCycle != null && !cyclesDisponibles.contains(_filtreCycle)) {
+          _filtreCycle = null;
+        }
         _chargementListe = false;
       });
     } catch (e) {
@@ -164,13 +190,19 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFDC2626),
+      ),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF16A34A),
+      ),
     );
   }
 
@@ -183,7 +215,13 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
         backgroundColor: const Color(0xFF1E3A8A),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
         icon: const Icon(Icons.add, color: Colors.white),
-        label: Text('Nouvelle classe', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+        label: Text(
+          'Nouvelle classe',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -196,6 +234,8 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     _barreOutils(),
+                    const SizedBox(height: 12),
+                    if (_cyclesDisponibles.isNotEmpty) _chipsCycles(),
                     const SizedBox(height: 16),
                     if (_chargementListe)
                       const Padding(
@@ -206,13 +246,24 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         child: Center(
-                          child: Text('Aucune classe trouvée', style: GoogleFonts.inter(color: const Color(0xFF334155))),
+                          child: Text(
+                            'Aucune classe trouvée',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
                         ),
                       )
                     else
                       ..._ordreCycles
                           .where((c) => (_groupes[c] as Map).isNotEmpty)
-                          .map((cycle) => _sectionCycle(cycle, _groupes[cycle] as Map)),
+                          .where(
+                            (c) => _filtreCycle == null || _filtreCycle == c,
+                          )
+                          .map(
+                            (cycle) =>
+                                _sectionCycle(cycle, _groupes[cycle] as Map),
+                          ),
                     const SizedBox(height: 80),
                   ],
                 ),
@@ -238,7 +289,10 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -258,7 +312,13 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                 },
               ),
               const SizedBox(width: 4),
-              Text('Retour', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
+              Text(
+                'Retour',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -268,17 +328,40 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Classes', style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
+                  Text(
+                    'Classes',
+                    style: GoogleFonts.sora(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text('$_totalActives classes actives', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7))),
+                  Text(
+                    '$_totalActives classes actives',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: Colors.white.withValues(alpha: 0.7),
+                    ),
+                  ),
                 ],
               ),
               Container(
                 width: 56,
                 height: 56,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), shape: BoxShape.circle),
-                child: Text('$_totalClasses', style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  '$_totalClasses',
+                  style: GoogleFonts.sora(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                  ),
+                ),
               ),
             ],
           ),
@@ -317,7 +400,11 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
           ),
           child: Row(
             children: [
-              Icon(Icons.search, size: 16, color: const Color(0xFF334155).withValues(alpha: 0.6)),
+              Icon(
+                Icons.search,
+                size: 16,
+                color: const Color(0xFF334155).withValues(alpha: 0.6),
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: TextField(
@@ -326,7 +413,10 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                     hintText: 'Rechercher une classe...',
                     border: InputBorder.none,
                     isDense: true,
-                    hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155).withValues(alpha: 0.5)),
+                    hintStyle: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: const Color(0xFF334155).withValues(alpha: 0.5),
+                    ),
                   ),
                   style: GoogleFonts.inter(fontSize: 13),
                 ),
@@ -356,7 +446,9 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   Widget _dropdownTri() {
     return _dropdownGlass<String>(
       valeur: _tri,
-      items: _labelsTri.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+      items: _labelsTri.entries
+          .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+          .toList(),
       onChanged: (v) {
         if (v == null) return;
         setState(() => _tri = v);
@@ -387,7 +479,10 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
               isDense: true,
               isExpanded: true,
               icon: const Icon(Icons.expand_more, size: 16),
-              style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: const Color(0xFF334155),
+              ),
               items: items,
               onChanged: onChanged,
             ),
@@ -398,13 +493,83 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   }
 
   // ══════════════════════════════════════════════════════
+  // CHIPS DE FILTRAGE PAR CYCLE (dynamiques)
+  // ══════════════════════════════════════════════════════
+
+  Widget _chipsCycles() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _chipCycle(
+            label: 'Tous',
+            actif: _filtreCycle == null,
+            couleur: const Color(0xFF1E3A8A),
+            onTap: () => setState(() => _filtreCycle = null),
+          ),
+          for (final cycle in _cyclesDisponibles) ...[
+            const SizedBox(width: 8),
+            _chipCycle(
+              label: '${_emojisCycle[cycle]} ${_labelsCycle[cycle]}',
+              actif: _filtreCycle == cycle,
+              couleur: _couleursCycle[cycle]!,
+              onTap: () => setState(() => _filtreCycle = cycle),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _chipCycle({
+    required String label,
+    required bool actif,
+    required Color couleur,
+    required VoidCallback onTap,
+  }) {
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: actif ? couleur : Colors.white.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(50),
+        border: actif
+            ? null
+            : Border.all(color: Colors.white.withValues(alpha: 0.8)),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: actif ? Colors.white : const Color(0xFF334155),
+        ),
+      ),
+    );
+
+    return GestureDetector(
+      onTap: onTap,
+      child: actif
+          ? chip
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                child: chip,
+              ),
+            ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
   // SECTIONS PAR CYCLE → NIVEAU → (SÉRIE)
   // ══════════════════════════════════════════════════════
 
   Widget _sectionCycle(String cycle, Map niveauxData) {
     final couleur = _couleursCycle[cycle]!;
     final classesDuCycle = _aplatir(niveauxData);
-    final niveauxPresents = _niveauxParCycle[cycle]!.where((n) => niveauxData.containsKey(n)).toList();
+    final niveauxPresents = _niveauxParCycle[cycle]!
+        .where((n) => niveauxData.containsKey(n))
+        .toList();
     // Inclut aussi d'éventuels niveaux hors liste canonique (données historiques).
     for (final n in niveauxData.keys) {
       if (!niveauxPresents.contains(n)) niveauxPresents.add(n);
@@ -417,28 +582,58 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
         children: [
           Row(
             children: [
-              Container(width: 4, height: 20, decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(2))),
+              Container(
+                width: 4,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: couleur,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               const SizedBox(width: 8),
               Text(
                 _labelsCycle[cycle]!.toUpperCase(),
-                style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: couleur, letterSpacing: 1.2),
+                style: GoogleFonts.sora(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: couleur,
+                  letterSpacing: 1.2,
+                ),
               ),
               const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-                child: Text('${classesDuCycle.length} classe(s)', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: couleur)),
+                decoration: BoxDecoration(
+                  color: couleur.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '${classesDuCycle.length} classe(s)',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: couleur,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          ...niveauxPresents.map((niveau) => _sectionNiveau(cycle, niveau, niveauxData[niveau], couleur)),
+          ...niveauxPresents.map(
+            (niveau) =>
+                _sectionNiveau(cycle, niveau, niveauxData[niveau], couleur),
+          ),
         ],
       ),
     );
   }
 
-  Widget _sectionNiveau(String cycle, String niveau, dynamic donnees, Color couleur) {
+  Widget _sectionNiveau(
+    String cycle,
+    String niveau,
+    dynamic donnees,
+    Color couleur,
+  ) {
     final estCollege = cycle == 'college';
 
     return Padding(
@@ -446,10 +641,19 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(niveau, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF334155))),
+          Text(
+            niveau,
+            style: GoogleFonts.sora(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF334155),
+            ),
+          ),
           const SizedBox(height: 6),
           if (estCollege)
-            ...(donnees as List? ?? []).map((c) => _carteClasseCompacte(c as Map<String, dynamic>, couleur))
+            ...(donnees as List? ?? []).map(
+              (c) => _carteClasseCompacte(c as Map<String, dynamic>, couleur),
+            )
           else
             ...(donnees is Map ? donnees.entries : <MapEntry>[]).map((entry) {
               final serie = entry.key as String;
@@ -459,9 +663,21 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Série $serie', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF94A3B8))),
+                    Text(
+                      'Série $serie',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    ...classes.map((c) => _carteClasseCompacte(c as Map<String, dynamic>, couleur)),
+                    ...classes.map(
+                      (c) => _carteClasseCompacte(
+                        c as Map<String, dynamic>,
+                        couleur,
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -472,15 +688,17 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   }
 
   Widget _carteClasseCompacte(Map<String, dynamic> classe, Color couleurCycle) {
-    final id           = classe['id'] as int;
-    final nom          = classe['nom'] as String;
-    final salle        = classe['salle'] as String?;
-    final statut       = classe['statut'] as String? ?? 'active';
-    final actif        = statut == 'active';
+    final id = classe['id'] as int;
+    final nom = classe['nom'] as String;
+    final salle = classe['salle'] as String?;
+    final statut = classe['statut'] as String? ?? 'active';
+    final actif = statut == 'active';
     final nombreEleves = (classe['nombre_eleves'] as num?)?.toInt() ?? 0;
     final nombreMatieres = (classe['nombre_matieres'] as num?)?.toInt() ?? 0;
-    final capaciteMax  = (classe['capacite_max'] as num?)?.toInt() ?? 40;
-    final pourcentage  = capaciteMax > 0 ? (nombreEleves / capaciteMax).clamp(0.0, 1.0) : 0.0;
+    final capaciteMax = (classe['capacite_max'] as num?)?.toInt() ?? 40;
+    final pourcentage = capaciteMax > 0
+        ? (nombreEleves / capaciteMax).clamp(0.0, 1.0)
+        : 0.0;
 
     return GestureDetector(
       onTap: () => Navigator.push(
@@ -499,14 +717,23 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
               color: Colors.white.withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(12),
               border: Border(left: BorderSide(color: couleurCycle, width: 4)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 Container(
                   width: 44,
                   height: 44,
-                  decoration: BoxDecoration(color: couleurCycle.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(
+                    color: couleurCycle.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Icon(Icons.school, color: couleurCycle, size: 22),
                 ),
                 const SizedBox(width: 10),
@@ -515,23 +742,72 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(nom, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      Text(
+                        nom,
+                        style: GoogleFonts.sora(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       if (salle != null)
-                        Text(salle, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        Text(
+                          salle,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: const Color(0xFF334155),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.people, size: 12, color: const Color(0xFF94A3B8)),
+                          Icon(
+                            Icons.people,
+                            size: 12,
+                            color: const Color(0xFF94A3B8),
+                          ),
                           const SizedBox(width: 2),
-                          Text('$nombreEleves', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
+                          Text(
+                            '$nombreEleves',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Icon(Icons.book, size: 12, color: const Color(0xFF94A3B8)),
+                          Icon(
+                            Icons.book,
+                            size: 12,
+                            color: const Color(0xFF94A3B8),
+                          ),
                           const SizedBox(width: 2),
-                          Text('$nombreMatieres matières', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
+                          Text(
+                            '$nombreMatieres matières',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
                           const SizedBox(width: 8),
-                          Icon(actif ? Icons.check_circle : Icons.pause_circle, size: 12, color: actif ? const Color(0xFF16A34A) : const Color(0xFF94A3B8)),
+                          Icon(
+                            actif ? Icons.check_circle : Icons.pause_circle,
+                            size: 12,
+                            color: actif
+                                ? const Color(0xFF16A34A)
+                                : const Color(0xFF94A3B8),
+                          ),
                           const SizedBox(width: 2),
-                          Text(actif ? 'active' : 'inactive', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
+                          Text(
+                            actif ? 'active' : 'inactive',
+                            style: GoogleFonts.inter(
+                              fontSize: 10,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -541,8 +817,21 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('$nombreEleves/$capaciteMax', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF1E3A8A))),
-                    Text('élèves', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
+                    Text(
+                      '$nombreEleves/$capaciteMax',
+                      style: GoogleFonts.sora(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1E3A8A),
+                      ),
+                    ),
+                    Text(
+                      'élèves',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(2),
@@ -555,18 +844,23 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                           color: pourcentage >= 1
                               ? const Color(0xFFDC2626)
                               : pourcentage >= 0.8
-                                  ? const Color(0xFFEA580C)
-                                  : const Color(0xFF16A34A),
+                              ? const Color(0xFFEA580C)
+                              : const Color(0xFF16A34A),
                         ),
                       ),
                     ),
                   ],
                 ),
                 IconButton(
-                  icon: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
+                  icon: const Icon(
+                    Icons.chevron_right,
+                    color: Color(0xFF94A3B8),
+                  ),
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => FicheClasseScreen(classeId: id)),
+                    MaterialPageRoute(
+                      builder: (_) => FicheClasseScreen(classeId: id),
+                    ),
                   ).then((_) => _chargerListe()),
                 ),
               ],
@@ -582,15 +876,15 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   // ══════════════════════════════════════════════════════
 
   Future<void> _afficherDialogCreation() async {
-    final salleController    = TextEditingController();
+    final salleController = TextEditingController();
     final capaciteController = TextEditingController(text: '40');
     final serieCustomController = TextEditingController();
 
-    String cycle    = 'college';
-    String niveau   = _niveauxParCycle['college']!.first;
+    String cycle = 'college';
+    String niveau = _niveauxParCycle['college']!.first;
     String? serie;
     bool serieEstPersonnalisee = false;
-    String indice   = 'A';
+    String indice = 'A';
     int? professeurPrincipalId;
     int? anneeAcademiqueId;
 
@@ -599,14 +893,25 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           final niveaux = _niveauxParCycle[cycle]!;
-          final series  = _seriesParCycle[cycle]!;
+          final series = _seriesParCycle[cycle]!;
           final estCollege = cycle == 'college';
-          final indices = estCollege ? ['A', 'B', 'C', 'D'] : ['1', '2', '3', '4'];
-          final serieActuelle = serieEstPersonnalisee ? serieCustomController.text : serie;
-          final nomGenere = _genererNom(cycle, niveau, estCollege ? null : serieActuelle, indice);
+          final indices = estCollege
+              ? ['A', 'B', 'C', 'D']
+              : ['1', '2', '3', '4'];
+          final serieActuelle = serieEstPersonnalisee
+              ? serieCustomController.text
+              : serie;
+          final nomGenere = _genererNom(
+            cycle,
+            niveau,
+            estCollege ? null : serieActuelle,
+            indice,
+          );
 
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 540, maxHeight: 760),
               child: Padding(
@@ -615,11 +920,22 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Nouvelle classe',
-                        style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                    Text(
+                      'Nouvelle classe',
+                      style: GoogleFonts.sora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text('Le nom est généré automatiquement',
-                        style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
+                    Text(
+                      'Le nom est généré automatiquement',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF334155),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(
@@ -631,16 +947,30 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
+                                color: const Color(
+                                  0xFF1E3A8A,
+                                ).withValues(alpha: 0.08),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('Nom généré :', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
+                                  Text(
+                                    'Nom généré :',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      color: const Color(0xFF334155),
+                                    ),
+                                  ),
                                   const SizedBox(height: 2),
-                                  Text(nomGenere.isEmpty ? '—' : nomGenere,
-                                      style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A))),
+                                  Text(
+                                    nomGenere.isEmpty ? '—' : nomGenere,
+                                    style: GoogleFonts.sora(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1E3A8A),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -654,16 +984,23 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                 scrollDirection: Axis.horizontal,
                                 child: SegmentedButton<String>(
                                   segments: _ordreCycles
-                                      .map((c) => ButtonSegment(value: c, label: Text('${_emojisCycle[c]} ${_labelsCycle[c]}')))
+                                      .map(
+                                        (c) => ButtonSegment(
+                                          value: c,
+                                          label: Text(
+                                            '${_emojisCycle[c]} ${_labelsCycle[c]}',
+                                          ),
+                                        ),
+                                      )
                                       .toList(),
                                   selected: {cycle},
                                   onSelectionChanged: (s) => setStateDialog(() {
-                                    cycle   = s.first;
-                                    niveau  = _niveauxParCycle[cycle]!.first;
-                                    serie   = null;
+                                    cycle = s.first;
+                                    niveau = _niveauxParCycle[cycle]!.first;
+                                    serie = null;
                                     serieEstPersonnalisee = false;
                                     serieCustomController.clear();
-                                    indice  = cycle == 'college' ? 'A' : '1';
+                                    indice = cycle == 'college' ? 'A' : '1';
                                   }),
                                 ),
                               ),
@@ -675,9 +1012,21 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: SegmentedButton<String>(
-                                segments: niveaux.map((n) => ButtonSegment(value: n, label: Text(n))).toList(),
-                                selected: {niveaux.contains(niveau) ? niveau : niveaux.first},
-                                onSelectionChanged: (s) => setStateDialog(() => niveau = s.first),
+                                segments: niveaux
+                                    .map(
+                                      (n) => ButtonSegment(
+                                        value: n,
+                                        label: Text(n),
+                                      ),
+                                    )
+                                    .toList(),
+                                selected: {
+                                  niveaux.contains(niveau)
+                                      ? niveau
+                                      : niveaux.first,
+                                },
+                                onSelectionChanged: (s) =>
+                                    setStateDialog(() => niveau = s.first),
                               ),
                             ),
 
@@ -689,19 +1038,25 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                 spacing: 8,
                                 runSpacing: 8,
                                 children: [
-                                  ...series.map((s) => ChoiceChip(
-                                        label: Text(s),
-                                        selected: !serieEstPersonnalisee && serie == s,
-                                        onSelected: (_) => setStateDialog(() {
-                                          serie = s;
-                                          serieEstPersonnalisee = false;
-                                        }),
-                                        selectedColor: const Color(0xFF1E3A8A),
-                                        labelStyle: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w600,
-                                          color: !serieEstPersonnalisee && serie == s ? Colors.white : const Color(0xFF334155),
-                                        ),
-                                      )),
+                                  ...series.map(
+                                    (s) => ChoiceChip(
+                                      label: Text(s),
+                                      selected:
+                                          !serieEstPersonnalisee && serie == s,
+                                      onSelected: (_) => setStateDialog(() {
+                                        serie = s;
+                                        serieEstPersonnalisee = false;
+                                      }),
+                                      selectedColor: const Color(0xFF1E3A8A),
+                                      labelStyle: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        color:
+                                            !serieEstPersonnalisee && serie == s
+                                            ? Colors.white
+                                            : const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ),
                                   ChoiceChip(
                                     label: const Text('+ Autre'),
                                     selected: serieEstPersonnalisee,
@@ -712,7 +1067,9 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                     selectedColor: const Color(0xFFD97706),
                                     labelStyle: GoogleFonts.inter(
                                       fontWeight: FontWeight.w600,
-                                      color: serieEstPersonnalisee ? Colors.white : const Color(0xFF334155),
+                                      color: serieEstPersonnalisee
+                                          ? Colors.white
+                                          : const Color(0xFF334155),
                                     ),
                                   ),
                                 ],
@@ -721,8 +1078,12 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                 const SizedBox(height: 8),
                                 TextField(
                                   controller: serieCustomController,
-                                  textCapitalization: TextCapitalization.characters,
-                                  decoration: const InputDecoration(labelText: 'Série personnalisée', prefixIcon: Icon(Icons.edit)),
+                                  textCapitalization:
+                                      TextCapitalization.characters,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Série personnalisée',
+                                    prefixIcon: Icon(Icons.edit),
+                                  ),
                                   onChanged: (_) => setStateDialog(() {}),
                                 ),
                               ],
@@ -730,43 +1091,82 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
 
                             const SizedBox(height: 20),
                             // ── Étape 4 : Indice ─────────────────
-                            _titreSection('Étape 4 — Numéro de la classe (si plusieurs)'),
+                            _titreSection(
+                              'Étape 4 — Numéro de la classe (si plusieurs)',
+                            ),
                             SegmentedButton<String>(
-                              segments: indices.map((i) => ButtonSegment(value: i, label: Text(i))).toList(),
+                              segments: indices
+                                  .map(
+                                    (i) =>
+                                        ButtonSegment(value: i, label: Text(i)),
+                                  )
+                                  .toList(),
                               selected: {indice},
-                              onSelectionChanged: (s) => setStateDialog(() => indice = s.first),
+                              onSelectionChanged: (s) =>
+                                  setStateDialog(() => indice = s.first),
                             ),
                             const SizedBox(height: 20),
 
                             // ── Étape 5 : Informations complémentaires ──
-                            _titreSection('Étape 5 — Informations complémentaires'),
+                            _titreSection(
+                              'Étape 5 — Informations complémentaires',
+                            ),
                             TextField(
                               controller: salleController,
-                              decoration: const InputDecoration(labelText: 'Salle (ex: Salle 101)', prefixIcon: Icon(Icons.room)),
+                              decoration: const InputDecoration(
+                                labelText: 'Salle (ex: Salle 101)',
+                                prefixIcon: Icon(Icons.room),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: capaciteController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Capacité max *', prefixIcon: Icon(Icons.people)),
+                              decoration: const InputDecoration(
+                                labelText: 'Capacité max *',
+                                prefixIcon: Icon(Icons.people),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
                               value: professeurPrincipalId,
                               isExpanded: true,
-                              decoration: const InputDecoration(labelText: 'Professeur principal', prefixIcon: Icon(Icons.school)),
+                              decoration: const InputDecoration(
+                                labelText: 'Professeur principal',
+                                prefixIcon: Icon(Icons.school),
+                              ),
                               hint: const Text('Aucun'),
-                              items: _enseignants.map((e) => DropdownMenuItem<int>(value: e['id'] as int, child: Text(e['name'] as String))).toList(),
-                              onChanged: (v) => setStateDialog(() => professeurPrincipalId = v),
+                              items: _enseignants
+                                  .map(
+                                    (e) => DropdownMenuItem<int>(
+                                      value: e['id'] as int,
+                                      child: Text(e['name'] as String),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setStateDialog(
+                                () => professeurPrincipalId = v,
+                              ),
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
                               value: anneeAcademiqueId,
                               isExpanded: true,
-                              decoration: const InputDecoration(labelText: 'Année académique', prefixIcon: Icon(Icons.calendar_month)),
+                              decoration: const InputDecoration(
+                                labelText: 'Année académique',
+                                prefixIcon: Icon(Icons.calendar_month),
+                              ),
                               hint: const Text('Aucune'),
-                              items: _annees.map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String))).toList(),
-                              onChanged: (v) => setStateDialog(() => anneeAcademiqueId = v),
+                              items: _annees
+                                  .map(
+                                    (a) => DropdownMenuItem<int>(
+                                      value: a['id'] as int,
+                                      child: Text(a['libelle'] as String),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setStateDialog(() => anneeAcademiqueId = v),
                             ),
                           ],
                         ),
@@ -775,7 +1175,12 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annuler'),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
@@ -785,27 +1190,39 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             onPressed: () async {
-                              if (!estCollege && (serieActuelle == null || serieActuelle.isEmpty)) {
-                                _afficherErreur('Veuillez sélectionner ou saisir une série');
+                              if (!estCollege &&
+                                  (serieActuelle == null ||
+                                      serieActuelle.isEmpty)) {
+                                _afficherErreur(
+                                  'Veuillez sélectionner ou saisir une série',
+                                );
                                 return;
                               }
                               try {
                                 await ClasseService.creer(
-                                  niveau:                 niveau,
-                                  serie:                  estCollege ? null : serieActuelle,
-                                  indice:                 indice,
-                                  salle:                  salleController.text.isEmpty ? null : salleController.text,
-                                  capaciteMax:            int.tryParse(capaciteController.text) ?? 40,
-                                  statut:                 'active',
-                                  cycle:                  cycle,
-                                  professeurPrincipalId:  professeurPrincipalId,
-                                  anneeAcademiqueId:      anneeAcademiqueId,
+                                  niveau: niveau,
+                                  serie: estCollege ? null : serieActuelle,
+                                  indice: indice,
+                                  salle: salleController.text.isEmpty
+                                      ? null
+                                      : salleController.text,
+                                  capaciteMax:
+                                      int.tryParse(capaciteController.text) ??
+                                      40,
+                                  statut: 'active',
+                                  cycle: cycle,
+                                  professeurPrincipalId: professeurPrincipalId,
+                                  anneeAcademiqueId: anneeAcademiqueId,
                                 );
                                 if (context.mounted) Navigator.pop(context);
-                                _afficherSucces('Classe "$nomGenere" créée avec succès');
+                                _afficherSucces(
+                                  'Classe "$nomGenere" créée avec succès',
+                                );
                                 _chargerListe();
                               } catch (e) {
-                                _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                                _afficherErreur(
+                                  e.toString().replaceAll('Exception: ', ''),
+                                );
                               }
                             },
                             child: const Text('Créer la classe'),
@@ -832,7 +1249,12 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
       padding: const EdgeInsets.only(bottom: 8, top: 4),
       child: Text(
         titre.toUpperCase(),
-        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A), letterSpacing: 0.4),
+        style: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF1E3A8A),
+          letterSpacing: 0.4,
+        ),
       ),
     );
   }

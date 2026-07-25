@@ -199,6 +199,7 @@ Route::get('/dashboard', [DashboardController::class, 'index']);
 Route::get('/cahier-texte',              [CahierTexteController::class, 'index']);
 Route::post('/cahier-texte',             [CahierTexteController::class, 'store']);
 Route::put('/cahier-texte/{id}',         [CahierTexteController::class, 'update']);
+Route::delete('/cahier-texte/{id}',      [CahierTexteController::class, 'destroy']);
 Route::get('/cahier-texte/classe/{classeId}', [CahierTexteController::class, 'historiqueClasse']);
 
 // Discipline

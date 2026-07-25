@@ -4,14 +4,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../services/auth_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/eleve_service.dart';
+import '../../services/absence_service.dart';
 import '../../services/classe_matiere_service.dart';
 import '../../services/affectation_service.dart';
 import '../../services/emploi_du_temps_service.dart';
-import '../../services/cahier_texte_service.dart';
 import '../../services/matiere_service.dart';
 import '../../services/utilisateur_service.dart';
 import '../../widgets/ssm_widgets.dart';
@@ -36,15 +35,59 @@ const List<Map<String, String>> _jours = [
 ];
 
 const List<Color> _paletteMatieres = [
-  Color(0xFFBBDEFB), Color(0xFFC8E6C9), Color(0xFFFFE0B2), Color(0xFFF8BBD0),
-  Color(0xFFD1C4E9), Color(0xFFB2EBF2), Color(0xFFFFF9C4), Color(0xFFD7CCC8),
-  Color(0xFFC5CAE9), Color(0xFFDCEDC8),
+  Color(0xFFBBDEFB),
+  Color(0xFFC8E6C9),
+  Color(0xFFFFE0B2),
+  Color(0xFFF8BBD0),
+  Color(0xFFD1C4E9),
+  Color(0xFFB2EBF2),
+  Color(0xFFFFF9C4),
+  Color(0xFFD7CCC8),
+  Color(0xFFC5CAE9),
+  Color(0xFFDCEDC8),
 ];
 
-Color _couleurMatiere(int matiereId) => _paletteMatieres[matiereId % _paletteMatieres.length];
+Color _couleurMatiere(int matiereId) =>
+    _paletteMatieres[matiereId % _paletteMatieres.length];
+
+const List<Color> _couleursSuggerees = [
+  Color(0xFF1E3A8A), // Indigo
+  Color(0xFF0D9488), // Teal
+  Color(0xFFD97706), // Ambre
+  Color(0xFF16A34A), // Vert
+  Color(0xFFDC2626), // Rouge
+  Color(0xFFEA580C), // Orange
+  Color(0xFF7C3AED), // Violet
+  Color(0xFFDB2777), // Rose
+  Color(0xFF0891B2), // Cyan
+  Color(0xFF65A30D), // Lime
+];
+
+const List<String> _suggestionsMatieres = [
+  'Mathématiques',
+  'Français',
+  'Anglais',
+  'SVT',
+  'Physique-Chimie',
+  'Histoire-Géo',
+  'Philosophie',
+  'EPS',
+  'Informatique',
+  'Espagnol',
+  'Économie',
+  'Comptabilité',
+  'Dessin',
+  'Musique',
+];
 
 const List<String> _niveaux = [
-  '6ème', '5ème', '4ème', '3ème', 'Seconde', 'Première', 'Terminale',
+  '6ème',
+  '5ème',
+  '4ème',
+  '3ème',
+  'Seconde',
+  'Première',
+  'Terminale',
 ];
 
 class FicheClasseScreen extends StatefulWidget {
@@ -64,28 +107,30 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
   List<dynamic> _eleves = [];
   Map<String, dynamic> _emploiDuTemps = {};
-  List<dynamic> _cahierTexte = [];
 
   List<dynamic> _toutesMatieres = [];
   List<dynamic> _tousEnseignants = [];
   List<dynamic> _toutesClasses = [];
   int? _anneeId;
-  dynamic _utilisateurConnecte;
 
   bool _chargement = true;
   String _rechercheEleve = '';
-  int? _filtreMatiereCahier;
+
+  // ── Présence (onglet Élèves) ─────────────────────────
+  DateTime _dateSelectionnee = DateTime.now();
+  Map<int, String> _presences = {};
+  bool _chargementPresences = false;
 
   @override
   void initState() {
     super.initState();
     _chargerTout();
+    _chargerPresences();
   }
 
   Future<void> _chargerTout() async {
     setState(() => _chargement = true);
     try {
-      final utilisateur = await AuthService.getUtilisateur();
       final resultatsInit = await Future.wait([
         ClasseService.details(widget.classeId),
         AffectationService.listerParClasse(widget.classeId),
@@ -109,25 +154,24 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       if (anneeId != null) {
         final resultats = await Future.wait([
           EleveService.elevesParClasse(widget.classeId, anneeId),
-          EmploiDuTempsService.parClasse(classeId: widget.classeId, anneeId: anneeId),
+          EmploiDuTempsService.parClasse(
+            classeId: widget.classeId,
+            anneeId: anneeId,
+          ),
         ]);
         eleves = resultats[0] as List;
         emploi = resultats[1] as Map<String, dynamic>;
       }
 
-      final cahier = await CahierTexteService.historiqueClasse(widget.classeId);
-
       setState(() {
-        _utilisateurConnecte = utilisateur;
-        _classe          = classe;
-        _enseignants     = affectations;
-        _matieresClasse  = details['matieres'] as List;
-        _statistiques    = details['statistiques'] as Map<String, dynamic>;
-        _anneeId         = anneeId;
-        _eleves          = eleves;
-        _emploiDuTemps   = emploi;
-        _cahierTexte     = cahier;
-        _chargement      = false;
+        _classe = classe;
+        _enseignants = affectations;
+        _matieresClasse = details['matieres'] as List;
+        _statistiques = details['statistiques'] as Map<String, dynamic>;
+        _anneeId = anneeId;
+        _eleves = eleves;
+        _emploiDuTemps = emploi;
+        _chargement = false;
       });
 
       _chargerReferences();
@@ -144,7 +188,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       final tousEnseignants = <dynamic>[];
       var page = 1;
       while (true) {
-        final resultat = await UtilisateurService.lister(role: 'enseignant', page: page);
+        final resultat = await UtilisateurService.lister(
+          role: 'enseignant',
+          page: page,
+        );
         tousEnseignants.addAll((resultat['data'] as List?) ?? []);
         final dernierePage = resultat['last_page'] as int? ?? 1;
         if (page >= dernierePage) break;
@@ -154,31 +201,100 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       final toutesClasses = await ClasseService.listerClasses();
 
       setState(() {
-        _toutesMatieres  = toutesMatieres;
+        _toutesMatieres = toutesMatieres;
         _tousEnseignants = tousEnseignants;
-        _toutesClasses   = toutesClasses;
+        _toutesClasses = toutesClasses;
       });
     } catch (_) {
       // Listes de référence non bloquantes.
     }
   }
 
+  // ── Présence (onglet Élèves) ─────────────────────────
+
+  String _formatDateApi(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+  String _formatDateAffichee(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+  Future<void> _chargerPresences() async {
+    setState(() => _chargementPresences = true);
+    try {
+      final absences = await AbsenceService.listerAbsences(
+        classeId: widget.classeId,
+        dateAbsence: _formatDateApi(_dateSelectionnee),
+      );
+      setState(() {
+        _presences = {for (final a in absences) a['eleve_id'] as int: 'absent'};
+        _chargementPresences = false;
+      });
+    } catch (e) {
+      setState(() => _chargementPresences = false);
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  Future<void> _choisirDatePresence() async {
+    final d = await showDatePicker(
+      context: context,
+      initialDate: _dateSelectionnee,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+    );
+    if (d != null) {
+      setState(() => _dateSelectionnee = d);
+      _chargerPresences();
+    }
+  }
+
+  Future<void> _enregistrerPresence() async {
+    final absents = _presences.entries
+        .where((e) => e.value == 'absent')
+        .map((e) => {'eleve_id': e.key})
+        .toList();
+    final nombrePresents = _presences.values
+        .where((v) => v == 'present')
+        .length;
+    final nombreAbsents = absents.length;
+
+    try {
+      await AbsenceService.enregistrerAbsences(
+        classeId: widget.classeId,
+        dateAbsence: _formatDateApi(_dateSelectionnee),
+        absences: absents,
+      );
+      _afficherSucces(
+        'Présence enregistrée — $nombrePresents présents, $nombreAbsents absents',
+      );
+      _chargerPresences();
+    } catch (e) {
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFDC2626),
+      ),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF16A34A),
+      ),
     );
   }
 
   void _bientot() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fonctionnalité à venir')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Fonctionnalité à venir')));
   }
 
   dynamic _affectationPourMatiere(int matiereId) {
@@ -203,7 +319,8 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     for (final jour in _jours) {
       final liste = (_emploiDuTemps[jour['cle']] as List?) ?? [];
       for (final c in liste) {
-        if (enseignantId != null && c['enseignant_id'] != enseignantId) continue;
+        if (enseignantId != null && c['enseignant_id'] != enseignantId)
+          continue;
         if (matiereId != null && c['matiere_id'] != matiereId) continue;
         resultat.add({...c, 'jour_label': jour['label']});
       }
@@ -219,7 +336,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 7,
+      length: 6,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         extendBodyBehindAppBar: true,
@@ -233,7 +350,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             : NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) => [
                   SliverToBoxAdapter(child: _heroHeader(context)),
-                  SliverPersistentHeader(pinned: true, delegate: _TabBarDelegate(_tabBar())),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _TabBarDelegate(_tabBar()),
+                  ),
                 ],
                 body: TabBarView(
                   children: [
@@ -243,7 +363,6 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     _tabMatieres(),
                     _tabEmploiDuTemps(),
                     _tabStatistiques(),
-                    _tabCahierTexte(),
                   ],
                 ),
               ),
@@ -256,20 +375,30 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _heroHeader(BuildContext context) {
-    final classe        = _classe!;
-    final nom           = classe['nom'] as String;
-    final niveau        = classe['niveau'] as String? ?? '';
-    final serie         = classe['serie'] as String?;
-    final salle         = classe['salle'] as String?;
-    final nombreEleves  = (classe['nombre_eleves'] as num?)?.toInt() ?? 0;
-    final capaciteMax   = (classe['capacite_max'] as num?)?.toInt() ?? 50;
+    final classe = _classe!;
+    final nom = classe['nom'] as String;
+    final niveau = classe['niveau'] as String? ?? '';
+    final serie = classe['serie'] as String?;
+    final salle = classe['salle'] as String?;
+    final nombreEleves = (classe['nombre_eleves'] as num?)?.toInt() ?? 0;
+    final capaciteMax = (classe['capacite_max'] as num?)?.toInt() ?? 50;
     final nombreMatieres = _matieresClasse.length;
-    final nombreProfs   = _enseignants.map((e) => e['enseignant_id']).toSet().length;
-    final pourcentage   = capaciteMax > 0 ? (nombreEleves / capaciteMax).clamp(0.0, 1.0) : 0.0;
+    final nombreProfs = _enseignants
+        .map((e) => e['enseignant_id'])
+        .toSet()
+        .length;
+    final pourcentage = capaciteMax > 0
+        ? (nombreEleves / capaciteMax).clamp(0.0, 1.0)
+        : 0.0;
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(24, MediaQuery.of(context).padding.top + kToolbarHeight, 24, 24),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        MediaQuery.of(context).padding.top + kToolbarHeight,
+        24,
+        24,
+      ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
@@ -280,7 +409,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(nom, style: GoogleFonts.sora(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white)),
+          Text(
+            nom,
+            style: GoogleFonts.sora(
+              fontSize: 28,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 10),
           Wrap(
             spacing: 8,
@@ -294,7 +430,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           Row(
             children: [
               Expanded(child: _statHero(Icons.people, '$nombreEleves élèves')),
-              Expanded(child: _statHero(Icons.book, '$nombreMatieres matières')),
+              Expanded(
+                child: _statHero(Icons.book, '$nombreMatieres matières'),
+              ),
               Expanded(child: _statHero(Icons.school, '$nombreProfs profs')),
             ],
           ),
@@ -309,7 +447,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text('$nombreEleves / $capaciteMax', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
+          Text(
+            '$nombreEleves / $capaciteMax',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+          ),
         ],
       ),
     );
@@ -318,8 +462,18 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   Widget _badgeBlanc(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 
@@ -329,7 +483,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         Icon(icone, size: 15, color: Colors.white.withValues(alpha: 0.8)),
         const SizedBox(width: 4),
         Flexible(
-          child: Text(label, style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.9)), overflow: TextOverflow.ellipsis),
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.9),
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -346,7 +507,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             labelColor: const Color(0xFF1E3A8A),
             unselectedLabelColor: const Color(0xFF94A3B8),
             indicatorColor: const Color(0xFFD97706),
-            labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+            labelStyle: GoogleFonts.inter(
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
             tabs: const [
               Tab(text: '📋 Infos'),
               Tab(text: '👥 Élèves'),
@@ -363,7 +527,6 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               ),
               Tab(text: '📅 EDT'),
               Tab(text: '📊 Stats'),
-              Tab(text: '📖 Cahier'),
             ],
           ),
         ),
@@ -378,7 +541,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: child,
     );
@@ -389,15 +558,17 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _tabInfos() {
-    final classe    = _classe!;
-    final prof      = classe['professeur_principal'] as Map<String, dynamic>?;
-    final annee     = classe['annee'] as Map<String, dynamic>?;
-    final statut    = classe['statut'] as String? ?? 'active';
-    final actif     = statut == 'active';
+    final classe = _classe!;
+    final prof = classe['professeur_principal'] as Map<String, dynamic>?;
+    final annee = classe['annee'] as Map<String, dynamic>?;
+    final statut = classe['statut'] as String? ?? 'active';
+    final actif = statut == 'active';
     final createdAt = (classe['created_at'] as String?)?.split('T').first;
     final nombreEleves = (classe['nombre_eleves'] as num?)?.toInt() ?? 0;
-    final capaciteMax  = (classe['capacite_max'] as num?)?.toInt() ?? 50;
-    final pourcentage  = capaciteMax > 0 ? (nombreEleves / capaciteMax).clamp(0.0, 1.0) : 0.0;
+    final capaciteMax = (classe['capacite_max'] as num?)?.toInt() ?? 50;
+    final pourcentage = capaciteMax > 0
+        ? (nombreEleves / capaciteMax).clamp(0.0, 1.0)
+        : 0.0;
 
     return RefreshIndicator(
       onRefresh: _chargerTout,
@@ -409,9 +580,21 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _ligneInfo(Icons.class_, 'Nom', classe['nom'] as String),
-                _ligneInfo(Icons.layers, 'Niveau', classe['niveau'] as String? ?? '—'),
-                _ligneInfo(Icons.bookmark_outline, 'Série', classe['serie'] as String? ?? '—'),
-                _ligneInfo(Icons.room, 'Salle', classe['salle'] as String? ?? '—'),
+                _ligneInfo(
+                  Icons.layers,
+                  'Niveau',
+                  classe['niveau'] as String? ?? '—',
+                ),
+                _ligneInfo(
+                  Icons.bookmark_outline,
+                  'Série',
+                  classe['serie'] as String? ?? '—',
+                ),
+                _ligneInfo(
+                  Icons.room,
+                  'Salle',
+                  classe['salle'] as String? ?? '—',
+                ),
               ],
             ),
           ),
@@ -419,7 +602,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Capacité', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
+                Text(
+                  'Capacité',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
                 const SizedBox(height: 6),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
@@ -430,12 +619,18 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     color: pourcentage >= 1
                         ? const Color(0xFFDC2626)
                         : pourcentage >= 0.8
-                            ? const Color(0xFFEA580C)
-                            : const Color(0xFF16A34A),
+                        ? const Color(0xFFEA580C)
+                        : const Color(0xFF16A34A),
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text('$nombreEleves / $capaciteMax élèves', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
+                Text(
+                  '$nombreEleves / $capaciteMax élèves',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
               ],
             ),
           ),
@@ -443,26 +638,55 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Professeur principal', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
+                Text(
+                  'Professeur principal',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 if (prof != null)
                   Row(
                     children: [
                       CircleAvatar(
                         radius: 18,
-                        backgroundColor: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
-                        backgroundImage: prof['photo_url'] != null ? NetworkImage(prof['photo_url'] as String) : null,
+                        backgroundColor: const Color(
+                          0xFF1E3A8A,
+                        ).withValues(alpha: 0.15),
+                        backgroundImage: prof['photo_url'] != null
+                            ? NetworkImage(prof['photo_url'] as String)
+                            : null,
                         child: prof['photo_url'] == null
-                            ? Text((prof['name'] as String).substring(0, 1).toUpperCase(),
-                                style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)))
+                            ? Text(
+                                (prof['name'] as String)
+                                    .substring(0, 1)
+                                    .toUpperCase(),
+                                style: GoogleFonts.sora(
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1E3A8A),
+                                ),
+                              )
                             : null,
                       ),
                       const SizedBox(width: 10),
-                      Text(prof['name'] as String, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(
+                        prof['name'] as String,
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   )
                 else
-                  Text('Non défini', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF94A3B8))),
+                  Text(
+                    'Non défini',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -470,16 +694,35 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ligneInfo(Icons.calendar_month, 'Année académique', annee?['libelle'] as String? ?? '—'),
+                _ligneInfo(
+                  Icons.calendar_month,
+                  'Année académique',
+                  annee?['libelle'] as String? ?? '—',
+                ),
                 _ligneInfo(Icons.event, 'Créée le', createdAt ?? '—'),
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, size: 16, color: Color(0xFF94A3B8)),
+                      const Icon(
+                        Icons.info_outline,
+                        size: 16,
+                        color: Color(0xFF94A3B8),
+                      ),
                       const SizedBox(width: 10),
-                      Text('Statut : ', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
-                      SSMBadge(label: actif ? 'ACTIVE' : 'INACTIVE', couleur: actif ? const Color(0xFF16A34A) : const Color(0xFF94A3B8)),
+                      Text(
+                        'Statut : ',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      SSMBadge(
+                        label: actif ? 'ACTIVE' : 'INACTIVE',
+                        couleur: actif
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFF94A3B8),
+                      ),
                     ],
                   ),
                 ),
@@ -492,7 +735,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _afficherDialogModifierClasse,
-                  style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF1E3A8A), side: const BorderSide(color: Color(0xFF1E3A8A))),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1E3A8A),
+                    side: const BorderSide(color: Color(0xFF1E3A8A)),
+                  ),
                   icon: const Icon(Icons.edit, size: 16),
                   label: const Text('Modifier'),
                 ),
@@ -502,13 +748,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                 child: actif
                     ? OutlinedButton.icon(
                         onPressed: _archiverClasse,
-                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFFDC2626), side: const BorderSide(color: Color(0xFFDC2626))),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFDC2626),
+                          side: const BorderSide(color: Color(0xFFDC2626)),
+                        ),
                         icon: const Icon(Icons.archive_outlined, size: 16),
                         label: const Text('Archiver'),
                       )
                     : OutlinedButton.icon(
                         onPressed: _activerClasse,
-                        style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF16A34A), side: const BorderSide(color: Color(0xFF16A34A))),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF16A34A),
+                          side: const BorderSide(color: Color(0xFF16A34A)),
+                        ),
                         icon: const Icon(Icons.check_circle_outline, size: 16),
                         label: const Text('Activer'),
                       ),
@@ -528,8 +780,22 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         children: [
           Icon(icone, size: 16, color: const Color(0xFF94A3B8)),
           const SizedBox(width: 10),
-          Text('$label : ', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
-          Expanded(child: Text(valeur, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600))),
+          Text(
+            '$label : ',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: const Color(0xFF334155),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              valeur,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -557,10 +823,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
   Future<void> _afficherDialogModifierClasse() async {
     final classe = _classe!;
-    final nomController      = TextEditingController(text: classe['nom'] as String);
-    final serieController    = TextEditingController(text: classe['serie'] as String? ?? '');
-    final salleController    = TextEditingController(text: classe['salle'] as String? ?? '');
-    final capaciteController = TextEditingController(text: '${classe['capacite_max'] ?? 50}');
+    final nomController = TextEditingController(text: classe['nom'] as String);
+    final serieController = TextEditingController(
+      text: classe['serie'] as String? ?? '',
+    );
+    final salleController = TextEditingController(
+      text: classe['salle'] as String? ?? '',
+    );
+    final capaciteController = TextEditingController(
+      text: '${classe['capacite_max'] ?? 50}',
+    );
     String niveau = classe['niveau'] as String? ?? _niveaux.first;
     String statut = classe['statut'] as String? ?? 'active';
     int? professeurPrincipalId = classe['professeur_principal_id'] as int?;
@@ -570,7 +842,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 500, maxHeight: 640),
               child: Padding(
@@ -579,43 +853,91 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Modifier la classe', style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700)),
+                    Text(
+                      'Modifier la classe',
+                      style: GoogleFonts.sora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            TextField(controller: nomController, decoration: const InputDecoration(labelText: 'Nom *', prefixIcon: Icon(Icons.class_))),
+                            TextField(
+                              controller: nomController,
+                              decoration: const InputDecoration(
+                                labelText: 'Nom *',
+                                prefixIcon: Icon(Icons.class_),
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
                               value: _niveaux.contains(niveau) ? niveau : null,
-                              decoration: const InputDecoration(labelText: 'Niveau *', prefixIcon: Icon(Icons.layers)),
-                              items: _niveaux.map((n) => DropdownMenuItem(value: n, child: Text(n))).toList(),
-                              onChanged: (v) => setStateDialog(() => niveau = v ?? niveau),
+                              decoration: const InputDecoration(
+                                labelText: 'Niveau *',
+                                prefixIcon: Icon(Icons.layers),
+                              ),
+                              items: _niveaux
+                                  .map(
+                                    (n) => DropdownMenuItem(
+                                      value: n,
+                                      child: Text(n),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) =>
+                                  setStateDialog(() => niveau = v ?? niveau),
                             ),
                             const SizedBox(height: 12),
-                            TextField(controller: serieController, decoration: const InputDecoration(labelText: 'Série', prefixIcon: Icon(Icons.bookmark_outline))),
+                            TextField(
+                              controller: serieController,
+                              decoration: const InputDecoration(
+                                labelText: 'Série',
+                                prefixIcon: Icon(Icons.bookmark_outline),
+                              ),
+                            ),
                             const SizedBox(height: 12),
-                            TextField(controller: salleController, decoration: const InputDecoration(labelText: 'Salle', prefixIcon: Icon(Icons.room))),
+                            TextField(
+                              controller: salleController,
+                              decoration: const InputDecoration(
+                                labelText: 'Salle',
+                                prefixIcon: Icon(Icons.room),
+                              ),
+                            ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: capaciteController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(labelText: 'Capacité max *', prefixIcon: Icon(Icons.people)),
+                              decoration: const InputDecoration(
+                                labelText: 'Capacité max *',
+                                prefixIcon: Icon(Icons.people),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                Text('Statut :', style: GoogleFonts.inter(fontSize: 14)),
+                                Text(
+                                  'Statut :',
+                                  style: GoogleFonts.inter(fontSize: 14),
+                                ),
                                 const SizedBox(width: 12),
                                 SegmentedButton<String>(
                                   segments: const [
-                                    ButtonSegment(value: 'active', label: Text('Active')),
-                                    ButtonSegment(value: 'inactive', label: Text('Inactive')),
+                                    ButtonSegment(
+                                      value: 'active',
+                                      label: Text('Active'),
+                                    ),
+                                    ButtonSegment(
+                                      value: 'inactive',
+                                      label: Text('Inactive'),
+                                    ),
                                   ],
                                   selected: {statut},
-                                  onSelectionChanged: (s) => setStateDialog(() => statut = s.first),
+                                  onSelectionChanged: (s) =>
+                                      setStateDialog(() => statut = s.first),
                                 ),
                               ],
                             ),
@@ -623,10 +945,22 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                             DropdownButtonFormField<int>(
                               value: professeurPrincipalId,
                               isExpanded: true,
-                              decoration: const InputDecoration(labelText: 'Professeur principal', prefixIcon: Icon(Icons.school)),
+                              decoration: const InputDecoration(
+                                labelText: 'Professeur principal',
+                                prefixIcon: Icon(Icons.school),
+                              ),
                               hint: const Text('Aucun'),
-                              items: _tousEnseignants.map((e) => DropdownMenuItem<int>(value: e['id'] as int, child: Text(e['name'] as String))).toList(),
-                              onChanged: (v) => setStateDialog(() => professeurPrincipalId = v),
+                              items: _tousEnseignants
+                                  .map(
+                                    (e) => DropdownMenuItem<int>(
+                                      value: e['id'] as int,
+                                      child: Text(e['name'] as String),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setStateDialog(
+                                () => professeurPrincipalId = v,
+                              ),
                             ),
                           ],
                         ),
@@ -635,20 +969,34 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annuler'),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E3A8A),
+                              foregroundColor: Colors.white,
+                            ),
                             onPressed: () async {
                               try {
                                 await ClasseService.modifier(
                                   widget.classeId,
                                   nom: nomController.text,
                                   niveau: niveau,
-                                  serie: serieController.text.isEmpty ? null : serieController.text,
-                                  salle: salleController.text.isEmpty ? null : salleController.text,
-                                  capaciteMax: int.tryParse(capaciteController.text),
+                                  serie: serieController.text.isEmpty
+                                      ? null
+                                      : serieController.text,
+                                  salle: salleController.text.isEmpty
+                                      ? null
+                                      : salleController.text,
+                                  capaciteMax: int.tryParse(
+                                    capaciteController.text,
+                                  ),
                                   statut: statut,
                                   professeurPrincipalId: professeurPrincipalId,
                                 );
@@ -656,7 +1004,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                 _afficherSucces('Classe modifiée avec succès');
                                 _chargerTout();
                               } catch (e) {
-                                _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                                _afficherErreur(
+                                  e.toString().replaceAll('Exception: ', ''),
+                                );
                               }
                             },
                             child: const Text('Enregistrer'),
@@ -694,11 +1044,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('${_eleves.length} élève(s) inscrit(s)', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 12),
+          Text(
+            '${_eleves.length} élève(s) inscrit(s)',
+            style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 16),
+          _sectionPresence(),
+          const SizedBox(height: 16),
           TextField(
             onChanged: (v) => setState(() => _rechercheEleve = v),
-            decoration: const InputDecoration(labelText: 'Rechercher un élève', prefixIcon: Icon(Icons.search)),
+            decoration: const InputDecoration(
+              labelText: 'Rechercher un élève',
+              prefixIcon: Icon(Icons.search),
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
@@ -707,39 +1065,55 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             children: [
               ElevatedButton.icon(
                 onPressed: _afficherDialogAjouterEleve,
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                ),
                 icon: const Icon(Icons.person_add, size: 16),
                 label: const Text('Ajouter un élève'),
               ),
               ElevatedButton.icon(
                 onPressed: () => _afficherDialogTransfert(),
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0D9488),
+                  foregroundColor: Colors.white,
+                ),
                 icon: const Icon(Icons.compare_arrows, size: 16),
                 label: const Text('Transférer'),
               ),
               ElevatedButton.icon(
                 onPressed: () async {
                   try {
-                    final chemin = await ClasseService.exporterPdf(widget.classeId);
+                    final chemin = await ClasseService.exporterPdf(
+                      widget.classeId,
+                    );
                     await OpenFile.open(chemin);
                   } catch (e) {
                     _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDC2626),
+                  foregroundColor: Colors.white,
+                ),
                 icon: const Icon(Icons.picture_as_pdf, size: 16),
                 label: const Text('Imprimer liste'),
               ),
               ElevatedButton.icon(
                 onPressed: () async {
                   try {
-                    final chemin = await ClasseService.exporterExcel(widget.classeId);
+                    final chemin = await ClasseService.exporterExcel(
+                      widget.classeId,
+                    );
                     await OpenFile.open(chemin);
                   } catch (e) {
                     _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF16A34A), foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  foregroundColor: Colors.white,
+                ),
                 icon: const Icon(Icons.table_chart, size: 16),
                 label: const Text('Export Excel'),
               ),
@@ -749,7 +1123,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           if (_elevesFiltres.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('Aucun élève', style: GoogleFonts.inter(color: const Color(0xFF334155)))),
+              child: Center(
+                child: Text(
+                  'Aucun élève',
+                  style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                ),
+              ),
             )
           else
             ..._elevesFiltres.map(_carteEleve),
@@ -758,71 +1137,336 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     );
   }
 
-  Widget _carteEleve(dynamic eleve) {
-    final photoUrl = eleve['photo_url'] as String?;
-    final sexe     = eleve['sexe'] as String?;
-    final statut   = eleve['inscription_statut'] as String?;
+  // ── Présence ──────────────────────────────────────────
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
-            backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-            child: photoUrl == null
-                ? Text((eleve['nom'] as String).substring(0, 1).toUpperCase(),
-                    style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)))
-                : null,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('${eleve['nom']} ${eleve['prenom']}', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600)),
-                Text(eleve['matricule'] as String, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: const Color(0xFF94A3B8))),
-              ],
+  Widget _sectionPresence() {
+    final nombrePresents = _presences.values
+        .where((v) => v == 'present')
+        .length;
+    final nombreAbsents = _presences.values.where((v) => v == 'absent').length;
+    final nombreNonMarques = _eleves.length - _presences.length;
+    final auMoinsUnMarque = _presences.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(
+              Icons.calendar_today,
+              color: Color(0xFF1E3A8A),
+              size: 18,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Présence du ${_formatDateAffichee(_dateSelectionnee)}',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: _choisirDatePresence,
+              child: Text(
+                'Changer',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: const Color(0xFF1E3A8A),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: _chargementPresences
+                  ? const Center(
+                      child: SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF16A34A,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.check_circle,
+                                    color: Color(0xFF16A34A),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$nombrePresents présents',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF166534),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFFDC2626,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.cancel,
+                                    color: Color(0xFFDC2626),
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '$nombreAbsents absents',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF991B1B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          '$nombreNonMarques non marqués',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            color: nombreNonMarques > 0
+                                ? const Color(0xFFEA580C)
+                                : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
-          Icon(sexe == 'M' ? Icons.boy : Icons.girl, color: sexe == 'M' ? const Color(0xFF0284C7) : const Color(0xFFEC4899), size: 20),
-          const SizedBox(width: 6),
-          if (statut != null) SSMBadge(label: statut.toUpperCase(), couleur: const Color(0xFF16A34A)),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, size: 20, color: Color(0xFF334155)),
-            onSelected: (action) {
-              switch (action) {
-                case 'fiche':
-                  Navigator.pushNamed(context, '/eleve/fiche', arguments: {'eleveId': eleve['id']});
-                  break;
-                case 'transferer':
-                  _afficherDialogTransfert(eleveIdPreselectionne: eleve['id'] as int);
-                  break;
-                case 'retirer':
-                  _bientot();
-                  break;
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'fiche', child: Text('Voir fiche')),
-              PopupMenuItem(value: 'transferer', child: Text('Transférer')),
-              PopupMenuItem(value: 'retirer', child: Text('Retirer')),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: auMoinsUnMarque ? _enregistrerPresence : null,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              disabledBackgroundColor: const Color(
+                0xFF1E3A8A,
+              ).withValues(alpha: 0.3),
+            ),
+            icon: const Icon(Icons.save, size: 18),
+            label: const Text('Enregistrer la présence'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _carteEleve(dynamic eleve) {
+    final photoUrl = eleve['photo_url'] as String?;
+    final sexe = eleve['sexe'] as String?;
+    final statut = eleve['inscription_statut'] as String?;
+    final eleveId = eleve['id'] as int;
+    final presence = _presences[eleveId];
+    final couleurBordure = presence == 'present'
+        ? const Color(0xFF16A34A)
+        : presence == 'absent'
+        ? const Color(0xFFDC2626)
+        : const Color(0xFF94A3B8);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(12),
+            border: Border(left: BorderSide(color: couleurBordure, width: 4)),
+          ),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: const Color(
+                  0xFF1E3A8A,
+                ).withValues(alpha: 0.15),
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
+                child: photoUrl == null
+                    ? Text(
+                        (eleve['nom'] as String).substring(0, 1).toUpperCase(),
+                        style: GoogleFonts.sora(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E3A8A),
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${eleve['nom']} ${eleve['prenom']}',
+                      style: GoogleFonts.sora(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Matricule: ${eleve['matricule']}',
+                      style: GoogleFonts.jetBrainsMono(
+                        fontSize: 11,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          sexe == 'M' ? Icons.boy : Icons.girl,
+                          color: sexe == 'M'
+                              ? const Color(0xFF0284C7)
+                              : const Color(0xFFEC4899),
+                          size: 16,
+                        ),
+                        if (statut != null) ...[
+                          const SizedBox(width: 6),
+                          SSMBadge(
+                            label: statut.toUpperCase(),
+                            couleur: const Color(0xFF16A34A),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              _boutonPresence(
+                eleveId: eleveId,
+                etat: 'present',
+                actif: presence == 'present',
+                icone: Icons.check,
+                couleur: const Color(0xFF16A34A),
+              ),
+              const SizedBox(width: 8),
+              _boutonPresence(
+                eleveId: eleveId,
+                etat: 'absent',
+                actif: presence == 'absent',
+                icone: Icons.close,
+                couleur: const Color(0xFFDC2626),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert,
+                  size: 20,
+                  color: Color(0xFF334155),
+                ),
+                onSelected: (action) {
+                  switch (action) {
+                    case 'fiche':
+                      Navigator.pushNamed(
+                        context,
+                        '/eleve/fiche',
+                        arguments: {'eleveId': eleve['id']},
+                      );
+                      break;
+                    case 'transferer':
+                      _afficherDialogTransfert(
+                        eleveIdPreselectionne: eleve['id'] as int,
+                      );
+                      break;
+                    case 'retirer':
+                      _bientot();
+                      break;
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'fiche', child: Text('Voir fiche')),
+                  PopupMenuItem(value: 'transferer', child: Text('Transférer')),
+                  PopupMenuItem(value: 'retirer', child: Text('Retirer')),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _boutonPresence({
+    required int eleveId,
+    required String etat,
+    required bool actif,
+    required IconData icone,
+    required Color couleur,
+  }) {
+    return GestureDetector(
+      onTap: () => setState(() => _presences[eleveId] = etat),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: actif ? couleur : couleur.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icone,
+          color: actif ? Colors.white : couleur.withValues(alpha: 0.5),
+          size: 20,
+        ),
       ),
     );
   }
 
   Future<void> _afficherDialogAjouterEleve() async {
-    final nomController    = TextEditingController();
+    final nomController = TextEditingController();
     final prenomController = TextEditingController();
     String sexe = 'M';
 
@@ -840,9 +1484,15 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nomController, decoration: const InputDecoration(labelText: 'Nom')),
+                TextField(
+                  controller: nomController,
+                  decoration: const InputDecoration(labelText: 'Nom'),
+                ),
                 const SizedBox(height: 12),
-                TextField(controller: prenomController, decoration: const InputDecoration(labelText: 'Prénom')),
+                TextField(
+                  controller: prenomController,
+                  decoration: const InputDecoration(labelText: 'Prénom'),
+                ),
                 const SizedBox(height: 12),
                 SegmentedButton<String>(
                   segments: const [
@@ -850,15 +1500,21 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     ButtonSegment(value: 'F', label: Text('F')),
                   ],
                   selected: {sexe},
-                  onSelectionChanged: (s) => setStateDialog(() => sexe = s.first),
+                  onSelectionChanged: (s) =>
+                      setStateDialog(() => sexe = s.first),
                 ),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
               ElevatedButton(
                 onPressed: () async {
-                  if (nomController.text.isEmpty || prenomController.text.isEmpty) return;
+                  if (nomController.text.isEmpty ||
+                      prenomController.text.isEmpty)
+                    return;
                   try {
                     await EleveService.creerEleve(
                       nom: nomController.text,
@@ -901,24 +1557,42 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     value: eleveId,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'Élève'),
-                    items: _eleves.map((e) => DropdownMenuItem<int>(value: e['id'] as int, child: Text('${e['nom']} ${e['prenom']}'))).toList(),
+                    items: _eleves
+                        .map(
+                          (e) => DropdownMenuItem<int>(
+                            value: e['id'] as int,
+                            child: Text('${e['nom']} ${e['prenom']}'),
+                          ),
+                        )
+                        .toList(),
                     onChanged: (v) => setStateDialog(() => eleveId = v),
                   ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
                   value: classeDestinationId,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Classe de destination'),
+                  decoration: const InputDecoration(
+                    labelText: 'Classe de destination',
+                  ),
                   items: _toutesClasses
                       .where((c) => c['id'] != widget.classeId)
-                      .map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['nom'] as String)))
+                      .map(
+                        (c) => DropdownMenuItem<int>(
+                          value: c['id'] as int,
+                          child: Text(c['nom'] as String),
+                        ),
+                      )
                       .toList(),
-                  onChanged: (v) => setStateDialog(() => classeDestinationId = v),
+                  onChanged: (v) =>
+                      setStateDialog(() => classeDestinationId = v),
                 ),
               ],
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
               ElevatedButton(
                 onPressed: eleveId == null || classeDestinationId == null
                     ? null
@@ -933,7 +1607,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           _afficherSucces('Élève transféré avec succès');
                           _chargerTout();
                         } catch (e) {
-                          _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                          _afficherErreur(
+                            e.toString().replaceAll('Exception: ', ''),
+                          );
                         }
                       },
                 child: const Text('Confirmer'),
@@ -952,10 +1628,17 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   Widget _tabProfesseurs() {
     final prof = _classe!['professeur_principal'] as Map<String, dynamic>?;
     final matieresProfPrincipal = prof != null
-        ? _enseignants.where((e) => e['enseignant_id'] == _classe!['professeur_principal_id']).toList()
+        ? _enseignants
+              .where(
+                (e) =>
+                    e['enseignant_id'] == _classe!['professeur_principal_id'],
+              )
+              .toList()
         : <dynamic>[];
 
-    final matieresNonAffectees = _matieresClasse.where((m) => _affectationPourMatiere(m['matiere_id'] as int) == null).toList();
+    final matieresNonAffectees = _matieresClasse
+        .where((m) => _affectationPourMatiere(m['matiere_id'] as int) == null)
+        .toList();
 
     return RefreshIndicator(
       onRefresh: _chargerTout,
@@ -968,22 +1651,39 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               decoration: BoxDecoration(
                 color: const Color(0xFFD97706).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: const Color(0xFFD97706).withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SSMBadge(label: 'PROFESSEUR PRINCIPAL', couleur: Color(0xFFD97706)),
+                  const SSMBadge(
+                    label: 'PROFESSEUR PRINCIPAL',
+                    couleur: Color(0xFFD97706),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: const Color(0xFFD97706).withValues(alpha: 0.15),
-                        backgroundImage: prof['photo_url'] != null ? NetworkImage(prof['photo_url'] as String) : null,
+                        backgroundColor: const Color(
+                          0xFFD97706,
+                        ).withValues(alpha: 0.15),
+                        backgroundImage: prof['photo_url'] != null
+                            ? NetworkImage(prof['photo_url'] as String)
+                            : null,
                         child: prof['photo_url'] == null
-                            ? Text((prof['name'] as String).substring(0, 1).toUpperCase(),
-                                style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFFD97706)))
+                            ? Text(
+                                (prof['name'] as String)
+                                    .substring(0, 1)
+                                    .toUpperCase(),
+                                style: GoogleFonts.sora(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFD97706),
+                                ),
+                              )
                             : null,
                       ),
                       const SizedBox(width: 12),
@@ -991,12 +1691,26 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(prof['name'] as String, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700)),
+                            Text(
+                              prof['name'] as String,
+                              style: GoogleFonts.sora(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                             if (matieresProfPrincipal.isNotEmpty)
                               Wrap(
                                 spacing: 6,
                                 children: matieresProfPrincipal
-                                    .map((m) => Text('${m['matiere_nom']} ', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))))
+                                    .map(
+                                      (m) => Text(
+                                        '${m['matiere_nom']} ',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: const Color(0xFF334155),
+                                        ),
+                                      ),
+                                    )
                                     .toList(),
                               ),
                           ],
@@ -1012,32 +1726,57 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
           SSMSectionTitre(titre: 'Enseignants'),
           if (_matieresParEnseignant.isEmpty)
-            Text('Aucun enseignant affecté', style: GoogleFonts.inter(color: const Color(0xFF334155)))
+            Text(
+              'Aucun enseignant affecté',
+              style: GoogleFonts.inter(color: const Color(0xFF334155)),
+            )
           else
-            ..._matieresParEnseignant.entries.map((entry) => _carteEnseignant(entry.key, entry.value)),
+            ..._matieresParEnseignant.entries.map(
+              (entry) => _carteEnseignant(entry.key, entry.value),
+            ),
 
           if (matieresNonAffectees.isNotEmpty) ...[
             const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: const Color(0xFFEA580C).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEA580C).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Non affectées', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFFEA580C))),
+                  Text(
+                    'Non affectées',
+                    style: GoogleFonts.sora(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFEA580C),
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  ...matieresNonAffectees.map((m) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Expanded(child: Text(m['matiere_nom'] as String, style: GoogleFonts.inter(fontSize: 13))),
-                            TextButton(
-                              onPressed: () => _afficherDialogAffecterMatiere(m['matiere_id'] as int, m['matiere_nom'] as String),
-                              child: const Text('Affecter'),
+                  ...matieresNonAffectees.map(
+                    (m) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              m['matiere_nom'] as String,
+                              style: GoogleFonts.inter(fontSize: 13),
                             ),
-                          ],
-                        ),
-                      )),
+                          ),
+                          TextButton(
+                            onPressed: () => _afficherDialogAffecterMatiere(
+                              m['matiere_id'] as int,
+                              m['matiere_nom'] as String,
+                            ),
+                            child: const Text('Affecter'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1050,8 +1789,8 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   Widget _carteEnseignant(int enseignantId, List<dynamic> matieres) {
     final premiere = matieres.first;
     final telephone = premiere['enseignant_telephone'] as String?;
-    final photoUrl  = premiere['enseignant_photo_url'] as String?;
-    final horaires  = _creneauxPour(enseignantId: enseignantId);
+    final photoUrl = premiere['enseignant_photo_url'] as String?;
+    final horaires = _creneauxPour(enseignantId: enseignantId);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1059,7 +1798,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1068,21 +1813,41 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
-                backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                backgroundColor: const Color(
+                  0xFF1E3A8A,
+                ).withValues(alpha: 0.15),
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
                 child: photoUrl == null
-                    ? Text((premiere['enseignant_nom'] as String).substring(0, 1).toUpperCase(),
-                        style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)))
+                    ? Text(
+                        (premiere['enseignant_nom'] as String)
+                            .substring(0, 1)
+                            .toUpperCase(),
+                        style: GoogleFonts.sora(
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF1E3A8A),
+                        ),
+                      )
                     : null,
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(premiere['enseignant_nom'] as String, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600)),
+                child: Text(
+                  premiere['enseignant_nom'] as String,
+                  style: GoogleFonts.sora(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               TextButton(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => FicheUtilisateurScreen(userId: enseignantId)),
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        FicheUtilisateurScreen(userId: enseignantId),
+                  ),
                 ),
                 child: const Text('Voir profil'),
               ),
@@ -1096,10 +1861,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               final coef = m['coefficient'];
               return Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(color: const Color(0xFF0D9488).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(999),
+                ),
                 child: Text(
-                  coef != null ? '${m['matiere_nom']} (coef $coef)' : '${m['matiere_nom']}',
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488)),
+                  coef != null
+                      ? '${m['matiere_nom']} (coef $coef)'
+                      : '${m['matiere_nom']}',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0D9488),
+                  ),
                 ),
               );
             }).toList(),
@@ -1107,8 +1881,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           if (horaires.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              horaires.map((h) => '${h['jour_label']} ${(h['heure_debut'] as String).substring(0, 5)}').join(' • '),
-              style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8)),
+              horaires
+                  .map(
+                    (h) =>
+                        '${h['jour_label']} ${(h['heure_debut'] as String).substring(0, 5)}',
+                  )
+                  .join(' • '),
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: const Color(0xFF94A3B8),
+              ),
             ),
           ],
           if (telephone != null) ...[
@@ -1120,7 +1902,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                 children: [
                   const Icon(Icons.phone, size: 13, color: Color(0xFF1E3A8A)),
                   const SizedBox(width: 4),
-                  Text(telephone, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E3A8A))),
+                  Text(
+                    telephone,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFF1E3A8A),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1130,7 +1918,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     );
   }
 
-  Future<void> _afficherDialogAffecterMatiere(int matiereId, String matiereNom) async {
+  Future<void> _afficherDialogAffecterMatiere(
+    int matiereId,
+    String matiereNom,
+  ) async {
     int? enseignantId;
 
     await showDialog(
@@ -1143,11 +1934,21 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               value: enseignantId,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'Enseignant'),
-              items: _tousEnseignants.map((e) => DropdownMenuItem<int>(value: e['id'] as int, child: Text(e['name'] as String))).toList(),
+              items: _tousEnseignants
+                  .map(
+                    (e) => DropdownMenuItem<int>(
+                      value: e['id'] as int,
+                      child: Text(e['name'] as String),
+                    ),
+                  )
+                  .toList(),
               onChanged: (v) => setStateDialog(() => enseignantId = v),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Annuler'),
+              ),
               ElevatedButton(
                 onPressed: enseignantId == null
                     ? null
@@ -1162,7 +1963,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           _afficherSucces('Enseignant affecté');
                           _chargerTout();
                         } catch (e) {
-                          _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                          _afficherErreur(
+                            e.toString().replaceAll('Exception: ', ''),
+                          );
                         }
                       },
                 child: const Text('Affecter'),
@@ -1179,12 +1982,18 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   // ══════════════════════════════════════════════════════
 
   Color _couleurReelleMatiere(int matiereId) {
-    final matiere = _toutesMatieres.firstWhere((m) => m['id'] == matiereId, orElse: () => null);
+    final matiere = _toutesMatieres.firstWhere(
+      (m) => m['id'] == matiereId,
+      orElse: () => null,
+    );
     return _couleurDepuisHex(matiere?['couleur'] as String?);
   }
 
   String? _codeReelMatiere(int matiereId) {
-    final matiere = _toutesMatieres.firstWhere((m) => m['id'] == matiereId, orElse: () => null);
+    final matiere = _toutesMatieres.firstWhere(
+      (m) => m['id'] == matiereId,
+      orElse: () => null,
+    );
     return matiere?['code'] as String?;
   }
 
@@ -1199,7 +2008,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
   Widget _tabMatieres() {
     final nombreMatieres = _matieresClasse.length;
-    final nombreAffectees = _matieresClasse.where((m) => _affectationPourMatiere(m['matiere_id'] as int) != null).length;
+    final nombreAffectees = _matieresClasse
+        .where((m) => _affectationPourMatiere(m['matiere_id'] as int) != null)
+        .length;
     final nombreSansProf = nombreMatieres - nombreAffectees;
 
     return RefreshIndicator(
@@ -1209,15 +2020,31 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         children: [
           Row(
             children: [
-              Expanded(child: _miniCardMatieres('$nombreMatieres', 'matières', const Color(0xFF1E3A8A))),
+              Expanded(
+                child: _miniCardMatieres(
+                  '$nombreMatieres',
+                  'matières',
+                  const Color(0xFF1E3A8A),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _miniCardMatieres('$nombreAffectees', 'affectées', const Color(0xFF0D9488))),
+              Expanded(
+                child: _miniCardMatieres(
+                  '$nombreAffectees',
+                  'affectées',
+                  const Color(0xFF0D9488),
+                ),
+              ),
               const SizedBox(width: 10),
-              Expanded(child: _miniCardMatieres(
-                '$nombreSansProf',
-                'sans prof',
-                nombreSansProf > 0 ? const Color(0xFFEA580C) : const Color(0xFF94A3B8),
-              )),
+              Expanded(
+                child: _miniCardMatieres(
+                  '$nombreSansProf',
+                  'sans prof',
+                  nombreSansProf > 0
+                      ? const Color(0xFFEA580C)
+                      : const Color(0xFF94A3B8),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -1226,7 +2053,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           if (_matieresClasse.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('Aucune matière configurée', style: GoogleFonts.inter(color: const Color(0xFF334155)))),
+              child: Center(
+                child: Text(
+                  'Aucune matière configurée',
+                  style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                ),
+              ),
             )
           else
             ..._matieresClasse.map((m) => _carteMatiere(m)),
@@ -1241,13 +2073,32 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         children: [
-          Text(valeur, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: couleur)),
+          Text(
+            valeur,
+            style: GoogleFonts.sora(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: couleur,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF334155))),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              color: const Color(0xFF334155),
+            ),
+          ),
         ],
       ),
     );
@@ -1257,7 +2108,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     return GestureDetector(
       onTap: _afficherDialogAjouterMatiere,
       child: CustomPaint(
-        painter: _BordurePointilleePainter(couleur: const Color(0xFF1E3A8A).withValues(alpha: 0.3), rayon: 12),
+        painter: _BordurePointilleePainter(
+          couleur: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
+          rayon: 12,
+        ),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
@@ -1270,8 +2124,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             children: [
               const Icon(Icons.add_circle, color: Color(0xFF1E3A8A)),
               const SizedBox(width: 8),
-              Text('Ajouter une matière à cette classe',
-                  style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF1E3A8A), fontWeight: FontWeight.w600)),
+              Text(
+                'Ajouter une matière à cette classe',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: const Color(0xFF1E3A8A),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -1286,106 +2146,236 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     final code = _codeReelMatiere(matiereId);
     final couleur = _couleurReelleMatiere(matiereId);
     final affectation = _affectationPourMatiere(matiereId);
-    final nomEnseignant = affectation != null ? affectation['enseignant_nom'] as String? : null;
-    final photoEnseignant = affectation != null ? affectation['enseignant_photo_url'] as String? : null;
+    final nomEnseignant = affectation != null
+        ? affectation['enseignant_nom'] as String?
+        : null;
+    final photoEnseignant = affectation != null
+        ? affectation['enseignant_photo_url'] as String?
+        : null;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(14),
-        border: Border(left: BorderSide(color: couleur, width: 4)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
-                child: Icon(Icons.book, color: couleur, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(nom, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                    if (code != null && code.isNotEmpty)
-                      Text(code, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: const Color(0xFF94A3B8))),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(color: const Color(0xFF1E3A8A).withValues(alpha: 0.10), borderRadius: BorderRadius.circular(8)),
-                child: Column(
-                  children: [
-                    Text('Coef.', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
-                    Text('$coef', style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A))),
-                  ],
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF1E3A8A)),
-                tooltip: 'Modifier le coefficient',
-                onPressed: () => _afficherDialogModifierCoefficient(matiere),
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _ouvrirFicheMatiere(matiere, couleur),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.85),
+            borderRadius: BorderRadius.circular(14),
+            border: Border(left: BorderSide(color: couleur, width: 4)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          const Divider(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Text('Enseignant : ', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
-                  if (nomEnseignant != null) ...[
-                    CircleAvatar(
-                      radius: 14,
-                      backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.15),
-                      backgroundImage: photoEnseignant != null ? NetworkImage(photoEnseignant) : null,
-                      child: photoEnseignant == null
-                          ? Text(nomEnseignant.substring(0, 1).toUpperCase(),
-                              style: GoogleFonts.sora(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF0D9488)))
-                          : null,
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: couleur.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    const SizedBox(width: 6),
-                    Text(nomEnseignant,
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488))),
-                  ] else ...[
-                    const Icon(Icons.warning_amber_outlined, color: Color(0xFFEA580C), size: 16),
-                    const SizedBox(width: 4),
-                    Text('Non affecté', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFEA580C))),
-                  ],
+                    child: Icon(Icons.book, color: couleur, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nom,
+                          style: GoogleFonts.sora(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                        if (code != null && code.isNotEmpty)
+                          Text(
+                            code,
+                            style: GoogleFonts.jetBrainsMono(
+                              fontSize: 11,
+                              color: const Color(0xFF94A3B8),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          'Coef.',
+                          style: GoogleFonts.inter(
+                            fontSize: 10,
+                            color: const Color(0xFF94A3B8),
+                          ),
+                        ),
+                        Text(
+                          '$coef',
+                          style: GoogleFonts.sora(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E3A8A),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      size: 18,
+                      color: Color(0xFF1E3A8A),
+                    ),
+                    tooltip: 'Modifier le coefficient',
+                    onPressed: () =>
+                        _afficherDialogModifierCoefficient(matiere),
+                  ),
                 ],
               ),
-              TextButton(
-                onPressed: () => _afficherDialogAffecterEnseignant(matiere),
-                child: Text(nomEnseignant != null ? 'Changer' : 'Affecter',
-                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF1E3A8A))),
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Enseignant : ',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: const Color(0xFF94A3B8),
+                        ),
+                      ),
+                      if (nomEnseignant != null) ...[
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: const Color(
+                            0xFF0D9488,
+                          ).withValues(alpha: 0.15),
+                          backgroundImage: photoEnseignant != null
+                              ? NetworkImage(photoEnseignant)
+                              : null,
+                          child: photoEnseignant == null
+                              ? Text(
+                                  nomEnseignant.substring(0, 1).toUpperCase(),
+                                  style: GoogleFonts.sora(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0D9488),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          nomEnseignant,
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0D9488),
+                          ),
+                        ),
+                      ] else ...[
+                        const Icon(
+                          Icons.warning_amber_outlined,
+                          color: Color(0xFFEA580C),
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Non affecté',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            color: const Color(0xFFEA580C),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  TextButton(
+                    onPressed: () => _afficherDialogAffecterEnseignant(matiere),
+                    child: Text(
+                      nomEnseignant != null ? 'Changer' : 'Affecter',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF1E3A8A),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _confirmerRetraitMatiere(matiere),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: Color(0xFFDC2626),
+                    size: 16,
+                  ),
+                  label: Text(
+                    'Retirer de la classe',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: const Color(0xFFDC2626),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: () => _confirmerRetraitMatiere(matiere),
-              icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626), size: 16),
-              label: Text('Retirer de la classe', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFFDC2626))),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
+  void _ouvrirFicheMatiere(dynamic matiere, Color couleur) {
+    final matiereId = matiere['matiere_id'] as int;
+    final affectation = _affectationPourMatiere(matiereId);
+    Navigator.pushNamed(
+      context,
+      '/directeur/matiere/fiche',
+      arguments: {
+        'classeId': widget.classeId,
+        'classeNom': _classe?['nom'] as String? ?? '',
+        'matiereId': matiereId,
+        'matiereNom': matiere['matiere_nom'] as String,
+        'couleurMatiere': couleur,
+        'coefficient': _coefficientDouble(matiere['coefficient']),
+        'enseignantNom': affectation != null
+            ? affectation['enseignant_nom'] as String?
+            : null,
+      },
+    ).then((_) => _chargerTout());
+  }
+
+  double _coefficientDouble(dynamic valeur) =>
+      double.tryParse(valeur.toString()) ?? 1.0;
+
   Future<void> _afficherDialogModifierCoefficient(dynamic matiere) async {
-    final controller = TextEditingController(text: '${matiere['coefficient'] ?? 1}');
+    final controller = TextEditingController(
+      text: '${matiere['coefficient'] ?? 1}',
+    );
     final nomClasse = _classe?['nom'] as String? ?? '';
 
     await showDialog(
@@ -1401,25 +2391,45 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Coefficient de ${matiere['matiere_nom']}',
-                    style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                Text(
+                  'Coefficient de ${matiere['matiere_nom']}',
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: controller,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Coefficient',
                     hintText: 'ex: 3, 4.5, 7',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text('Ce coefficient est spécifique à $nomClasse',
-                    style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
+                Text(
+                  'Ce coefficient est spécifique à $nomClasse',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annuler'),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
@@ -1427,21 +2437,33 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           backgroundColor: const Color(0xFF1E3A8A),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         onPressed: () async {
-                          final coef = double.tryParse(controller.text.replaceAll(',', '.'));
+                          final coef = double.tryParse(
+                            controller.text.replaceAll(',', '.'),
+                          );
                           if (coef == null || coef < 0.5 || coef > 10) {
-                            _afficherErreur('Le coefficient doit être compris entre 0.5 et 10');
+                            _afficherErreur(
+                              'Le coefficient doit être compris entre 0.5 et 10',
+                            );
                             return;
                           }
                           try {
-                            await ClasseMatiereService.ajouter(widget.classeId, matiere['matiere_id'] as int, coef);
+                            await ClasseMatiereService.ajouter(
+                              classeId: widget.classeId,
+                              matiereId: matiere['matiere_id'] as int,
+                              coefficient: coef,
+                            );
                             if (context.mounted) Navigator.pop(context);
                             _afficherSucces('Coefficient mis à jour');
                             _chargerTout();
                           } catch (e) {
-                            _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                            _afficherErreur(
+                              e.toString().replaceAll('Exception: ', ''),
+                            );
                           }
                         },
                         child: const Text('Enregistrer'),
@@ -1469,7 +2491,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             backgroundColor: Colors.white,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
@@ -1479,26 +2503,50 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Enseignant pour $matiereNom',
-                        style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                    Text(
+                      'Enseignant pour $matiereNom',
+                      style: GoogleFonts.sora(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(nomClasse, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
+                    Text(
+                      nomClasse,
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        color: const Color(0xFF334155),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int?>(
                       value: enseignantId,
                       isExpanded: true,
-                      decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
                       items: [
-                        const DropdownMenuItem<int?>(value: null, child: Text("Aucun (retirer l'affectation)")),
+                        const DropdownMenuItem<int?>(
+                          value: null,
+                          child: Text("Aucun (retirer l'affectation)"),
+                        ),
                         ..._tousEnseignants.map((e) {
                           final id = e['id'] as int;
-                          final matieresDeja = (_matieresParEnseignant[id] ?? [])
-                              .map((a) => a['matiere_nom'] as String)
-                              .toSet()
-                              .join(', ');
+                          final matieresDeja =
+                              (_matieresParEnseignant[id] ?? [])
+                                  .map((a) => a['matiere_nom'] as String)
+                                  .toSet()
+                                  .join(', ');
                           return DropdownMenuItem<int?>(
                             value: id,
-                            child: Text(matieresDeja.isEmpty ? e['name'] as String : '${e['name']} ($matieresDeja)'),
+                            child: Text(
+                              matieresDeja.isEmpty
+                                  ? e['name'] as String
+                                  : '${e['name']} ($matieresDeja)',
+                            ),
                           );
                         }),
                       ],
@@ -1507,7 +2555,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annuler'),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
@@ -1515,13 +2568,18 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               backgroundColor: const Color(0xFF1E3A8A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             onPressed: () async {
                               try {
-                                final ancienId = affectationActuelle?['id'] as int?;
+                                final ancienId =
+                                    affectationActuelle?['id'] as int?;
                                 if (ancienId != null) {
-                                  await AffectationService.supprimerAffectation(ancienId);
+                                  await AffectationService.supprimerAffectation(
+                                    ancienId,
+                                  );
                                 }
                                 if (enseignantId != null) {
                                   await AffectationService.ajouterAffectation(
@@ -1531,10 +2589,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                   );
                                 }
                                 if (context.mounted) Navigator.pop(context);
-                                _afficherSucces(enseignantId != null ? 'Enseignant affecté' : 'Affectation retirée');
+                                _afficherSucces(
+                                  enseignantId != null
+                                      ? 'Enseignant affecté'
+                                      : 'Affectation retirée',
+                                );
                                 _chargerTout();
                               } catch (e) {
-                                _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                                _afficherErreur(
+                                  e.toString().replaceAll('Exception: ', ''),
+                                );
                               }
                             },
                             child: const Text('Enregistrer'),
@@ -1570,21 +2634,39 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 48),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFD97706),
+                  size: 48,
+                ),
                 const SizedBox(height: 16),
-                Text('Retirer $matiereNom de $nomClasse ?',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                Text(
+                  'Retirer $matiereNom de $nomClasse ?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
                 const SizedBox(height: 10),
                 Text(
                   "Le coefficient et l'affectation de l'enseignant seront supprimés. Les notes saisies ne seront pas affectées.",
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155)),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    color: const Color(0xFF334155),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler'))),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Annuler'),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
@@ -1592,7 +2674,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           backgroundColor: const Color(0xFFDC2626),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         onPressed: () => Navigator.pop(context, true),
                         child: const Text('Retirer'),
@@ -1623,115 +2707,438 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   }
 
   Future<void> _afficherDialogAjouterMatiere() async {
-    final matieresDisponibles = _toutesMatieres
-        .where((m) => !_matieresClasse.any((mc) => mc['matiere_id'] == m['id']))
-        .toList();
-
-    int? matiereId;
-    int? enseignantId;
+    final nomController = TextEditingController();
+    final codeController = TextEditingController();
     final coefController = TextEditingController();
+    Color couleurSelectionnee = _couleursSuggerees.first;
+    Map<String, dynamic>? enseignantSelectionne;
 
     await showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
-          final matiereChoisie = matiereId == null
-              ? null
-              : matieresDisponibles.firstWhere((m) => m['id'] == matiereId, orElse: () => null);
-          final coef = double.tryParse(coefController.text.replaceAll(',', '.'));
-          final enseignantChoisi = enseignantId == null
-              ? null
-              : _tousEnseignants.firstWhere((e) => e['id'] == enseignantId, orElse: () => null);
+          final nom = nomController.text.trim();
+          final coef = double.tryParse(
+            coefController.text.replaceAll(',', '.'),
+          );
 
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             backgroundColor: Colors.white,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460, maxHeight: 680),
+              constraints: const BoxConstraints(maxWidth: 460, maxHeight: 760),
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Ajouter une matière',
-                        style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                    Text(
+                      'Ajouter une matière',
+                      style: GoogleFonts.sora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Matière', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
-                            const SizedBox(height: 6),
-                            if (matieresDisponibles.isEmpty)
-                              Text('Toutes les matières sont déjà ajoutées',
-                                  style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFEA580C)))
-                            else
-                              DropdownButtonFormField<int>(
-                                value: matiereId,
-                                isExpanded: true,
-                                decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-                                hint: const Text('Choisir une matière'),
-                                items: matieresDisponibles.map((m) {
-                                  final couleur = _couleurDepuisHex(m['couleur'] as String?);
-                                  final code = m['code'] as String?;
-                                  return DropdownMenuItem<int>(
-                                    value: m['id'] as int,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Container(width: 12, height: 12, decoration: BoxDecoration(color: couleur, shape: BoxShape.circle)),
-                                        const SizedBox(width: 8),
-                                        Text(m['nom'] as String),
-                                        if (code != null && code.isNotEmpty) ...[
-                                          const SizedBox(width: 6),
-                                          Text('($code)', style: GoogleFonts.jetBrainsMono(fontSize: 11, color: const Color(0xFF94A3B8))),
-                                        ],
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (v) => setStateDialog(() => matiereId = v),
+                            Text(
+                              'Nom de la matière *',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: const Color(0xFF334155),
                               ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: nomController,
+                              decoration: InputDecoration(
+                                hintText: 'ex: Mathématiques, Français, SVT...',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              style: GoogleFonts.sora(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF0F172A),
+                              ),
+                              onChanged: (_) => setStateDialog(() {}),
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: [
+                                ..._suggestionsMatieres.map(
+                                  (label) => GestureDetector(
+                                    onTap: () => setStateDialog(
+                                      () => nomController.text = label,
+                                    ),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF1E3A8A,
+                                        ).withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11,
+                                          color: const Color(0xFF1E3A8A),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () => setStateDialog(
+                                    () => nomController.clear(),
+                                  ),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(
+                                        0xFF94A3B8,
+                                      ).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      '+ Autre',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        color: const Color(0xFF334155),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                             const SizedBox(height: 18),
-                            Text('Coefficient pour ${_classe?['nom'] ?? 'la classe'}',
-                                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
+                            Text(
+                              'Code (optionnel)',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            TextField(
+                              controller: codeController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: InputDecoration(
+                                hintText: 'ex: MATH, FR, SVT',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              style: GoogleFonts.jetBrainsMono(fontSize: 14),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              'Couleur',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Wrap(
+                              spacing: 10,
+                              runSpacing: 10,
+                              children: _couleursSuggerees.map((c) {
+                                final selectionnee =
+                                    c.toARGB32() ==
+                                    couleurSelectionnee.toARGB32();
+                                return GestureDetector(
+                                  onTap: () => setStateDialog(
+                                    () => couleurSelectionnee = c,
+                                  ),
+                                  child: Container(
+                                    width: 32,
+                                    height: 32,
+                                    decoration: BoxDecoration(
+                                      color: c,
+                                      shape: BoxShape.circle,
+                                      border: selectionnee
+                                          ? Border.all(
+                                              color: Colors.white,
+                                              width: 2,
+                                            )
+                                          : null,
+                                      boxShadow: selectionnee
+                                          ? [
+                                              BoxShadow(
+                                                color: c.withValues(alpha: 0.6),
+                                                blurRadius: 6,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                            const SizedBox(height: 18),
+                            Text(
+                              'Coefficient *',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: const Color(0xFF334155),
+                              ),
+                            ),
                             const SizedBox(height: 6),
                             TextField(
                               controller: coefController,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                    decimal: true,
+                                  ),
                               decoration: InputDecoration(
                                 hintText: 'ex: 3, 4.5, 7',
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
                               ),
                               onChanged: (_) => setStateDialog(() {}),
                             ),
                             const SizedBox(height: 18),
-                            Text('Enseignant responsable', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
-                            Text("(optionnel — peut être défini plus tard)",
-                                style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
-                            const SizedBox(height: 6),
-                            DropdownButtonFormField<int?>(
-                              value: enseignantId,
-                              isExpanded: true,
-                              decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
-                              items: [
-                                const DropdownMenuItem<int?>(value: null, child: Text("Aucun pour l'instant")),
-                                ..._tousEnseignants.map((e) => DropdownMenuItem<int?>(
-                                      value: e['id'] as int,
-                                      child: Text(e['name'] as String),
-                                    )),
-                              ],
-                              onChanged: (v) => setStateDialog(() => enseignantId = v),
+                            Text(
+                              'Enseignant responsable',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: const Color(0xFF334155),
+                              ),
                             ),
+                            Text(
+                              "(optionnel — peut être défini plus tard)",
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: const Color(0xFF94A3B8),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            if (enseignantSelectionne == null)
+                              Autocomplete<Map<String, dynamic>>(
+                                optionsBuilder: (textEditingValue) {
+                                  if (textEditingValue.text.isEmpty) {
+                                    return const Iterable<
+                                      Map<String, dynamic>
+                                    >.empty();
+                                  }
+                                  final recherche = textEditingValue.text
+                                      .toLowerCase();
+                                  return _tousEnseignants
+                                      .cast<Map<String, dynamic>>()
+                                      .where((e) {
+                                        final nomComplet =
+                                            '${e['name']} ${e['prenom'] ?? ''}'
+                                                .toLowerCase();
+                                        return nomComplet.contains(recherche);
+                                      });
+                                },
+                                displayStringForOption: (e) =>
+                                    '${e['name']} ${e['prenom'] ?? ''}'.trim(),
+                                fieldViewBuilder:
+                                    (context, controller, focusNode, onSubmit) {
+                                      return TextField(
+                                        controller: controller,
+                                        focusNode: focusNode,
+                                        decoration: InputDecoration(
+                                          hintText:
+                                              'Rechercher un enseignant...',
+                                          prefixIcon: const Icon(
+                                            Icons.search,
+                                            color: Color(0xFF1E3A8A),
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                        ),
+                                        style: GoogleFonts.inter(fontSize: 14),
+                                      );
+                                    },
+                                optionsViewBuilder: (context, onSelected, options) {
+                                  final liste = options.toList();
+                                  return Align(
+                                    alignment: Alignment.topLeft,
+                                    child: Material(
+                                      elevation: 8,
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: ConstrainedBox(
+                                        constraints: const BoxConstraints(
+                                          maxWidth: 380,
+                                          maxHeight: 200,
+                                        ),
+                                        child: ListView.builder(
+                                          padding: EdgeInsets.zero,
+                                          itemCount: liste.length,
+                                          itemBuilder: (context, index) {
+                                            final e = liste[index];
+                                            final photoUrl =
+                                                e['photo_url'] as String?;
+                                            final nomAffiche =
+                                                e['name'] as String;
+                                            return ListTile(
+                                              leading: CircleAvatar(
+                                                radius: 18,
+                                                backgroundColor: const Color(
+                                                  0xFF0D9488,
+                                                ),
+                                                backgroundImage:
+                                                    photoUrl != null
+                                                    ? NetworkImage(photoUrl)
+                                                    : null,
+                                                child: photoUrl == null
+                                                    ? Text(
+                                                        nomAffiche.isNotEmpty
+                                                            ? nomAffiche[0]
+                                                            : '?',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                        ),
+                                                      )
+                                                    : null,
+                                              ),
+                                              title: Text(
+                                                '${e['name']} ${e['prenom'] ?? ''}',
+                                                style: GoogleFonts.sora(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                              subtitle: Text(
+                                                (e['fonction'] as String?) ??
+                                                    (e['role'] as String?) ??
+                                                    '',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              onTap: () => onSelected(e),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                onSelected: (e) => setStateDialog(() {
+                                  enseignantSelectionne = e;
+                                }),
+                              )
+                            else
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFF0D9488,
+                                  ).withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 18,
+                                      backgroundColor: const Color(
+                                        0xFF0D9488,
+                                      ).withValues(alpha: 0.2),
+                                      backgroundImage:
+                                          enseignantSelectionne!['photo_url'] !=
+                                              null
+                                          ? NetworkImage(
+                                              enseignantSelectionne!['photo_url']
+                                                  as String,
+                                            )
+                                          : null,
+                                      child:
+                                          enseignantSelectionne!['photo_url'] ==
+                                              null
+                                          ? Text(
+                                              (enseignantSelectionne!['name']
+                                                          as String)
+                                                      .isNotEmpty
+                                                  ? (enseignantSelectionne!['name']
+                                                            as String)[0]
+                                                        .toUpperCase()
+                                                  : '?',
+                                              style: GoogleFonts.sora(
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF0D9488),
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            '${enseignantSelectionne!['name']} ${enseignantSelectionne!['prenom'] ?? ''}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          Text(
+                                            (enseignantSelectionne!['fonction']
+                                                    as String?) ??
+                                                (enseignantSelectionne!['role']
+                                                    as String?) ??
+                                                '',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              color: const Color(0xFF334155),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        size: 18,
+                                        color: Color(0xFF334155),
+                                      ),
+                                      onPressed: () => setStateDialog(() {
+                                        enseignantSelectionne = null;
+                                      }),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             const SizedBox(height: 20),
-                            if (matiereChoisie != null)
+                            if (nom.isNotEmpty)
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF1E3A8A).withValues(alpha: 0.06),
+                                  color: const Color(
+                                    0xFF1E3A8A,
+                                  ).withValues(alpha: 0.06),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Row(
@@ -1740,20 +3147,30 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                       width: 24,
                                       height: 24,
                                       decoration: BoxDecoration(
-                                        color: _couleurDepuisHex(matiereChoisie['couleur'] as String?),
+                                        color: couleurSelectionnee,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
-                                          Text(matiereChoisie['nom'] as String,
-                                              style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
                                           Text(
-                                            'Coefficient ${coef?.toStringAsFixed(1) ?? '—'} · ${enseignantChoisi != null ? enseignantChoisi['name'] : 'Non affecté'}',
-                                            style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
+                                            nom,
+                                            style: GoogleFonts.sora(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF0F172A),
+                                            ),
+                                          ),
+                                          Text(
+                                            'Coefficient ${coef?.toStringAsFixed(1) ?? '—'} · ${enseignantSelectionne != null ? enseignantSelectionne!['name'] : 'Non affecté'}',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              color: const Color(0xFF334155),
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -1768,7 +3185,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annuler'),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
@@ -1776,31 +3198,47 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               backgroundColor: const Color(0xFF1E3A8A),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
-                            onPressed: matiereId == null
-                                ? null
-                                : () async {
-                                    if (coef == null || coef < 0.5 || coef > 10) {
-                                      _afficherErreur('Le coefficient doit être compris entre 0.5 et 10');
-                                      return;
-                                    }
-                                    try {
-                                      await ClasseMatiereService.ajouter(widget.classeId, matiereId!, coef);
-                                      if (enseignantId != null) {
-                                        await AffectationService.ajouterAffectation(
-                                          enseignantId: enseignantId!,
-                                          classeId: widget.classeId,
-                                          matiereId: matiereId!,
-                                        );
-                                      }
-                                      if (context.mounted) Navigator.pop(context);
-                                      _afficherSucces('Matière ajoutée à la classe');
-                                      _chargerTout();
-                                    } catch (e) {
-                                      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-                                    }
-                                  },
+                            onPressed: () async {
+                              if (nom.length < 2) {
+                                _afficherErreur(
+                                  'Le nom de la matière doit contenir au moins 2 caractères',
+                                );
+                                return;
+                              }
+                              if (coef == null || coef < 0.5 || coef > 10) {
+                                _afficherErreur(
+                                  'Le coefficient doit être compris entre 0.5 et 10',
+                                );
+                                return;
+                              }
+                              final couleurHex =
+                                  '#${couleurSelectionnee.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
+                              try {
+                                await ClasseMatiereService.ajouter(
+                                  classeId: widget.classeId,
+                                  matiereNom: nom,
+                                  matiereCode:
+                                      codeController.text.trim().isEmpty
+                                      ? null
+                                      : codeController.text.trim(),
+                                  matiereCouleur: couleurHex,
+                                  coefficient: coef,
+                                  enseignantId:
+                                      enseignantSelectionne?['id'] as int?,
+                                );
+                                if (context.mounted) Navigator.pop(context);
+                                _afficherSucces('Matière ajoutée à la classe');
+                                _chargerTout();
+                              } catch (e) {
+                                _afficherErreur(
+                                  e.toString().replaceAll('Exception: ', ''),
+                                );
+                              }
+                            },
                             child: const Text('Ajouter à la classe'),
                           ),
                         ),
@@ -1815,6 +3253,8 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       ),
     );
 
+    nomController.dispose();
+    codeController.dispose();
     coefController.dispose();
   }
 
@@ -1825,7 +3265,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   dynamic _creneauPourCellule(String jour, String heureDebut) {
     final liste = (_emploiDuTemps[jour] as List?) ?? [];
     try {
-      return liste.firstWhere((c) => (c['heure_debut'] as String).substring(0, 5) == heureDebut);
+      return liste.firstWhere(
+        (c) => (c['heure_debut'] as String).substring(0, 5) == heureDebut,
+      );
     } catch (_) {
       return null;
     }
@@ -1841,13 +3283,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             onPressed: () async {
               if (_anneeId == null) return;
               try {
-                final chemin = await EmploiDuTempsService.telechargerPdf(classeId: widget.classeId, anneeId: _anneeId!);
+                final chemin = await EmploiDuTempsService.telechargerPdf(
+                  classeId: widget.classeId,
+                  anneeId: _anneeId!,
+                );
                 await OpenFile.open(chemin);
               } catch (e) {
                 _afficherErreur(e.toString().replaceAll('Exception: ', ''));
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
             icon: const Icon(Icons.picture_as_pdf, size: 16),
             label: const Text('Exporter EDT PDF'),
           ),
@@ -1873,9 +3321,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                       Row(
                         children: [
                           const SizedBox(width: 60),
-                          ..._jours.map((j) => Expanded(
-                                child: Center(child: Text(j['label']!, style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.w700))),
-                              )),
+                          ..._jours.map(
+                            (j) => Expanded(
+                              child: Center(
+                                child: Text(
+                                  j['label']!,
+                                  style: GoogleFonts.sora(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -1888,9 +3346,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 2),
                             padding: const EdgeInsets.symmetric(vertical: 6),
-                            decoration: BoxDecoration(color: Colors.amber[100], borderRadius: BorderRadius.circular(6)),
+                            decoration: BoxDecoration(
+                              color: Colors.amber[100],
+                              borderRadius: BorderRadius.circular(6),
+                            ),
                             child: Center(
-                              child: Text('🔶 RÉCRÉATION', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber[900])),
+                              child: Text(
+                                '🔶 RÉCRÉATION',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.amber[900],
+                                ),
+                              ),
                             ),
                           );
                         }
@@ -1902,7 +3370,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               width: 60,
                               child: Padding(
                                 padding: const EdgeInsets.only(top: 20),
-                                child: Text('$debut\n$fin', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
+                                child: Text(
+                                  '$debut\n$fin',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                ),
                               ),
                             ),
                             ..._jours.map((j) {
@@ -1912,7 +3386,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                   onTap: () => Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) => EmploiDuTempsClasseScreen(classeId: widget.classeId, classeNom: _classe!['nom'] as String),
+                                      builder: (_) => EmploiDuTempsClasseScreen(
+                                        classeId: widget.classeId,
+                                        classeNom: _classe!['nom'] as String,
+                                      ),
                                     ),
                                   ).then((_) => _chargerTout()),
                                   child: Container(
@@ -1920,21 +3397,46 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                     margin: const EdgeInsets.all(2),
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: c != null ? _couleurMatiere(c['matiere_id'] as int) : const Color(0xFFF1F5F9),
+                                      color: c != null
+                                          ? _couleurMatiere(
+                                              c['matiere_id'] as int,
+                                            )
+                                          : const Color(0xFFF1F5F9),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: c != null
                                         ? Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text(c['matiere_nom'] as String,
-                                                  style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                                              Text(c['enseignant_nom'] as String,
-                                                  style: GoogleFonts.inter(fontSize: 9), maxLines: 1, overflow: TextOverflow.ellipsis),
+                                              Text(
+                                                c['matiere_nom'] as String,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              Text(
+                                                c['enseignant_nom'] as String,
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 9,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
                                             ],
                                           )
-                                        : const Center(child: Icon(Icons.add, size: 16, color: Colors.grey)),
+                                        : const Center(
+                                            child: Icon(
+                                              Icons.add,
+                                              size: 16,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               );
@@ -1960,7 +3462,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   Widget _tabStatistiques() {
     final stats = _statistiques ?? {};
     final garcons = (stats['garcons'] as num?)?.toInt() ?? 0;
-    final filles  = (stats['filles'] as num?)?.toInt() ?? 0;
+    final filles = (stats['filles'] as num?)?.toInt() ?? 0;
     final moyenne = (stats['moyenne_generale'] as num?)?.toDouble();
     final tauxReussite = (stats['taux_reussite'] as num?)?.toDouble() ?? 0;
     final totalAbsences = (stats['total_absences'] as num?)?.toInt() ?? 0;
@@ -1980,20 +3482,55 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             mainAxisSpacing: 10,
             childAspectRatio: 1.45,
             children: [
-              _carteStatGrid('Effectif', '${garcons + filles}', 'G: $garcons · F: $filles', Icons.people, const Color(0xFF1E3A8A)),
+              _carteStatGrid(
+                'Effectif',
+                '${garcons + filles}',
+                'G: $garcons · F: $filles',
+                Icons.people,
+                const Color(0xFF1E3A8A),
+              ),
               _carteStatGraphMoyenne(moyenne),
-              _carteStatProgression('Taux de réussite', tauxReussite / 100, '${tauxReussite.toStringAsFixed(0)}%', const Color(0xFF16A34A)),
-              _carteStatGrid('Absences', '$totalAbsences', 'total enregistrées', Icons.event_busy, const Color(0xFFEA580C)),
+              _carteStatProgression(
+                'Taux de réussite',
+                tauxReussite / 100,
+                '${tauxReussite.toStringAsFixed(0)}%',
+                const Color(0xFF16A34A),
+              ),
+              _carteStatGrid(
+                'Absences',
+                '$totalAbsences',
+                'total enregistrées',
+                Icons.event_busy,
+                const Color(0xFFEA580C),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           _carteGlass(
             child: Row(
               children: [
-                const Icon(Icons.account_balance_wallet, color: Color(0xFF0D9488)),
+                const Icon(
+                  Icons.account_balance_wallet,
+                  color: Color(0xFF0D9488),
+                ),
                 const SizedBox(width: 10),
-                Expanded(child: Text('Total encaissé', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155)))),
-                Text('${totalPaiements.toStringAsFixed(0)} FCFA', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF0D9488))),
+                Expanded(
+                  child: Text(
+                    'Total encaissé',
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      color: const Color(0xFF334155),
+                    ),
+                  ),
+                ),
+                Text(
+                  '${totalPaiements.toStringAsFixed(0)} FCFA',
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0D9488),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2001,27 +3538,58 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           if (elevesEnDifficulte.isEmpty)
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: const Color(0xFF16A34A).withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
-              child: Text('Aucun élève en difficulté 🎉', style: GoogleFonts.inter(color: const Color(0xFF166534))),
+              decoration: BoxDecoration(
+                color: const Color(0xFF16A34A).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                'Aucun élève en difficulté 🎉',
+                style: GoogleFonts.inter(color: const Color(0xFF166534)),
+              ),
             )
           else
-            ...elevesEnDifficulte.map((e) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    children: [
-                      Expanded(child: Text('${e['nom']} ${e['prenom']}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600))),
-                      SSMBadge(label: '${e['moyenne']}/20', couleur: const Color(0xFFDC2626)),
-                    ],
-                  ),
-                )),
+            ...elevesEnDifficulte.map(
+              (e) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${e['nom']} ${e['prenom']}',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    SSMBadge(
+                      label: '${e['moyenne']}/20',
+                      couleur: const Color(0xFFDC2626),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _carteStatGrid(String label, String valeur, String sousLabel, IconData icone, Color couleur) {
+  Widget _carteStatGrid(
+    String label,
+    String valeur,
+    String sousLabel,
+    IconData icone,
+    Color couleur,
+  ) {
     return _carteGlass(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -2032,13 +3600,42 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           Container(
             width: 28,
             height: 28,
-            decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: couleur.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Icon(icone, color: couleur, size: 16),
           ),
           const SizedBox(height: 6),
-          Text(valeur, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)), maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155)), maxLines: 1, overflow: TextOverflow.ellipsis),
-          Text(sousLabel, style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8)), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            valeur,
+            style: GoogleFonts.sora(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          Text(
+            sousLabel,
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: const Color(0xFF94A3B8),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -2051,11 +3648,26 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Moyenne générale', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
+          Text(
+            'Moyenne générale',
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
           const SizedBox(height: 4),
           Expanded(
             child: moyenne == null
-                ? Center(child: Text('—', style: GoogleFonts.sora(fontSize: 18, color: const Color(0xFF94A3B8))))
+                ? Center(
+                    child: Text(
+                      '—',
+                      style: GoogleFonts.sora(
+                        fontSize: 18,
+                        color: const Color(0xFF94A3B8),
+                      ),
+                    ),
+                  )
                 : Center(
                     child: Stack(
                       alignment: Alignment.center,
@@ -2063,16 +3675,34 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         SizedBox(
                           width: 64,
                           height: 64,
-                          child: PieChart(PieChartData(
-                            sectionsSpace: 0,
-                            centerSpaceRadius: 20,
-                            sections: [
-                              PieChartSectionData(value: moyenne, color: const Color(0xFF1E3A8A), showTitle: false, radius: 11),
-                              PieChartSectionData(value: (20 - moyenne).clamp(0, 20), color: const Color(0xFFF1F5F9), showTitle: false, radius: 11),
-                            ],
-                          )),
+                          child: PieChart(
+                            PieChartData(
+                              sectionsSpace: 0,
+                              centerSpaceRadius: 20,
+                              sections: [
+                                PieChartSectionData(
+                                  value: moyenne,
+                                  color: const Color(0xFF1E3A8A),
+                                  showTitle: false,
+                                  radius: 11,
+                                ),
+                                PieChartSectionData(
+                                  value: (20 - moyenne).clamp(0, 20),
+                                  color: const Color(0xFFF1F5F9),
+                                  showTitle: false,
+                                  radius: 11,
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        Text(moyenne.toStringAsFixed(1), style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700)),
+                        Text(
+                          moyenne.toStringAsFixed(1),
+                          style: GoogleFonts.sora(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -2082,7 +3712,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     );
   }
 
-  Widget _carteStatProgression(String label, double valeur, String texte, Color couleur) {
+  Widget _carteStatProgression(
+    String label,
+    double valeur,
+    String texte,
+    Color couleur,
+  ) {
     return _carteGlass(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -2090,285 +3725,38 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155)), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
           const SizedBox(height: 6),
-          Text(texte, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: couleur)),
+          Text(
+            texte,
+            style: GoogleFonts.sora(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+              color: couleur,
+            ),
+          ),
           const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(value: valeur.clamp(0.0, 1.0), minHeight: 6, backgroundColor: const Color(0xFFF1F5F9), color: couleur),
+            child: LinearProgressIndicator(
+              value: valeur.clamp(0.0, 1.0),
+              minHeight: 6,
+              backgroundColor: const Color(0xFFF1F5F9),
+              color: couleur,
+            ),
           ),
         ],
       ),
     );
-  }
-
-  // ══════════════════════════════════════════════════════
-  // TAB 7 — CAHIER DE TEXTE
-  // ══════════════════════════════════════════════════════
-
-  List<dynamic> get _cahierTexteFiltre {
-    if (_filtreMatiereCahier == null) return _cahierTexte;
-    return _cahierTexte.where((e) => e['matiere_id'] == _filtreMatiereCahier).toList();
-  }
-
-  Widget _tabCahierTexte() {
-    final estEnseignant = _utilisateurConnecte?.estEnseignant == true;
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      floatingActionButton: estEnseignant
-          ? FloatingActionButton.extended(
-              onPressed: _afficherDialogAjouterCahierTexte,
-              backgroundColor: const Color(0xFF1E3A8A),
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: Text('Ajouter une entrée', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-            )
-          : null,
-      body: RefreshIndicator(
-        onRefresh: _chargerTout,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-          children: [
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _chipMatiereCahier('Toutes', null),
-                  ..._matieresClasse.map((m) => Padding(
-                        padding: const EdgeInsets.only(left: 8),
-                        child: _chipMatiereCahier(m['matiere_nom'] as String, m['matiere_id'] as int),
-                      )),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_cahierTexteFiltre.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Center(child: Text('Aucune entrée', style: GoogleFonts.inter(color: const Color(0xFF334155)))),
-              )
-            else
-              ..._cahierTexteFiltre.map(_carteCahierTexte),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _chipMatiereCahier(String label, int? matiereId) {
-    final selectionne = _filtreMatiereCahier == matiereId;
-    return GestureDetector(
-      onTap: () => setState(() => _filtreMatiereCahier = matiereId),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: selectionne ? const Color(0xFF1E3A8A) : const Color(0xFF1E3A8A).withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: selectionne ? Colors.white : const Color(0xFF1E3A8A))),
-      ),
-    );
-  }
-
-  Widget _carteCahierTexte(dynamic entree) {
-    final enseignant = entree['enseignant'] as Map<String, dynamic>?;
-    final matiere    = entree['matiere'] as Map<String, dynamic>?;
-    final dateCours  = (entree['date_cours'] as String?)?.split('T').first;
-    final dateRemise = (entree['date_remise_devoir'] as String?)?.split('T').first;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(dateCours ?? '—', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8))),
-              const SizedBox(width: 8),
-              Text(matiere?['nom'] as String? ?? '', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700)),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text('Cours du jour', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155))),
-          Text(entree['cours_du_jour'] as String? ?? '', style: GoogleFonts.inter(fontSize: 13)),
-          if (entree['exercices'] != null) ...[
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFF0284C7).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-              child: Text('Exercices : ${entree['exercices']}', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF0284C7))),
-            ),
-          ],
-          if (entree['devoir'] != null) ...[
-            const SizedBox(height: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: const Color(0xFFEA580C).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-              child: Text(
-                dateRemise != null ? 'Devoir : ${entree['devoir']} (pour le $dateRemise)' : 'Devoir : ${entree['devoir']}',
-                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFFEA580C)),
-              ),
-            ),
-          ],
-          if (enseignant != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 10,
-                  backgroundColor: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
-                  child: Text((enseignant['name'] as String).substring(0, 1).toUpperCase(),
-                      style: GoogleFonts.sora(fontSize: 9, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A))),
-                ),
-                const SizedBox(width: 6),
-                Text(enseignant['name'] as String, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF334155))),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Future<void> _afficherDialogAjouterCahierTexte() async {
-    if (_matieresClasse.isEmpty) {
-      _afficherErreur('Aucune matière configurée pour cette classe');
-      return;
-    }
-
-    int matiereId = _matieresClasse.first['matiere_id'] as int;
-    DateTime dateCours = DateTime.now();
-    DateTime? dateRemiseDevoir;
-    final coursController = TextEditingController();
-    final exercicesController = TextEditingController();
-    final devoirController = TextEditingController();
-
-    await showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setStateDialog) {
-          return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 620),
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Nouvelle entrée', style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            DropdownButtonFormField<int>(
-                              value: matiereId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(labelText: 'Matière'),
-                              items: _matieresClasse.map((m) => DropdownMenuItem<int>(value: m['matiere_id'] as int, child: Text(m['matiere_nom'] as String))).toList(),
-                              onChanged: (v) => setStateDialog(() => matiereId = v ?? matiereId),
-                            ),
-                            const SizedBox(height: 12),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.date_range),
-                              title: Text('Date du cours : ${dateCours.day}/${dateCours.month}/${dateCours.year}'),
-                              onTap: () async {
-                                final d = await showDatePicker(context: context, initialDate: dateCours, firstDate: DateTime(2020), lastDate: DateTime(2035));
-                                if (d != null) setStateDialog(() => dateCours = d);
-                              },
-                            ),
-                            const SizedBox(height: 8),
-                            TextField(
-                              controller: coursController,
-                              maxLines: 3,
-                              decoration: const InputDecoration(labelText: 'Cours du jour *', alignLabelWithHint: true),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: exercicesController,
-                              maxLines: 2,
-                              decoration: const InputDecoration(labelText: 'Exercices', alignLabelWithHint: true),
-                            ),
-                            const SizedBox(height: 12),
-                            TextField(
-                              controller: devoirController,
-                              maxLines: 2,
-                              decoration: const InputDecoration(labelText: 'Devoir', alignLabelWithHint: true),
-                            ),
-                            const SizedBox(height: 8),
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.event),
-                              title: Text(dateRemiseDevoir != null
-                                  ? 'Remise devoir : ${dateRemiseDevoir!.day}/${dateRemiseDevoir!.month}/${dateRemiseDevoir!.year}'
-                                  : 'Date de remise du devoir (optionnel)'),
-                              onTap: () async {
-                                final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2035));
-                                if (d != null) setStateDialog(() => dateRemiseDevoir = d);
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
-                            onPressed: () async {
-                              if (coursController.text.isEmpty) {
-                                _afficherErreur('Le cours du jour est obligatoire');
-                                return;
-                              }
-                              try {
-                                await CahierTexteService.creer(
-                                  classeId: widget.classeId,
-                                  matiereId: matiereId,
-                                  dateCours: _formatDate(dateCours),
-                                  coursDuJour: coursController.text,
-                                  exercices: exercicesController.text.isEmpty ? null : exercicesController.text,
-                                  devoir: devoirController.text.isEmpty ? null : devoirController.text,
-                                  dateRemiseDevoir: dateRemiseDevoir != null ? _formatDate(dateRemiseDevoir!) : null,
-                                );
-                                if (context.mounted) Navigator.pop(context);
-                                _afficherSucces('Entrée enregistrée');
-                                _chargerTout();
-                              } catch (e) {
-                                _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-                              }
-                            },
-                            child: const Text('Enregistrer'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  String _formatDate(DateTime d) {
-    return '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
   }
 }
 
@@ -2386,7 +3774,9 @@ class _BordurePointilleePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final contour = Path()
-      ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(rayon)));
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(rayon)),
+      );
 
     const largeurTrait = 6.0;
     const espace = 4.0;
@@ -2396,7 +3786,10 @@ class _BordurePointilleePainter extends CustomPainter {
       double distance = 0;
       while (distance < metrique.length) {
         final fin = (distance + largeurTrait).clamp(0, metrique.length);
-        chemin.addPath(metrique.extractPath(distance, fin.toDouble()), Offset.zero);
+        chemin.addPath(
+          metrique.extractPath(distance, fin.toDouble()),
+          Offset.zero,
+        );
         distance += largeurTrait + espace;
       }
     }
@@ -2419,7 +3812,11 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 48;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => tabBar;
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) => tabBar;
 
   @override
   bool shouldRebuild(_TabBarDelegate oldDelegate) => false;

@@ -7,23 +7,25 @@ class StatistiqueService {
   static Future<Map<String, String>> _headers() async {
     final token = await AuthService.getToken();
     return {
-      'Content-Type':  'application/json',
-      'Accept':        'application/json',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'Authorization': 'Bearer $token',
     };
   }
 
   static Future<Map<String, dynamic>> chargerStatistiques({
     int? anneeId,
+    int? periodeId,
   }) async {
-    final url = anneeId != null
-        ? '${AppConfig.apiBaseUrl}/statistiques?annee_id=$anneeId'
-        : '${AppConfig.apiBaseUrl}/statistiques';
+    final query = <String, String>{};
+    if (anneeId != null) query['annee_id'] = '$anneeId';
+    if (periodeId != null) query['periode_id'] = '$periodeId';
 
-    final response = await http.get(
-      Uri.parse(url),
-      headers: await _headers(),
-    );
+    final uri = Uri.parse(
+      '${AppConfig.apiBaseUrl}/statistiques',
+    ).replace(queryParameters: query.isEmpty ? null : query);
+
+    final response = await http.get(uri, headers: await _headers());
 
     if (response.statusCode == 200) return jsonDecode(response.body);
     throw Exception('Erreur chargement statistiques');

@@ -9,7 +9,7 @@ import 'screens/directeur/gestion_classes_screen.dart';
 import 'screens/directeur/fiche_classe_screen.dart';
 import 'screens/directeur/gestion_matieres_screen.dart';
 import 'screens/directeur/matieres_par_classe_screen.dart';
-import 'screens/directeur/catalogue_matieres_screen.dart';
+import 'screens/directeur/fiche_matiere_classe_screen.dart';
 import 'screens/directeur/gestion_annees_screen.dart';
 import 'screens/directeur/gestion_eleves_screen.dart';
 import 'screens/directeur/eleves_par_classe_screen.dart';
@@ -77,13 +77,25 @@ class SSMApp extends StatelessWidget {
           return FicheClasseScreen(classeId: args['classeId'] as int);
         },
         '/directeur/matieres':     (context) => const GestionMatieresScreen(),
-        '/directeur/catalogue-matieres': (context) => const CatalogueMatieresScreen(),
         '/directeur/matieres/classe': (context) {
           final args = ModalRoute.of(context)!.settings.arguments
               as Map<String, dynamic>;
           return MatieresParClasseScreen(
             classeId:  args['classeId'] as int,
             nomClasse: args['nomClasse'] as String?,
+          );
+        },
+        '/directeur/matiere/fiche': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments
+              as Map<String, dynamic>;
+          return FicheMatiereClasseScreen(
+            classeId:       args['classeId'] as int,
+            classeNom:      args['classeNom'] as String,
+            matiereId:      args['matiereId'] as int,
+            matiereNom:     args['matiereNom'] as String,
+            couleurMatiere: args['couleurMatiere'] as Color,
+            coefficient:    args['coefficient'] as double,
+            enseignantNom:  args['enseignantNom'] as String?,
           );
         },
         '/directeur/annees':       (context) => const GestionAnneesScreen(),

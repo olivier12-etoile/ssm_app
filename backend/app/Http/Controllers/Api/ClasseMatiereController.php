@@ -38,13 +38,20 @@ class ClasseMatiereController extends Controller
         return response()->json($matieres);
     }
 
-    // Ajouter ou modifier le coefficient d'une matière dans une classe
+    // Ajouter ou modifier le coefficient d'une matière dans une classe.
+    // Accepte soit matiere_id (matière existante), soit matiere_nom
+    // (+ matiere_code / matiere_couleur en option) : dans ce cas la matière
+    // est réutilisée si elle existe déjà dans l'école, sinon créée — jamais
+    // de doublon de nom dans la même école.
     public function enregistrer(Request $request)
     {
         $request->validate([
-            'classe_id'   => 'required|integer',
-            'matiere_id'  => 'required|integer',
-            'coefficient' => 'required|numeric|min:0.5',
+            'classe_id'       => 'required|integer',
+            'matiere_id'      => 'nullable|integer',
+            'matiere_nom'     => 'required_without:matiere_id|string|max:100',
+            'matiere_code'    => 'nullable|string|max:10',
+            'matiere_couleur' => 'nullable|string|max:20',
+            'coefficient'     => 'required|numeric|min:0.5',
         ]);
 
         $ecoleId = $request->user()->ecole_id;
@@ -53,14 +60,27 @@ class ClasseMatiereController extends Controller
             ->where('ecole_id', $ecoleId)
             ->firstOrFail();
 
-        Matiere::where('id', $request->matiere_id)
-            ->where('ecole_id', $ecoleId)
-            ->firstOrFail();
+        if ($request->matiere_id) {
+            $matiere = Matiere::where('id', $request->matiere_id)
+                ->where('ecole_id', $ecoleId)
+                ->firstOrFail();
+        } else {
+            $matiere = Matiere::firstOrCreate(
+                [
+                    'ecole_id' => $ecoleId,
+                    'nom'      => $request->matiere_nom,
+                ],
+                [
+                    'code'    => $request->matiere_code,
+                    'couleur' => $request->matiere_couleur,
+                ]
+            );
+        }
 
         $classeMatiere = ClasseMatiere::updateOrCreate(
             [
                 'classe_id'  => $request->classe_id,
-                'matiere_id' => $request->matiere_id,
+                'matiere_id' => $matiere->id,
             ],
             [
                 'coefficient' => $request->coefficient,
@@ -70,6 +90,7 @@ class ClasseMatiereController extends Controller
         return response()->json([
             'message'        => 'Matière enregistrée pour la classe avec succès',
             'classe_matiere' => $classeMatiere,
+            'matiere'        => $matiere,
         ], 201);
     }
 

@@ -77,9 +77,9 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: _rouge),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
   }
 
   void _afficherSucces(String msg) {
@@ -124,7 +124,10 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
         .map((a) => a['enseignant_id'])
         .toSet()
         .length;
-    final coefTotal = _matieresClasse.fold<double>(0, (s, l) => s + _coefficient(l));
+    final coefTotal = _matieresClasse.fold<double>(
+      0,
+      (s, l) => s + _coefficient(l),
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -133,8 +136,13 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
         backgroundColor: _indigo,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
         icon: const Icon(Icons.add, color: Colors.white),
-        label: Text('Ajouter une matière',
-            style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+        label: Text(
+          'Ajouter une matière',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -156,16 +164,27 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                               child: Center(
                                 child: Column(
                                   children: [
-                                    const Icon(Icons.book_outlined, size: 64, color: Color(0xFF94A3B8)),
+                                    const Icon(
+                                      Icons.book_outlined,
+                                      size: 64,
+                                      color: Color(0xFF94A3B8),
+                                    ),
                                     const SizedBox(height: 12),
-                                    Text('Aucune matière assignée à cette classe',
-                                        style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF334155))),
+                                    Text(
+                                      'Aucune matière assignée à cette classe',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        color: const Color(0xFF334155),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
                             )
                           else
-                            ..._matieresClasse.map((l) => _carteMatiereClasse(l)),
+                            ..._matieresClasse.map(
+                              (l) => _carteMatiereClasse(l),
+                            ),
                           const SizedBox(height: 12),
                           _carteAjouter(),
                           const SizedBox(height: 80),
@@ -197,18 +216,36 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
-                onPressed: () => Navigator.canPop(context) ? Navigator.pop(context) : null,
+                onPressed: () =>
+                    Navigator.canPop(context) ? Navigator.pop(context) : null,
               ),
               const SizedBox(width: 4),
-              Text('Retour', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
+              Text(
+                'Retour',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.8),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text('Matières de ${_nomClasse ?? '...'}',
-              style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+          Text(
+            'Matières de ${_nomClasse ?? '...'}',
+            style: GoogleFonts.sora(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text('${_matieresClasse.length} matières configurées',
-              style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7))),
+          Text(
+            '${_matieresClasse.length} matières configurées',
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              color: Colors.white.withValues(alpha: 0.7),
+            ),
+          ),
         ],
       ),
     );
@@ -221,11 +258,21 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
   Widget _resume(int nombreEnseignants, double coefTotal) {
     return Row(
       children: [
-        Expanded(child: _miniCard('${_matieresClasse.length}', 'matières', Icons.book)),
+        Expanded(
+          child: _miniCard('${_matieresClasse.length}', 'matières', Icons.book),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: _miniCard('$nombreEnseignants', 'enseignants', Icons.person)),
+        Expanded(
+          child: _miniCard('$nombreEnseignants', 'enseignants', Icons.person),
+        ),
         const SizedBox(width: 10),
-        Expanded(child: _miniCard(coefTotal.toStringAsFixed(1), 'coef. total', Icons.calculate)),
+        Expanded(
+          child: _miniCard(
+            coefTotal.toStringAsFixed(1),
+            'coef. total',
+            Icons.calculate,
+          ),
+        ),
       ],
     );
   }
@@ -240,17 +287,35 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             children: [
               Icon(icone, size: 18, color: _indigo),
               const SizedBox(height: 6),
-              Text(valeur, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+              Text(
+                valeur,
+                style: GoogleFonts.sora(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
               const SizedBox(height: 2),
-              Text(label,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF334155))),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  color: const Color(0xFF334155),
+                ),
+              ),
             ],
           ),
         ),
@@ -280,18 +345,31 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
             color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(14),
             border: Border(left: BorderSide(color: couleur, width: 4)),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
                 width: 40,
                 height: 40,
-                decoration: BoxDecoration(color: couleur, shape: BoxShape.circle),
+                decoration: BoxDecoration(
+                  color: couleur,
+                  shape: BoxShape.circle,
+                ),
                 child: Center(
                   child: Text(
                     nom.isNotEmpty ? nom.characters.first.toUpperCase() : '?',
-                    style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: GoogleFonts.sora(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -300,7 +378,14 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(nom, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                    Text(
+                      nom,
+                      style: GoogleFonts.sora(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       enseignant != null ? 'M. $enseignant' : 'Non affecté',
@@ -316,14 +401,27 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Coef.', style: GoogleFonts.inter(fontSize: 10, color: const Color(0xFF94A3B8))),
-                  Text(coef.toStringAsFixed(1),
-                      style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: _indigo)),
+                  Text(
+                    'Coef.',
+                    style: GoogleFonts.inter(
+                      fontSize: 10,
+                      color: const Color(0xFF94A3B8),
+                    ),
+                  ),
+                  Text(
+                    coef.toStringAsFixed(1),
+                    style: GoogleFonts.sora(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: _indigo,
+                    ),
+                  ),
                 ],
               ),
               IconButton(
                 icon: const Icon(Icons.edit, size: 20, color: _indigo),
-                onPressed: () => _afficherDialogModifierCoefficient(matiereId, nom, coef),
+                onPressed: () =>
+                    _afficherDialogModifierCoefficient(matiereId, nom, coef),
               ),
               IconButton(
                 icon: const Icon(Icons.delete, size: 20, color: _rouge),
@@ -344,7 +442,10 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
     return GestureDetector(
       onTap: _afficherDialogAjout,
       child: CustomPaint(
-        painter: _BordurePointilleePainter(couleur: _indigo.withValues(alpha: 0.3), rayon: 12),
+        painter: _BordurePointilleePainter(
+          couleur: _indigo.withValues(alpha: 0.3),
+          rayon: 12,
+        ),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -356,7 +457,14 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
             children: [
               const Icon(Icons.add_circle_outline, color: _indigo, size: 28),
               const SizedBox(height: 8),
-              Text('Ajouter une matière', style: GoogleFonts.inter(fontSize: 14, color: _indigo, fontWeight: FontWeight.w600)),
+              Text(
+                'Ajouter une matière',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  color: _indigo,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
         ),
@@ -369,11 +477,17 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
   // ══════════════════════════════════════════════════════
 
   Future<void> _afficherDialogAjout() async {
-    final matieresAjoutees = _matieresClasse.map((l) => l['matiere_id']).toSet();
-    final matieresDisponibles = _toutesMatieres.where((m) => !matieresAjoutees.contains(m['id'])).toList();
+    final matieresAjoutees = _matieresClasse
+        .map((l) => l['matiere_id'])
+        .toSet();
+    final matieresDisponibles = _toutesMatieres
+        .where((m) => !matieresAjoutees.contains(m['id']))
+        .toList();
 
     if (matieresDisponibles.isEmpty) {
-      _afficherErreur('Toutes les matières de l\'école sont déjà ajoutées à cette classe');
+      _afficherErreur(
+        'Toutes les matières de l\'école sont déjà ajoutées à cette classe',
+      );
       return;
     }
 
@@ -384,11 +498,18 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
-          final matiere = matieresSelectionneeDe(matieresDisponibles, matiereSelectionnee);
-          final coef = double.tryParse(coefficientController.text.replaceAll(',', '.'));
+          final matiere = matieresSelectionneeDe(
+            matieresDisponibles,
+            matiereSelectionnee,
+          );
+          final coef = double.tryParse(
+            coefficientController.text.replaceAll(',', '.'),
+          );
 
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             backgroundColor: Colors.white,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
@@ -398,41 +519,63 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Ajouter une matière',
-                        style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                    Text(
+                      'Ajouter une matière',
+                      style: GoogleFonts.sora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<int>(
                       value: matiereSelectionnee,
                       isExpanded: true,
                       decoration: InputDecoration(
                         labelText: 'Matière',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       hint: const Text('Choisir une matière'),
                       items: matieresDisponibles.map((m) {
-                        final couleur = _couleurDepuisHex(m['couleur'] as String?);
+                        final couleur = _couleurDepuisHex(
+                          m['couleur'] as String?,
+                        );
                         return DropdownMenuItem<int>(
                           value: m['id'] as int,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Container(width: 12, height: 12, decoration: BoxDecoration(color: couleur, shape: BoxShape.circle)),
+                              Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: couleur,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
                               const SizedBox(width: 8),
                               Text(m['nom'] as String),
                             ],
                           ),
                         );
                       }).toList(),
-                      onChanged: (v) => setStateDialog(() => matiereSelectionnee = v),
+                      onChanged: (v) =>
+                          setStateDialog(() => matiereSelectionnee = v),
                     ),
                     const SizedBox(height: 14),
                     TextField(
                       controller: coefficientController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                       decoration: InputDecoration(
                         labelText: 'Coefficient',
                         hintText: 'ex: 3, 4.5, 7',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       onChanged: (_) => setStateDialog(() {}),
                     ),
@@ -440,12 +583,21 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                     if (matiere != null)
                       Text(
                         '${matiere['nom']} · Coefficient ${coef?.toStringAsFixed(1) ?? '—'}',
-                        style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _indigo),
+                        style: GoogleFonts.sora(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: _indigo,
+                        ),
                       ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annuler'),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
@@ -453,22 +605,40 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                               backgroundColor: _indigo,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
                             onPressed: matiereSelectionnee == null
                                 ? null
                                 : () async {
-                                    if (coef == null || coef < 0.5 || coef > 10) {
-                                      _afficherErreur('Le coefficient doit être compris entre 0.5 et 10');
+                                    if (coef == null ||
+                                        coef < 0.5 ||
+                                        coef > 10) {
+                                      _afficherErreur(
+                                        'Le coefficient doit être compris entre 0.5 et 10',
+                                      );
                                       return;
                                     }
                                     try {
-                                      await ClasseMatiereService.ajouter(widget.classeId, matiereSelectionnee!, coef);
-                                      if (context.mounted) Navigator.pop(context);
-                                      _afficherSucces('Matière ajoutée à la classe');
+                                      await ClasseMatiereService.ajouter(
+                                        classeId: widget.classeId,
+                                        matiereId: matiereSelectionnee!,
+                                        coefficient: coef,
+                                      );
+                                      if (context.mounted)
+                                        Navigator.pop(context);
+                                      _afficherSucces(
+                                        'Matière ajoutée à la classe',
+                                      );
                                       _chargerDonnees();
                                     } catch (e) {
-                                      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                                      _afficherErreur(
+                                        e.toString().replaceAll(
+                                          'Exception: ',
+                                          '',
+                                        ),
+                                      );
                                     }
                                   },
                             child: const Text('Ajouter'),
@@ -506,8 +676,14 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
   // DIALOG MODIFIER COEFFICIENT
   // ══════════════════════════════════════════════════════
 
-  Future<void> _afficherDialogModifierCoefficient(int matiereId, String nom, double coefActuel) async {
-    final coefficientController = TextEditingController(text: coefActuel.toStringAsFixed(1));
+  Future<void> _afficherDialogModifierCoefficient(
+    int matiereId,
+    String nom,
+    double coefActuel,
+  ) async {
+    final coefficientController = TextEditingController(
+      text: coefActuel.toStringAsFixed(1),
+    );
 
     await showDialog(
       context: context,
@@ -522,22 +698,37 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Modifier le coefficient de $nom',
-                    style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                Text(
+                  'Modifier le coefficient de $nom',
+                  style: GoogleFonts.sora(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 TextField(
                   controller: coefficientController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     labelText: 'Coefficient',
                     hintText: 'ex: 3, 4.5, 7',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Annuler'),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
@@ -545,21 +736,33 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                           backgroundColor: _indigo,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         onPressed: () async {
-                          final coef = double.tryParse(coefficientController.text.replaceAll(',', '.'));
+                          final coef = double.tryParse(
+                            coefficientController.text.replaceAll(',', '.'),
+                          );
                           if (coef == null || coef < 0.5 || coef > 10) {
-                            _afficherErreur('Le coefficient doit être compris entre 0.5 et 10');
+                            _afficherErreur(
+                              'Le coefficient doit être compris entre 0.5 et 10',
+                            );
                             return;
                           }
                           try {
-                            await ClasseMatiereService.ajouter(widget.classeId, matiereId, coef);
+                            await ClasseMatiereService.ajouter(
+                              classeId: widget.classeId,
+                              matiereId: matiereId,
+                              coefficient: coef,
+                            );
                             if (context.mounted) Navigator.pop(context);
                             _afficherSucces('Coefficient modifié avec succès');
                             _chargerDonnees();
                           } catch (e) {
-                            _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                            _afficherErreur(
+                              e.toString().replaceAll('Exception: ', ''),
+                            );
                           }
                         },
                         child: const Text('Enregistrer'),
@@ -594,15 +797,30 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 48),
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFD97706),
+                  size: 48,
+                ),
                 const SizedBox(height: 16),
-                Text('Retirer "${ligne['matiere_nom']}" de cette classe ?',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                Text(
+                  'Retirer "${ligne['matiere_nom']}" de cette classe ?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.sora(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler'))),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Annuler'),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
@@ -610,7 +828,9 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                           backgroundColor: _rouge,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
                         ),
                         onPressed: () => Navigator.pop(context, true),
                         child: const Text('Retirer'),
@@ -655,7 +875,9 @@ class _BordurePointilleePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final contour = Path()
-      ..addRRect(RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(rayon)));
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(rayon)),
+      );
 
     const largeurTrait = 6.0;
     const espace = 4.0;
@@ -665,7 +887,10 @@ class _BordurePointilleePainter extends CustomPainter {
       double distance = 0;
       while (distance < metrique.length) {
         final fin = (distance + largeurTrait).clamp(0, metrique.length);
-        chemin.addPath(metrique.extractPath(distance, fin.toDouble()), Offset.zero);
+        chemin.addPath(
+          metrique.extractPath(distance, fin.toDouble()),
+          Offset.zero,
+        );
         distance += largeurTrait + espace;
       }
     }

@@ -44,6 +44,7 @@ class DashboardController extends Controller
                 'matieres.id as matiere_id',
                 'matieres.nom as matiere_nom',
                 'matieres.coefficient',
+                'matieres.couleur',
             )
             ->get();
 
