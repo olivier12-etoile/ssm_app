@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Note;
+use App\Models\PeriodeAcademique;
 use Illuminate\Http\Request;
 
 class NoteController extends Controller
@@ -40,6 +41,10 @@ class NoteController extends Controller
             'valeur'     => 'required|numeric|min:0|max:20',
         ]);
 
+        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
+            return $erreur;
+        }
+
         $note = Note::updateOrCreate(
             [
                 'eleve_id'    => $request->eleve_id,
@@ -67,6 +72,10 @@ class NoteController extends Controller
             'matiere_id' => 'required|integer',
             'classe_id'  => 'required|integer',
         ]);
+
+        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
+            return $erreur;
+        }
 
         Note::where('periode_id', $request->periode_id)
             ->where('matiere_id', $request->matiere_id)
@@ -113,5 +122,20 @@ class NoteController extends Controller
             ]);
 
         return response()->json(['message' => 'Notes rejetées']);
+    }
+
+    // Bloque la saisie/soumission si la période est fermée, sauf pour
+    // le directeur ou le censeur.
+    private function verifierPeriodeOuverte(Request $request, $periodeId)
+    {
+        $periode = PeriodeAcademique::find($periodeId);
+
+        if ($periode && $periode->statut === 'ferme' && !in_array($request->user()->role, ['directeur', 'censeur'])) {
+            return response()->json([
+                'message' => 'Cette période est fermée. La saisie des notes est verrouillée.',
+            ], 403);
+        }
+
+        return null;
     }
 }

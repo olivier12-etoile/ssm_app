@@ -14,7 +14,22 @@ class AnneeAcademique extends Model
         'date_debut',
         'date_fin',
         'statut',
+        'cree_par',
+        'active_par',
+        'active_le',
+        'cloture_par',
+        'cloture_le',
+        'regle_passage_moyenne',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'active_le'              => 'datetime',
+            'cloture_le'             => 'datetime',
+            'regle_passage_moyenne'  => 'decimal:2',
+        ];
+    }
 
     public function ecole()
     {
@@ -29,5 +44,25 @@ class AnneeAcademique extends Model
     public function inscriptions()
     {
         return $this->hasMany(Inscription::class, 'annee_academique_id');
+    }
+
+    public function creePar()
+    {
+        return $this->belongsTo(User::class, 'cree_par');
+    }
+
+    public function activePar()
+    {
+        return $this->belongsTo(User::class, 'active_par');
+    }
+
+    public function cloturePar()
+    {
+        return $this->belongsTo(User::class, 'cloture_par');
+    }
+
+    public function historique()
+    {
+        return $this->hasMany(HistoriqueAnnee::class, 'annee_id');
     }
 }

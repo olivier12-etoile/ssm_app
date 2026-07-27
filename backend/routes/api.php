@@ -118,13 +118,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/affectations/{id}',        [AffectationController::class, 'supprimer']);
 
     // Années académiques
-    Route::get('/annees',    [AnneeAcademiqueController::class, 'index']);
-    Route::post('/annees',   [AnneeAcademiqueController::class, 'creer']);
+    Route::get('/annees',                     [AnneeAcademiqueController::class, 'index']);
+    Route::get('/annees/active',              [AnneeAcademiqueController::class, 'anneeActive']);
+    Route::get('/annees/historique',          [AnneeAcademiqueController::class, 'historique']);
+    Route::post('/annees',                    [AnneeAcademiqueController::class, 'store']);
+    Route::patch('/annees/{id}/activer',      [AnneeAcademiqueController::class, 'activer']);
+    Route::patch('/annees/{id}/cloturer',     [AnneeAcademiqueController::class, 'cloturer']);
+    Route::patch('/annees/{id}/archiver',     [AnneeAcademiqueController::class, 'archiver']);
+    Route::post('/annees/{id}/passer-eleves', [AnneeAcademiqueController::class, 'passerEleves']);
+    Route::get('/annees/{id}/statistiques',   [AnneeAcademiqueController::class, 'statistiques']);
+    Route::get('/annees/{id}/passage-apercu', [AnneeAcademiqueController::class, 'apercuPassage']);
 
     // Périodes
-    Route::get('/periodes/{anneeId}',         [PeriodeAcademiqueController::class, 'index']);
-    Route::post('/periodes',                  [PeriodeAcademiqueController::class, 'creer']);
-    Route::patch('/periodes/{id}/statut',     [PeriodeAcademiqueController::class, 'changerStatut']);
+    Route::get('/periodes',                   [PeriodeAcademiqueController::class, 'index']);
+    Route::post('/periodes',                  [PeriodeAcademiqueController::class, 'store']);
+    Route::patch('/periodes/{id}/ouvrir',     [PeriodeAcademiqueController::class, 'ouvrir']);
+    Route::patch('/periodes/{id}/fermer',     [PeriodeAcademiqueController::class, 'fermer']);
+    Route::get('/periodes/alertes',           [PeriodeAcademiqueController::class, 'alertes']);
 
     // Élèves
     Route::get('/eleves',                    [EleveController::class, 'index']);
