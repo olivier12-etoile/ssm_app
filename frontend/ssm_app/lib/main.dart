@@ -11,6 +11,7 @@ import 'screens/directeur/gestion_matieres_screen.dart';
 import 'screens/directeur/matieres_par_classe_screen.dart';
 import 'screens/directeur/fiche_matiere_classe_screen.dart';
 import 'screens/directeur/gestion_annees_screen.dart';
+import 'screens/directeur/fiche_annee_screen.dart';
 import 'screens/directeur/gestion_eleves_screen.dart';
 import 'screens/directeur/eleves_par_classe_screen.dart';
 import 'screens/directeur/fiche_eleve_screen.dart';
@@ -50,108 +51,130 @@ class SSMApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: SSMTheme.themeClaire,
       routes: {
-        '/login':                  (context) => const LoginScreen(),
-        '/changer-mot-de-passe':   (context) => const ChangementMdpScreen(),
-        '/tableau-de-bord':        (context) => const TableauDeBordScreen(),
-        '/dashboard/enseignant':   (context) => const DashboardEnseignantScreen(),
-        '/dashboard/censeur':      (context) => const DashboardCenseurScreen(),
+        '/login': (context) => const LoginScreen(),
+        '/changer-mot-de-passe': (context) => const ChangementMdpScreen(),
+        '/tableau-de-bord': (context) => const TableauDeBordScreen(),
+        '/dashboard/enseignant': (context) => const DashboardEnseignantScreen(),
+        '/dashboard/censeur': (context) => const DashboardCenseurScreen(),
         '/censeur/classe/absences': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return SuiviAbsencesClasseScreen(
-            classeId:  args['classeId'] as int,
+            classeId: args['classeId'] as int,
             classeNom: args['classeNom'] as String,
           );
         },
-        '/dashboard/secretaire':   (context) => const DashboardSecretaireScreen(),
-        '/directeur/utilisateurs': (context) => const GestionUtilisateursScreen(),
+        '/dashboard/secretaire': (context) => const DashboardSecretaireScreen(),
+        '/directeur/utilisateurs': (context) =>
+            const GestionUtilisateursScreen(),
         '/directeur/utilisateur/fiche': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return FicheUtilisateurScreen(userId: args['userId'] as int);
         },
-        '/directeur/classes':      (context) => const GestionClassesScreen(),
+        '/directeur/classes': (context) => const GestionClassesScreen(),
         '/directeur/classe/fiche': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return FicheClasseScreen(classeId: args['classeId'] as int);
         },
-        '/directeur/matieres':     (context) => const GestionMatieresScreen(),
+        '/directeur/matieres': (context) => const GestionMatieresScreen(),
         '/directeur/matieres/classe': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return MatieresParClasseScreen(
-            classeId:  args['classeId'] as int,
+            classeId: args['classeId'] as int,
             nomClasse: args['nomClasse'] as String?,
           );
         },
         '/directeur/matiere/fiche': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return FicheMatiereClasseScreen(
-            classeId:       args['classeId'] as int,
-            classeNom:      args['classeNom'] as String,
-            matiereId:      args['matiereId'] as int,
-            matiereNom:     args['matiereNom'] as String,
+            classeId: args['classeId'] as int,
+            classeNom: args['classeNom'] as String,
+            matiereId: args['matiereId'] as int,
+            matiereNom: args['matiereNom'] as String,
             couleurMatiere: args['couleurMatiere'] as Color,
-            coefficient:    args['coefficient'] as double,
-            enseignantNom:  args['enseignantNom'] as String?,
+            coefficient: args['coefficient'] as double,
+            enseignantNom: args['enseignantNom'] as String?,
           );
         },
-        '/directeur/annees':       (context) => const GestionAnneesScreen(),
-        '/directeur/frais':        (context) => const GestionFraisScreen(),
-        '/directeur/eleves':       (context) => const GestionElevesScreen(),
+        '/directeur/annees': (context) => const GestionAnneesScreen(),
+        '/directeur/annee/fiche': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
+          return FicheAnneeScreen(
+            anneeId: args['anneeId'] as int,
+            libelle: args['libelle'] as String,
+            statut: args['statut'] as String,
+          );
+        },
+        '/directeur/frais': (context) => const GestionFraisScreen(),
+        '/directeur/eleves': (context) => const GestionElevesScreen(),
         '/directeur/eleves/classe': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return ElevesParClasseScreen(
             classeId: args['classeId'] as int,
-            anneeId:  args['anneeId'] as int,
+            anneeId: args['anneeId'] as int,
           );
         },
         '/eleve/fiche': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return FicheEleveScreen(eleveId: args['eleveId'] as int);
         },
-        '/directeur/affectations':       (context) => const GestionAffectationsScreen(),
+        '/directeur/affectations': (context) =>
+            const GestionAffectationsScreen(),
         '/directeur/affectations/classe': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return AffectationsClasseScreen(
-            classeId:  args['classeId'] as int,
+            classeId: args['classeId'] as int,
             classeNom: args['classeNom'] as String,
           );
         },
-        '/notes/validation':       (context) => const ValidationNotesScreen(),
-        '/enseignant/notes':       (context) => const SaisieNotesScreen(),
-        '/enseignant/absences':    (context) => const SaisieAbsencesScreen(),
-        '/emploi-du-temps':        (context) => const SelectionClasseEdtScreen(),
+        '/notes/validation': (context) => const ValidationNotesScreen(),
+        '/enseignant/notes': (context) => const SaisieNotesScreen(),
+        '/enseignant/absences': (context) => const SaisieAbsencesScreen(),
+        '/emploi-du-temps': (context) => const SelectionClasseEdtScreen(),
         '/emploi-du-temps/classe': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return EmploiDuTempsClasseScreen(
-            classeId:  args['classeId'] as int,
+            classeId: args['classeId'] as int,
             classeNom: args['classeNom'] as String,
           );
         },
         '/emploi-du-temps/enseignant': (context) =>
             const EmploiDuTempsEnseignantScreen(),
         '/enseignant/presence': (context) {
-          final args = ModalRoute.of(context)!.settings.arguments
-              as Map<String, dynamic>;
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
           return ListePresenceScreen(
-            classeId:  args['classeId'] as int,
+            classeId: args['classeId'] as int,
             classeNom: args['classeNom'] as String,
           );
         },
-        '/paiements':              (context) => const GestionPaiementsScreen(),
-        '/paiements/renvoi':       (context) => const ListeRenvoiScreen(),
-        '/profil':                 (context) => const ProfilScreen(),
-        '/statistiques':           (context) => const StatistiquesScreen(),
-        '/bulletins':              (context) => const BulletinsScreen(),
-        '/sync':                   (context) => const SyncScreen(),
-        '/notifications':          (context) => const NotificationsAttenteScreen(),
+        '/paiements': (context) => const GestionPaiementsScreen(),
+        '/paiements/renvoi': (context) => const ListeRenvoiScreen(),
+        '/profil': (context) => const ProfilScreen(),
+        '/statistiques': (context) => const StatistiquesScreen(),
+        '/bulletins': (context) => const BulletinsScreen(),
+        '/sync': (context) => const SyncScreen(),
+        '/notifications': (context) => const NotificationsAttenteScreen(),
       },
       home: const LoginScreen(),
     );

@@ -96,6 +96,10 @@ class PeriodeAcademiqueController extends Controller
     }
 
     // ── 3. Ouvrir une période ─────────────────────────────────────
+    // Une seule période 'ouvert' à la fois : l'ancienne (s'il y en a une)
+    // passe en 'en_veille' — elle reste accessible en lecture/écriture
+    // aux enseignants pour compléter leurs saisies, sans bloquer
+    // l'ouverture de la nouvelle période principale.
     public function ouvrir(Request $request, $id)
     {
         $ecoleId = $request->user()->ecole_id;
@@ -104,16 +108,10 @@ class PeriodeAcademiqueController extends Controller
             ->where('id', $id)
             ->firstOrFail();
 
-        $dejaOuverte = PeriodeAcademique::where('annee_academique_id', $periode->annee_academique_id)
+        PeriodeAcademique::where('annee_academique_id', $periode->annee_academique_id)
             ->where('statut', 'ouvert')
             ->where('id', '!=', $periode->id)
-            ->first();
-
-        if ($dejaOuverte) {
-            return response()->json([
-                'message' => "La période \"{$dejaOuverte->nom}\" est déjà ouverte. Fermez-la avant d'en ouvrir une autre.",
-            ], 409);
-        }
+            ->update(['statut' => 'en_veille']);
 
         $periode->update([
             'statut'      => 'ouvert',

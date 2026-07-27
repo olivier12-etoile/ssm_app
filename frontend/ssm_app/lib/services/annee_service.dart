@@ -7,8 +7,8 @@ class AnneeService {
   static Future<Map<String, String>> _headers() async {
     final token = await AuthService.getToken();
     return {
-      'Content-Type':  'application/json',
-      'Accept':        'application/json',
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
       'Authorization': 'Bearer $token',
     };
   }
@@ -42,20 +42,33 @@ class AnneeService {
     required String libelle,
     required String dateDebut,
     required String dateFin,
+    String typePeriodes = 'trimestres',
   }) async {
     final response = await http.post(
       Uri.parse('${AppConfig.apiBaseUrl}/annees'),
       headers: await _headers(),
       body: jsonEncode({
-        'libelle':    libelle,
+        'libelle': libelle,
         'date_debut': dateDebut,
-        'date_fin':   dateFin,
+        'date_fin': dateFin,
+        'type_periodes': typePeriodes,
       }),
     );
     if (response.statusCode != 201) {
       final data = jsonDecode(response.body);
       throw Exception(data['message'] ?? 'Erreur création année');
     }
+  }
+
+  // Détails complets d'une année : stats, périodes, classes, élèves
+  // (avec statut final), enseignants et données financières.
+  static Future<Map<String, dynamic>> detailsAnnee(int id) async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/annees/$id/details'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement des détails de l\'année');
   }
 
   static Future<void> activerAnnee(int id) async {
@@ -102,8 +115,8 @@ class AnneeService {
       headers: await _headers(),
       body: jsonEncode({
         'passer_automatique': passerAutomatique,
-        'redoublants':        redoublants,
-        'diplomes':           diplomes,
+        'redoublants': redoublants,
+        'diplomes': diplomes,
       }),
     );
     final data = jsonDecode(response.body);
@@ -165,10 +178,10 @@ class AnneeService {
       headers: await _headers(),
       body: jsonEncode({
         'annee_academique_id': anneeAcademiqueId,
-        'nom':                 nom,
-        'code':                code,
-        'date_debut':          dateDebut,
-        'date_fin':            dateFin,
+        'nom': nom,
+        'code': code,
+        'date_debut': dateDebut,
+        'date_fin': dateFin,
       }),
     );
     if (response.statusCode != 201) {

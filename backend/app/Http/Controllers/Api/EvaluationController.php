@@ -115,7 +115,16 @@ class EvaluationController extends Controller
             ->whereHas('classe', function ($q) use ($request) {
                 $q->where('ecole_id', $request->user()->ecole_id);
             })
+            ->with('periode')
             ->firstOrFail();
+
+        if ($evaluation->periode && $evaluation->periode->statut === 'ferme'
+            && !in_array($request->user()->role, ['directeur', 'censeur', 'super_admin'])) {
+            return response()->json([
+                'message'       => 'Cette période est fermée. Vous pouvez consulter vos données mais pas les modifier.',
+                'lecture_seule' => true,
+            ], 403);
+        }
 
         foreach ($request->notes as $note) {
             NoteEvaluation::updateOrCreate(

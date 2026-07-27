@@ -34,6 +34,7 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
   Utilisateur? _utilisateur;
   int _totalEleves = 0;
   Map<int, int> _nombreElevesParClasse = {};
+  List<dynamic> _periodesAnneeActive = [];
   bool _chargement = true;
 
   @override
@@ -81,11 +82,25 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
         }
       }
 
+      var periodesAnneeActive = <dynamic>[];
+      try {
+        final anneeActiveData = await AnneeService.anneeActive();
+        final anneeActive = anneeActiveData['annee'] as Map<String, dynamic>?;
+        if (anneeActive != null) {
+          periodesAnneeActive = await AnneeService.listerPeriodes(
+            anneeActive['id'] as int,
+          );
+        }
+      } catch (_) {
+        // Section "Accès aux périodes" non bloquante si le chargement échoue.
+      }
+
       setState(() {
         _utilisateur = u;
         _donnees = data;
         _totalEleves = totalEleves;
         _nombreElevesParClasse = nombreElevesParClasse;
+        _periodesAnneeActive = periodesAnneeActive;
         _chargement = false;
       });
     } catch (e) {
@@ -97,6 +112,84 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
         ),
       );
     }
+  }
+
+  Widget _cartePeriodeAcces(Map<String, dynamic> p) {
+    final statut = p['statut'] as String? ?? '';
+    Color couleur;
+    String label;
+    switch (statut) {
+      case 'ouvert':
+        couleur = SSMBadge.succes;
+        label = 'OUVERTE';
+        break;
+      case 'en_veille':
+        couleur = SSMBadge.avertissement;
+        label = 'EN VEILLE';
+        break;
+      case 'ferme':
+        couleur = SSMBadge.erreur;
+        label = 'FERMÉE';
+        break;
+      default:
+        couleur = Colors.grey;
+        label = statut.toUpperCase();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      '${p['nom']}',
+                      style: GoogleFonts.sora(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    SSMBadge(label: label, couleur: couleur),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${p['notes_saisies'] ?? 0} notes saisies',
+                  style: GoogleFonts.inter(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    SaisieNotesScreen(periodeIdPreselectionnee: p['id'] as int),
+              ),
+            ),
+            child: const Text('Consulter'),
+          ),
+        ],
+      ),
+    );
   }
 
   Color _couleurStatut(String statut) {
@@ -300,6 +393,15 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // ── Accès aux périodes ──────────────────────
+                  if (_periodesAnneeActive.isNotEmpty) ...[
+                    SSMSectionTitre(titre: 'Accès aux périodes'),
+                    ..._periodesAnneeActive.map(
+                      (p) => _cartePeriodeAcces(p as Map<String, dynamic>),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
 
                   // ── Mes classes & matières ───────────────────
                   SSMSectionTitre(titre: 'Mes classes & matières'),

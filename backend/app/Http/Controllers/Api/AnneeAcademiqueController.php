@@ -6,11 +6,13 @@ use App\Http\Controllers\Controller;
 use App\Models\AnneeAcademique;
 use App\Models\Absence;
 use App\Models\Classe;
+use App\Models\Evaluation;
 use App\Models\HistoriqueAnnee;
 use App\Models\Inscription;
 use App\Models\Note;
 use App\Models\Paiement;
 use App\Models\PeriodeAcademique;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -20,6 +22,18 @@ class AnneeAcademiqueController extends Controller
         'college'          => ['6ème', '5ème', '4ème', '3ème'],
         'lycee_moderne'    => ['Seconde', 'Première', 'Terminale'],
         'lycee_technique'  => ['Seconde', 'Première', 'Terminale'],
+    ];
+
+    private const DEFINITIONS_PERIODES = [
+        'trimestres' => [
+            ['nom' => '1er Trimestre', 'code' => 'T1'],
+            ['nom' => '2ème Trimestre', 'code' => 'T2'],
+            ['nom' => '3ème Trimestre', 'code' => 'T3'],
+        ],
+        'semestres' => [
+            ['nom' => 'Semestre 1', 'code' => 'S1'],
+            ['nom' => 'Semestre 2', 'code' => 'S2'],
+        ],
     ];
 
     // ── 1. Liste des années de l'école ──────────────────────────
@@ -92,9 +106,10 @@ class AnneeAcademiqueController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'libelle'    => 'required|string|max:20',
-            'date_debut' => 'required|date',
-            'date_fin'   => 'required|date|after:date_debut',
+            'libelle'       => 'required|string|max:20',
+            'date_debut'    => 'required|date',
+            'date_fin'      => 'required|date|after:date_debut',
+            'type_periodes' => 'nullable|in:trimestres,semestres',
         ]);
 
         $ecoleId = $request->user()->ecole_id;
@@ -109,14 +124,19 @@ class AnneeAcademiqueController extends Controller
             ], 409);
         }
 
+        $typePeriodes = $request->type_periodes ?? 'trimestres';
+
         $annee = AnneeAcademique::create([
-            'ecole_id'   => $ecoleId,
-            'libelle'    => $request->libelle,
-            'date_debut' => $request->date_debut,
-            'date_fin'   => $request->date_fin,
-            'statut'     => 'en_preparation',
-            'cree_par'   => $request->user()->id,
+            'ecole_id'      => $ecoleId,
+            'libelle'       => $request->libelle,
+            'date_debut'    => $request->date_debut,
+            'date_fin'      => $request->date_fin,
+            'statut'        => 'en_preparation',
+            'cree_par'      => $request->user()->id,
+            'type_periodes' => $typePeriodes,
         ]);
+
+        $this->creerPeriodesAutomatiques($annee, $typePeriodes);
 
         HistoriqueAnnee::create([
             'annee_id' => $annee->id,
@@ -126,8 +146,38 @@ class AnneeAcademiqueController extends Controller
 
         return response()->json([
             'message' => 'Année académique créée avec succès',
-            'annee'   => $annee,
+            'annee'   => $annee->load('periodes'),
         ], 201);
+    }
+
+    // Répartit les dates de l'année entre les périodes du type choisi,
+    // à parts égales (la dernière période récupère les jours restants).
+    private function creerPeriodesAutomatiques(AnneeAcademique $annee, string $typePeriodes): void
+    {
+        $definitions = self::DEFINITIONS_PERIODES[$typePeriodes] ?? self::DEFINITIONS_PERIODES['trimestres'];
+
+        $debut = Carbon::parse($annee->date_debut);
+        $fin   = Carbon::parse($annee->date_fin);
+        $totalJours = $debut->diffInDays($fin);
+        $nombre = count($definitions);
+        $joursParPeriode = intdiv($totalJours, $nombre);
+
+        $curseur = $debut->copy();
+        foreach ($definitions as $index => $def) {
+            $estDerniere = $index === $nombre - 1;
+            $finPeriode = $estDerniere ? $fin->copy() : $curseur->copy()->addDays($joursParPeriode);
+
+            PeriodeAcademique::create([
+                'annee_academique_id' => $annee->id,
+                'nom'                 => $def['nom'],
+                'code'                => $def['code'],
+                'date_debut'          => $curseur->format('Y-m-d'),
+                'date_fin'            => $finPeriode->format('Y-m-d'),
+                'statut'              => 'planifie',
+            ]);
+
+            $curseur = $finPeriode->copy()->addDay();
+        }
     }
 
     // ── 4. Activer une année académique ──────────────────────────
@@ -329,6 +379,11 @@ class AnneeAcademiqueController extends Controller
         $ecoleId = $request->user()->ecole_id;
         $annee = AnneeAcademique::where('id', $id)->where('ecole_id', $ecoleId)->firstOrFail();
 
+        return response()->json($this->calculerStatistiquesAnnee($annee));
+    }
+
+    private function calculerStatistiquesAnnee(AnneeAcademique $annee): array
+    {
         $inscriptions = Inscription::where('annee_academique_id', $annee->id)->with('eleve')->get();
         $garcons = $inscriptions->filter(fn($i) => $i->eleve?->sexe === 'M')->count();
         $filles  = $inscriptions->filter(fn($i) => $i->eleve?->sexe === 'F')->count();
@@ -356,7 +411,7 @@ class AnneeAcademiqueController extends Controller
 
         $absencesTotal = Absence::whereHas('classe', fn($q) => $q->where('annee_academique_id', $annee->id))->count();
 
-        return response()->json([
+        return [
             'annee_id'           => $annee->id,
             'annee_libelle'      => $annee->libelle,
             'nombre_eleves'      => $inscriptions->count(),
@@ -368,6 +423,134 @@ class AnneeAcademiqueController extends Controller
             'taux_echec'         => $tauxEchec,
             'total_paiements'    => $totalPaiements,
             'absences_total'     => $absencesTotal,
+        ];
+    }
+
+    // ── 11. Détails complets d'une année (fiche année) ─────────────
+    public function details(Request $request, $id)
+    {
+        $ecoleId = $request->user()->ecole_id;
+        $annee = AnneeAcademique::where('id', $id)->where('ecole_id', $ecoleId)->firstOrFail();
+
+        $stats = $this->calculerStatistiquesAnnee($annee);
+
+        // Périodes
+        $periodes = PeriodeAcademique::where('annee_academique_id', $annee->id)
+            ->orderBy('date_debut')
+            ->get()
+            ->map(fn($p) => [
+                'id'                => $p->id,
+                'nom'               => $p->nom,
+                'code'              => $p->code,
+                'date_debut'        => $p->date_debut,
+                'date_fin'          => $p->date_fin,
+                'statut'            => $p->statut,
+                'notes_saisies'     => Note::where('periode_id', $p->id)->count(),
+                // Aucune table de bulletins générés n'existe encore dans le
+                // schéma — les bulletins sont générés à la volée en PDF.
+                'bulletins_generes' => 0,
+            ]);
+
+        // Classes
+        $classes = Classe::where('annee_academique_id', $annee->id)
+            ->orderBy('nom')
+            ->get()
+            ->map(function ($c) use ($annee) {
+                $nombreEleves = Inscription::where('classe_id', $c->id)->count();
+
+                $moyennes = Note::whereHas('periode', fn($q) => $q->where('annee_academique_id', $annee->id))
+                    ->where('statut', 'valide')
+                    ->whereHas('eleve.inscriptions', fn($q) => $q->where('classe_id', $c->id)->where('annee_academique_id', $annee->id))
+                    ->select('eleve_id', DB::raw('AVG(valeur) as moyenne'))
+                    ->groupBy('eleve_id')
+                    ->pluck('moyenne');
+
+                return [
+                    'id'             => $c->id,
+                    'nom'            => $c->nom,
+                    'nombre_eleves'  => $nombreEleves,
+                    'moyenne'        => $moyennes->isEmpty() ? null : round($moyennes->avg(), 2),
+                    'taux_reussite'  => $moyennes->isEmpty()
+                        ? 0
+                        : round($moyennes->filter(fn($m) => $m >= 10)->count() / $moyennes->count() * 100, 1),
+                ];
+            });
+
+        // Élèves (statut final d'inscription + moyenne générale)
+        $eleves = Inscription::where('annee_academique_id', $annee->id)
+            ->with(['eleve', 'classe'])
+            ->get()
+            ->map(function ($i) use ($annee) {
+                $moyenne = Note::whereHas('periode', fn($q) => $q->where('annee_academique_id', $annee->id))
+                    ->where('eleve_id', $i->eleve_id)
+                    ->where('statut', 'valide')
+                    ->avg('valeur');
+
+                return [
+                    'eleve_id'   => $i->eleve_id,
+                    'nom'        => $i->eleve?->nom,
+                    'prenom'     => $i->eleve?->prenom,
+                    'photo_url'  => $i->eleve?->photo_url,
+                    'classe_nom' => $i->classe?->nom,
+                    'moyenne'    => $moyenne !== null ? round($moyenne, 2) : null,
+                    'statut'     => $i->statut,
+                ];
+            })
+            ->values();
+
+        // Enseignants ayant une affectation dans cette année
+        $affectations = DB::table('enseignant_classe_matiere')
+            ->join('classes', 'classes.id', '=', 'enseignant_classe_matiere.classe_id')
+            ->join('matieres', 'matieres.id', '=', 'enseignant_classe_matiere.matiere_id')
+            ->join('users', 'users.id', '=', 'enseignant_classe_matiere.enseignant_id')
+            ->where('classes.annee_academique_id', $annee->id)
+            ->select(
+                'users.id as enseignant_id',
+                'users.name',
+                'users.fonction',
+                'users.photo_path',
+                'classes.nom as classe_nom',
+                'matieres.nom as matiere_nom'
+            )
+            ->get();
+
+        $enseignants = $affectations->groupBy('enseignant_id')->map(function ($lignes, $enseignantId) use ($annee) {
+            $premiere = $lignes->first();
+
+            return [
+                'enseignant_id'      => $enseignantId,
+                'nom'                => $premiere->name,
+                'fonction'           => $premiere->fonction,
+                'photo_url'          => $premiere->photo_path ? asset('storage/' . $premiere->photo_path) : null,
+                'classes'            => $lignes->map(fn($l) => [
+                    'classe_nom'  => $l->classe_nom,
+                    'matiere_nom' => $l->matiere_nom,
+                ])->values(),
+                'notes_saisies'      => Note::where('enseignant_id', $enseignantId)
+                    ->whereHas('periode', fn($q) => $q->where('annee_academique_id', $annee->id))
+                    ->count(),
+                'evaluations_creees' => Evaluation::where('enseignant_id', $enseignantId)
+                    ->whereHas('periode', fn($q) => $q->where('annee_academique_id', $annee->id))
+                    ->count(),
+            ];
+        })->values();
+
+        // Finances (réutilise le rapport financier déjà utilisé par le module Frais)
+        $rapport = (new FraisScolaireController())->calculerRapportFinancier($ecoleId, $annee->id, null);
+
+        return response()->json([
+            'annee'       => $annee,
+            'stats'       => $stats,
+            'periodes'    => $periodes,
+            'classes'     => $classes,
+            'eleves'      => $eleves,
+            'enseignants' => $enseignants,
+            'finances'    => [
+                'total_attendu'  => $rapport['total_global']['total_attendu'],
+                'total_encaisse' => $rapport['total_global']['total_encaisse'],
+                'total_restant'  => $rapport['total_global']['total_restant'],
+                'eleves_dettes'  => $rapport['debiteurs'],
+            ],
         ]);
     }
 

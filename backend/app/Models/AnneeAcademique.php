@@ -20,6 +20,7 @@ class AnneeAcademique extends Model
         'cloture_par',
         'cloture_le',
         'regle_passage_moyenne',
+        'type_periodes',
     ];
 
     protected function casts(): array

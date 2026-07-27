@@ -37,6 +37,55 @@ const List<String> _suggestionsPeriodes = [
   'Semestre 2',
 ];
 
+const Map<String, List<Map<String, String>>> _definitionsPeriodes = {
+  'trimestres': [
+    {'nom': '1er Trimestre', 'code': 'T1'},
+    {'nom': '2ème Trimestre', 'code': 'T2'},
+    {'nom': '3ème Trimestre', 'code': 'T3'},
+  ],
+  'semestres': [
+    {'nom': 'Semestre 1', 'code': 'S1'},
+    {'nom': 'Semestre 2', 'code': 'S2'},
+  ],
+};
+
+List<Map<String, String>> _apercuPeriodes(
+  String type,
+  DateTime? debut,
+  DateTime? fin,
+) {
+  final defs = _definitionsPeriodes[type]!;
+  if (debut == null || fin == null) {
+    return defs
+        .map(
+          (d) => {
+            'nom': d['nom']!,
+            'code': d['code']!,
+            'dates': 'Dates à définir',
+          },
+        )
+        .toList();
+  }
+  final totalJours = fin.difference(debut).inDays;
+  final joursParPeriode = totalJours ~/ defs.length;
+  var curseur = debut;
+  final resultat = <Map<String, String>>[];
+  for (var i = 0; i < defs.length; i++) {
+    final estDerniere = i == defs.length - 1;
+    final finPeriode = estDerniere
+        ? fin
+        : curseur.add(Duration(days: joursParPeriode));
+    resultat.add({
+      'nom': defs[i]['nom']!,
+      'code': defs[i]['code']!,
+      'dates':
+          '${_formatDateCourt(_formatDateApi(curseur))} → ${_formatDateCourt(_formatDateApi(finPeriode))}',
+    });
+    curseur = finPeriode.add(const Duration(days: 1));
+  }
+  return resultat;
+}
+
 String _formatDateLongue(DateTime d) =>
     '${d.day} ${_moisLongs[d.month]} ${d.year}';
 
@@ -80,12 +129,29 @@ Color _couleurStatutPeriode(String statut) {
   switch (statut) {
     case 'ouvert':
       return _vert;
+    case 'en_veille':
+      return _ambre;
     case 'ferme':
       return _rouge;
     case 'archive':
       return _grisFonce;
     default:
       return _gris;
+  }
+}
+
+String _labelStatutPeriode(String statut) {
+  switch (statut) {
+    case 'ouvert':
+      return 'OUVERTE';
+    case 'en_veille':
+      return 'EN VEILLE';
+    case 'ferme':
+      return 'FERMÉE';
+    case 'archive':
+      return 'ARCHIVÉE';
+    default:
+      return 'PLANIFIÉE';
   }
 }
 
@@ -431,6 +497,18 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
     );
   }
 
+  void _ouvrirFicheAnnee(dynamic annee) {
+    Navigator.pushNamed(
+      context,
+      '/directeur/annee/fiche',
+      arguments: {
+        'anneeId': annee['id'] as int,
+        'libelle': annee['libelle'] as String,
+        'statut': annee['statut'] as String,
+      },
+    );
+  }
+
   Widget _carteAnnee(dynamic annee) {
     final statut = annee['statut'] as String;
     final couleur = _couleurStatutAnnee(statut);
@@ -575,7 +653,14 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
       ),
     );
 
-    return carte;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () => _ouvrirFicheAnnee(annee),
+        child: carte,
+      ),
+    );
   }
 
   Widget _statRapide(IconData icone, String label) {
@@ -642,7 +727,7 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
                 ),
               ],
               const SizedBox(width: 8),
-              SSMBadge(label: statut.toUpperCase(), couleur: couleur),
+              SSMBadge(label: _labelStatutPeriode(statut), couleur: couleur),
               const Spacer(),
               Text(
                 '${_formatDateCourt(p['date_debut'] as String?)} → ${_formatDateCourt(p['date_fin'] as String?)}',
@@ -673,6 +758,54 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
               ],
             ),
           ],
+          if (statut == 'en_veille')
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: _vert,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 32),
+                    ),
+                    onPressed: () async {
+                      try {
+                        await AnneeService.ouvrirPeriode(p['id'] as int);
+                        _afficherSucces('Période réactivée');
+                        _chargerTout();
+                      } catch (e) {
+                        _afficherErreur(
+                          e.toString().replaceAll('Exception: ', ''),
+                        );
+                      }
+                    },
+                    child: const Text('Réactiver'),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: _rouge,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(0, 32),
+                    ),
+                    onPressed: () async {
+                      try {
+                        await AnneeService.fermerPeriode(p['id'] as int);
+                        _afficherSucces('Période fermée définitivement');
+                        _chargerTout();
+                      } catch (e) {
+                        _afficherErreur(
+                          e.toString().replaceAll('Exception: ', ''),
+                        );
+                      }
+                    },
+                    child: const Text('Fermer définitivement'),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -792,6 +925,7 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
     DateTime? dateDebut;
     DateTime? dateFin;
     double reglePassage = 10.0;
+    String typePeriodes = 'trimestres';
 
     await showDialog(
       context: context,
@@ -849,6 +983,82 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
                                   child: const Text('Générer'),
                                 ),
                               ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Type de périodes *',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: _gris,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SegmentedButton<String>(
+                              segments: const [
+                                ButtonSegment(
+                                  value: 'trimestres',
+                                  icon: Icon(Icons.view_column),
+                                  label: Text('3 Trimestres'),
+                                ),
+                                ButtonSegment(
+                                  value: 'semestres',
+                                  icon: Icon(Icons.view_agenda),
+                                  label: Text('2 Semestres'),
+                                ),
+                              ],
+                              selected: {typePeriodes},
+                              onSelectionChanged: (s) =>
+                                  setStateDialog(() => typePeriodes = s.first),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              typePeriodes == 'trimestres'
+                                  ? '(Collège & Primaire)'
+                                  : '(Lycée)',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: _gris,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Périodes qui seront créées :',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      color: _gris,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  ..._apercuPeriodes(
+                                    typePeriodes,
+                                    dateDebut,
+                                    dateFin,
+                                  ).map(
+                                    (p) => Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2,
+                                      ),
+                                      child: Text(
+                                        '📅 ${p['nom']} — ${p['dates']}',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 12,
+                                          color: const Color(0xFF334155),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 14),
                             ListTile(
@@ -996,6 +1206,7 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
                                         libelle: libelleController.text.trim(),
                                         dateDebut: _formatDateApi(dateDebut!),
                                         dateFin: _formatDateApi(dateFin!),
+                                        typePeriodes: typePeriodes,
                                       );
                                       if (context.mounted)
                                         Navigator.pop(context);
@@ -1423,11 +1634,67 @@ class _GestionAnneesScreenState extends State<GestionAnneesScreen>
                                             },
                                             child: const Text('Fermer'),
                                           )
+                                        else if (statut == 'en_veille')
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              TextButton(
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: _vert,
+                                                ),
+                                                onPressed: () async {
+                                                  try {
+                                                    await AnneeService.ouvrirPeriode(
+                                                      p['id'] as int,
+                                                    );
+                                                    _afficherSucces(
+                                                      'Période réactivée',
+                                                    );
+                                                    await recharger();
+                                                    _chargerTout();
+                                                  } catch (e) {
+                                                    _afficherErreur(
+                                                      e.toString().replaceAll(
+                                                        'Exception: ',
+                                                        '',
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                child: const Text('Réactiver'),
+                                              ),
+                                              TextButton(
+                                                style: TextButton.styleFrom(
+                                                  foregroundColor: _rouge,
+                                                ),
+                                                onPressed: () async {
+                                                  try {
+                                                    await AnneeService.fermerPeriode(
+                                                      p['id'] as int,
+                                                    );
+                                                    _afficherSucces(
+                                                      'Période fermée définitivement',
+                                                    );
+                                                    await recharger();
+                                                    _chargerTout();
+                                                  } catch (e) {
+                                                    _afficherErreur(
+                                                      e.toString().replaceAll(
+                                                        'Exception: ',
+                                                        '',
+                                                      ),
+                                                    );
+                                                  }
+                                                },
+                                                child: const Text(
+                                                  'Fermer déf.',
+                                                ),
+                                              ),
+                                            ],
+                                          )
                                         else
                                           SSMBadge(
-                                            label: statut == 'ferme'
-                                                ? 'Fermée'
-                                                : statut.toUpperCase(),
+                                            label: _labelStatutPeriode(statut),
                                             couleur: _gris,
                                           ),
                                       ],

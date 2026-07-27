@@ -128,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/annees/{id}/passer-eleves', [AnneeAcademiqueController::class, 'passerEleves']);
     Route::get('/annees/{id}/statistiques',   [AnneeAcademiqueController::class, 'statistiques']);
     Route::get('/annees/{id}/passage-apercu', [AnneeAcademiqueController::class, 'apercuPassage']);
+    Route::get('/annees/{id}/details',        [AnneeAcademiqueController::class, 'details']);
 
     // Périodes
     Route::get('/periodes',                   [PeriodeAcademiqueController::class, 'index']);

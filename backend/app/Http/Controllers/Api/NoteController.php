@@ -124,15 +124,18 @@ class NoteController extends Controller
         return response()->json(['message' => 'Notes rejetées']);
     }
 
-    // Bloque la saisie/soumission si la période est fermée, sauf pour
-    // le directeur ou le censeur.
+    // Une période 'ferme' passe en lecture seule pour les enseignants —
+    // directeur/censeur/super_admin gardent le droit d'écriture (ex :
+    // correction après clôture). Les périodes 'ouvert' et 'en_veille'
+    // restent modifiables par tous.
     private function verifierPeriodeOuverte(Request $request, $periodeId)
     {
         $periode = PeriodeAcademique::find($periodeId);
 
-        if ($periode && $periode->statut === 'ferme' && !in_array($request->user()->role, ['directeur', 'censeur'])) {
+        if ($periode && $periode->statut === 'ferme' && !in_array($request->user()->role, ['directeur', 'censeur', 'super_admin'])) {
             return response()->json([
-                'message' => 'Cette période est fermée. La saisie des notes est verrouillée.',
+                'message'       => 'Cette période est fermée. Vous pouvez consulter vos données mais pas les modifier.',
+                'lecture_seule' => true,
             ], 403);
         }
 

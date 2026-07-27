@@ -271,8 +271,9 @@ class FraisScolaireController extends Controller
         return $pdf->download($nomFichier);
     }
 
-    // Calcule le rapport financier complet de l'école (utilisé par le JSON et le PDF)
-    private function calculerRapportFinancier(int $ecoleId, int $anneeId, ?int $mois): array
+    // Calcule le rapport financier complet de l'école (utilisé par le JSON,
+    // le PDF, et réutilisé par AnneeAcademiqueController::details()).
+    public function calculerRapportFinancier(int $ecoleId, int $anneeId, ?int $mois): array
     {
         $classes = Classe::where('ecole_id', $ecoleId)->orderBy('nom')->get();
 

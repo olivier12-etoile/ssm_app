@@ -8,8 +8,13 @@ import '../../services/note_service.dart';
 
 class SaisieNotesScreen extends StatefulWidget {
   final int? classeIdPreselectionne;
+  final int? periodeIdPreselectionnee;
 
-  const SaisieNotesScreen({super.key, this.classeIdPreselectionne});
+  const SaisieNotesScreen({
+    super.key,
+    this.classeIdPreselectionne,
+    this.periodeIdPreselectionnee,
+  });
 
   @override
   State<SaisieNotesScreen> createState() => _SaisieNotesScreenState();
@@ -54,17 +59,28 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
       final utilisateur = await AuthService.getUtilisateur();
       _enseignantId = utilisateur!.id;
 
-      final donneesAffectations =
-          await AffectationService.listerAffectations(_enseignantId!);
+      final donneesAffectations = await AffectationService.listerAffectations(
+        _enseignantId!,
+      );
       final annees = await AnneeService.listerAnnees();
 
       final periodesParAnnee = await Future.wait(
         annees.map((a) => AnneeService.listerPeriodes(a['id'] as int)),
       );
 
+      // Seules les périodes 'ouvert' et 'en_veille' sont proposées pour la
+      // saisie courante — sauf si une période précise (potentiellement
+      // fermée) est préselectionnée pour une consultation en lecture seule.
       final periodes = <dynamic>[];
       for (var i = 0; i < annees.length; i++) {
         for (final periode in periodesParAnnee[i]) {
+          final statut = periode['statut'] as String?;
+          final estActive = statut == 'ouvert' || statut == 'en_veille';
+          final estPreselectionnee =
+              widget.periodeIdPreselectionnee != null &&
+              periode['id'] == widget.periodeIdPreselectionnee;
+          if (!estActive && !estPreselectionnee) continue;
+
           periodes.add({
             ...periode as Map<String, dynamic>,
             'annee_libelle': annees[i]['libelle'],
@@ -74,14 +90,22 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
 
       _affectations = donneesAffectations['affectations'] as List;
 
-      final classePreselectionneeValide = widget.classeIdPreselectionne != null &&
-          _affectations
-              .any((a) => a['classe_id'] == widget.classeIdPreselectionne);
+      final classePreselectionneeValide =
+          widget.classeIdPreselectionne != null &&
+          _affectations.any(
+            (a) => a['classe_id'] == widget.classeIdPreselectionne,
+          );
+      final periodePreselectionneeValide =
+          widget.periodeIdPreselectionnee != null &&
+          periodes.any((p) => p['id'] == widget.periodeIdPreselectionnee);
 
       setState(() {
         _periodes = periodes;
         if (classePreselectionneeValide) {
           _classeId = widget.classeIdPreselectionne;
+        }
+        if (periodePreselectionneeValide) {
+          _periodeId = widget.periodeIdPreselectionnee;
         }
         _chargementFiltres = false;
       });
@@ -117,16 +141,27 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     return liste;
   }
 
-  void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
+  String? get _statutPeriodeSelectionnee {
+    if (_periodeId == null) return null;
+    final periode = _periodes.firstWhere(
+      (p) => p['id'] == _periodeId,
+      orElse: () => null,
     );
+    return periode?['statut'] as String?;
+  }
+
+  bool get _periodeFermee => _statutPeriodeSelectionnee == 'ferme';
+
+  void _afficherErreur(String msg) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   String _cle(int eleveId, int evaluationId) => '${eleveId}_$evaluationId';
@@ -192,12 +227,12 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
   }
 
   Future<void> _afficherDialogAjoutEvaluation(String type) async {
-    final memeType =
-        _evaluations.where((e) => e['type'] == type).length;
+    final memeType = _evaluations.where((e) => e['type'] == type).length;
     final numeroParDefaut = type == 'devoir' ? memeType + 1 : 1;
 
-    final numeroController =
-        TextEditingController(text: numeroParDefaut.toString());
+    final numeroController = TextEditingController(
+      text: numeroParDefaut.toString(),
+    );
     final libelleController = TextEditingController(
       text: type == 'devoir' ? 'Devoir $numeroParDefaut' : 'Composition',
     );
@@ -209,7 +244,9 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
         builder: (context, setStateDialog) {
           return AlertDialog(
             title: Text(
-              type == 'devoir' ? 'Ajouter un devoir' : 'Ajouter une composition',
+              type == 'devoir'
+                  ? 'Ajouter un devoir'
+                  : 'Ajouter une composition',
             ),
             content: SizedBox(
               width: 400,
@@ -274,7 +311,8 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                             matiereId: _matiereId!,
                             periodeId: _periodeId!,
                             type: type,
-                            numero: int.tryParse(numeroController.text) ??
+                            numero:
+                                int.tryParse(numeroController.text) ??
                                 numeroParDefaut,
                             libelle: libelleController.text,
                             dateEvaluation: _formatDate(dateSelectionnee),
@@ -285,7 +323,8 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                         } catch (e) {
                           Navigator.pop(context);
                           _afficherErreur(
-                              e.toString().replaceAll('Exception: ', ''));
+                            e.toString().replaceAll('Exception: ', ''),
+                          );
                         }
                       },
                 child: const Text('Créer'),
@@ -309,13 +348,14 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     for (final eleve in _eleves) {
       final texte =
           _controllers[_cle(eleve['id'] as int, evaluationId)]?.text.trim() ??
-              '';
+          '';
       if (texte.isEmpty) continue;
 
       final valeur = double.tryParse(texte);
       if (valeur == null || valeur < 0 || valeur > 20) {
         _afficherErreur(
-            'Note invalide pour ${eleve['nom']} ${eleve['prenom']} (0 à 20)');
+          'Note invalide pour ${eleve['nom']} ${eleve['prenom']} (0 à 20)',
+        );
         return;
       }
       notes.add({'eleve_id': eleve['id'], 'valeur': valeur});
@@ -400,8 +440,10 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Oui, soumettre',
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Oui, soumettre',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -412,8 +454,9 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     try {
       var nombreEnvoyees = 0;
       for (final eleve in _eleves) {
-        final moyenneFinale =
-            _moyennePourEleve(eleve['id'] as int)['moyenne_finale'];
+        final moyenneFinale = _moyennePourEleve(
+          eleve['id'] as int,
+        )['moyenne_finale'];
         if (moyenneFinale == null) continue;
 
         await NoteService.sauvegarderNote(
@@ -525,9 +568,58 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                         ),
                         hint: const Text('Choisir une période'),
                         items: _periodes.map((p) {
+                          final statut = p['statut'] as String?;
+                          final String label;
+                          final Color couleur;
+                          switch (statut) {
+                            case 'ouvert':
+                              label = 'en cours';
+                              couleur = Colors.green;
+                              break;
+                            case 'en_veille':
+                              label = 'en veille';
+                              couleur = Colors.orange;
+                              break;
+                            case 'ferme':
+                              label = 'fermée';
+                              couleur = Colors.red;
+                              break;
+                            default:
+                              label = statut ?? '';
+                              couleur = Colors.grey;
+                          }
                           return DropdownMenuItem<int>(
                             value: p['id'] as int,
-                            child: Text('${p['nom']} (${p['annee_libelle']})'),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    '${p['nom']} (${p['annee_libelle']})',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: couleur.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(999),
+                                  ),
+                                  child: Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: couleur,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           );
                         }).toList(),
                         onChanged: (v) {
@@ -542,7 +634,8 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: _classeId == null ||
+                          onPressed:
+                              _classeId == null ||
                                   _matiereId == null ||
                                   _periodeId == null
                               ? null
@@ -575,31 +668,60 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                     ),
                   )
                 else ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 8),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _afficherDialogAjoutEvaluation('devoir'),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Ajouter un devoir'),
+                  if (_periodeFermee)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.lock, color: Colors.red),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Période fermée — Consultation uniquement',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.red,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: () =>
-                                _afficherDialogAjoutEvaluation('composition'),
-                            icon: const Icon(Icons.add),
-                            label: const Text('Ajouter une composition'),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  if (!_periodeFermee)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _afficherDialogAjoutEvaluation('devoir'),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Ajouter un devoir'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () =>
+                                  _afficherDialogAjoutEvaluation('composition'),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Ajouter une composition'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   Expanded(
                     child: _evaluations.isEmpty
                         ? const Center(
@@ -622,14 +744,19 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
                                           Text(evaluation['libelle'] as String),
-                                          IconButton(
-                                            icon: const Icon(Icons.save,
-                                                size: 18, color: Colors.indigo),
-                                            tooltip: 'Enregistrer la colonne',
-                                            onPressed: () =>
-                                                _enregistrerColonne(
-                                                    evaluation['id'] as int),
-                                          ),
+                                          if (!_periodeFermee)
+                                            IconButton(
+                                              icon: const Icon(
+                                                Icons.save,
+                                                size: 18,
+                                                color: Colors.indigo,
+                                              ),
+                                              tooltip: 'Enregistrer la colonne',
+                                              onPressed: () =>
+                                                  _enregistrerColonne(
+                                                    evaluation['id'] as int,
+                                                  ),
+                                            ),
                                         ],
                                       ),
                                     );
@@ -641,67 +768,79 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                                   final resultat = _moyennePourEleve(eleveId);
                                   final moyenneFinale =
                                       resultat['moyenne_finale'];
-                                  final couleurMoyenne =
-                                      _couleurMoyenne(moyenneFinale);
+                                  final couleurMoyenne = _couleurMoyenne(
+                                    moyenneFinale,
+                                  );
 
-                                  return DataRow(cells: [
-                                    DataCell(
-                                        Text('${eleve['nom']} ${eleve['prenom']}')),
-                                    ..._evaluations.map((evaluation) {
-                                      final evaluationId =
-                                          evaluation['id'] as int;
-                                      return DataCell(
-                                        SizedBox(
-                                          width: 64,
-                                          child: TextField(
-                                            controller: _controllers[
-                                                _cle(eleveId, evaluationId)],
-                                            keyboardType: TextInputType.number,
-                                            textAlign: TextAlign.center,
-                                            decoration: const InputDecoration(
-                                              hintText: '/20',
-                                              isDense: true,
-                                              border: OutlineInputBorder(),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }),
-                                    DataCell(
-                                      Text(
-                                        moyenneFinale != null
-                                            ? moyenneFinale.toStringAsFixed(2)
-                                            : '-',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: couleurMoyenne,
+                                  return DataRow(
+                                    cells: [
+                                      DataCell(
+                                        Text(
+                                          '${eleve['nom']} ${eleve['prenom']}',
                                         ),
                                       ),
-                                    ),
-                                  ]);
+                                      ..._evaluations.map((evaluation) {
+                                        final evaluationId =
+                                            evaluation['id'] as int;
+                                        return DataCell(
+                                          SizedBox(
+                                            width: 64,
+                                            child: TextField(
+                                              controller:
+                                                  _controllers[_cle(
+                                                    eleveId,
+                                                    evaluationId,
+                                                  )],
+                                              enabled: !_periodeFermee,
+                                              keyboardType:
+                                                  TextInputType.number,
+                                              textAlign: TextAlign.center,
+                                              decoration: const InputDecoration(
+                                                hintText: '/20',
+                                                isDense: true,
+                                                border: OutlineInputBorder(),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                      DataCell(
+                                        Text(
+                                          moyenneFinale != null
+                                              ? moyenneFinale.toStringAsFixed(2)
+                                              : '-',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: couleurMoyenne,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
                                 }).toList(),
                               ),
                             ),
                           ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _evaluations.isEmpty
-                            ? null
-                            : _soumettrePourValidation,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                  if (!_periodeFermee)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _evaluations.isEmpty
+                              ? null
+                              : _soumettrePourValidation,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: const Icon(Icons.send),
+                          label: const Text('Soumettre pour validation'),
                         ),
-                        icon: const Icon(Icons.send),
-                        label: const Text('Soumettre pour validation'),
                       ),
                     ),
-                  ),
                 ],
               ],
             ),
