@@ -431,6 +431,98 @@ class SSMListeTile extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════
+// 7bis. SSMStatInteractive — Carte statistique cliquable
+// ══════════════════════════════════════════════════════════
+class SSMStatInteractive extends StatelessWidget {
+  final String label;
+  final String valeur;
+  final IconData icone;
+  final Color couleur;
+  final VoidCallback onTap;
+
+  const SSMStatInteractive({
+    super.key,
+    required this.label,
+    required this.valeur,
+    required this.icone,
+    required this.couleur,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.70),
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: couleur.withValues(alpha: 0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icone, color: couleur, size: 18),
+                  ),
+                  Text(
+                    valeur,
+                    style: GoogleFonts.sora(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: couleur,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: const Color(0xFF334155),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Align(
+                alignment: Alignment.bottomRight,
+                child: Text(
+                  '→ Voir la liste',
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: couleur,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 // 7. SSMEnteteEcran — Bandeau de bienvenue
 // ══════════════════════════════════════════════════════════
 class SSMEnteteEcran extends StatelessWidget {

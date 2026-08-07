@@ -13,8 +13,13 @@ class Eleve extends Model
         'nom',
         'prenom',
         'date_naissance',
+        'lieu_naissance',
+        'nationalite',
         'sexe',
         'matricule',
+        'numero_appel',
+        'statut',
+        'date_inscription',
         'telephone_parent',
         'photo_path'
     ];
@@ -51,5 +56,25 @@ public function getPhotoUrlAttribute()
     public function absences()
     {
         return $this->hasMany(Absence::class, 'eleve_id');
+    }
+
+    public function parents()
+    {
+        return $this->hasMany(ParentEleve::class, 'eleve_id');
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(DocumentEleve::class, 'eleve_id');
+    }
+
+    public function chronologie()
+    {
+        return $this->hasMany(ChronologieEleve::class, 'eleve_id');
+    }
+
+    public function sanctions()
+    {
+        return $this->hasMany(Sanction::class, 'eleve_id');
     }
 }

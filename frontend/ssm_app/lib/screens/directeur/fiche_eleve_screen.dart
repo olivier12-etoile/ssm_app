@@ -1,51 +1,176 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:open_file/open_file.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/eleve_service.dart';
-import '../../services/frais_scolaire_service.dart';
-import '../../services/paiement_service.dart';
-import '../../services/bulletin_service.dart';
-import '../../services/absence_service.dart';
 import '../../services/annee_service.dart';
+import '../../services/paiement_service.dart';
+import '../../services/frais_scolaire_service.dart';
+import '../../services/bulletin_service.dart';
+import '../../services/discipline_service.dart';
 import '../../services/whatsapp_service.dart';
+import '../../widgets/ssm_widgets.dart';
 
-Color _couleurStatut(String statut) {
-  switch (statut) {
-    case 'en_regle':
-      return Colors.green;
-    case 'partiel':
-      return Colors.orange;
-    case 'non_paye':
-      return Colors.red;
-    default:
-      return Colors.grey;
-  }
-}
+const Color _indigo = Color(0xFF1E3A8A);
+const Color _teal = Color(0xFF0D9488);
+const Color _ambre = Color(0xFFD97706);
+const Color _vert = Color(0xFF16A34A);
+const Color _rouge = Color(0xFFDC2626);
+const Color _orange = Color(0xFFEA580C);
+const Color _violet = Color(0xFF7C3AED);
+const Color _rose = Color(0xFFDB2777);
+const Color _gris = Color(0xFF94A3B8);
+const Color _grisFonce = Color(0xFF475569);
 
-String _libelleStatut(String statut) {
+Color _couleurStatutEleve(String? statut) {
   switch (statut) {
-    case 'en_regle':
-      return 'En règle ✅';
-    case 'partiel':
-      return 'Partiel ⚠️';
-    case 'non_paye':
-      return 'Non payé ❌';
+    case 'actif':
+      return _indigo;
+    case 'suspendu':
+      return _orange;
+    case 'exclu':
+      return _rouge;
+    case 'diplome':
+      return _vert;
+    case 'transfere':
+      return _teal;
+    case 'abandon':
+      return _gris;
     default:
-      return statut;
+      return _gris;
   }
 }
 
 Color _couleurMoyenne(double? m) {
-  if (m == null) return Colors.grey;
-  if (m >= 14) return Colors.green;
-  if (m >= 10) return Colors.orange;
-  return Colors.red;
+  if (m == null) return _gris;
+  if (m >= 14) return _vert;
+  if (m >= 10) return _orange;
+  return _rouge;
+}
+
+Color _couleurTypeDocument(String? type) {
+  switch (type) {
+    case 'acte_naissance':
+      return _rouge;
+    case 'certificat_scolarite':
+      return _indigo;
+    case 'photo':
+      return _teal;
+    case 'bulletin':
+      return _ambre;
+    case 'certificat_transfert':
+      return _violet;
+    default:
+      return _gris;
+  }
+}
+
+IconData _iconeTypeDocument(String? type) {
+  switch (type) {
+    case 'acte_naissance':
+      return Icons.article;
+    case 'certificat_scolarite':
+      return Icons.school;
+    case 'photo':
+      return Icons.photo_camera;
+    case 'bulletin':
+      return Icons.description;
+    case 'certificat_transfert':
+      return Icons.transfer_within_a_station;
+    default:
+      return Icons.attach_file;
+  }
+}
+
+Color _couleurTypeChronologie(String? type) {
+  switch (type) {
+    case 'inscription':
+      return _indigo;
+    case 'paiement':
+      return _teal;
+    case 'note_validee':
+      return _vert;
+    case 'bulletin_genere':
+      return _ambre;
+    case 'absence':
+      return _orange;
+    case 'sanction':
+      return _rouge;
+    case 'document_ajoute':
+      return _violet;
+    case 'message_envoye':
+      return const Color(0xFF4ADE80);
+    case 'passage':
+    case 'transfert':
+      return const Color(0xFF0284C7);
+    default:
+      return _gris;
+  }
+}
+
+IconData _iconeTypeChronologie(String? type) {
+  switch (type) {
+    case 'inscription':
+      return Icons.school;
+    case 'paiement':
+      return Icons.payment;
+    case 'note_validee':
+      return Icons.check_circle;
+    case 'bulletin_genere':
+      return Icons.picture_as_pdf;
+    case 'absence':
+      return Icons.event_busy;
+    case 'sanction':
+      return Icons.gavel;
+    case 'document_ajoute':
+      return Icons.description;
+    case 'message_envoye':
+      return Icons.chat;
+    case 'passage':
+      return Icons.trending_up;
+    case 'transfert':
+      return Icons.transfer_within_a_station;
+    default:
+      return Icons.circle;
+  }
+}
+
+Color _couleurSanction(String? type) {
+  switch (type) {
+    case 'retard':
+      return _orange;
+    case 'avertissement':
+      return _ambre;
+    case 'exclusion':
+      return _rouge;
+    default:
+      return _gris;
+  }
 }
 
 String _formatDate(DateTime d) {
   return '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
+}
+
+String _formatDateCourt(String? iso) {
+  if (iso == null) return '—';
+  final d = DateTime.tryParse(iso);
+  if (d == null) return iso;
+  return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+}
+
+String _formatDateHeure(String? iso) {
+  if (iso == null) return '—';
+  final d = DateTime.tryParse(iso);
+  if (d == null) return iso;
+  final h = d.hour.toString().padLeft(2, '0');
+  final m = d.minute.toString().padLeft(2, '0');
+  return '${_formatDateCourt(iso)} à $h:$m';
 }
 
 class FicheEleveScreen extends StatefulWidget {
@@ -57,339 +182,278 @@ class FicheEleveScreen extends StatefulWidget {
   State<FicheEleveScreen> createState() => _FicheEleveScreenState();
 }
 
-class _FicheEleveScreenState extends State<FicheEleveScreen> {
-  Map<String, dynamic>? _eleve;
-  int? _anneeIdEnCours;
-  List<dynamic> _periodes = [];
-  Map<String, dynamic>? _situationFinanciere;
-  List<dynamic> _paiements = [];
-  Map<int, Map<String, dynamic>> _bulletins = {};
-  Map<String, dynamic>? _absencesData;
+class _FicheEleveScreenState extends State<FicheEleveScreen>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
 
   bool _chargement = true;
+  Map<String, dynamic>? _details;
+
+  Map<String, dynamic>? _situationFinanciere;
+  List<dynamic> _paiements = [];
+
+  List<dynamic> _periodes = [];
+  int? _periodeSelectionneeId;
+  final Map<int, Map<String, dynamic>> _bulletins = {};
+  final Map<int, Map<String, dynamic>> _rangs = {};
+
+  List<dynamic> _sanctions = [];
+  List<dynamic> _chronologieComplete = [];
+
   bool _uploadPhotoEnCours = false;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 8, vsync: this);
     _chargerTout();
   }
 
-  dynamic get _classeActuelle {
-    final inscriptions = (_eleve?['inscriptions'] as List?) ?? [];
-    if (inscriptions.isEmpty) return null;
-    final inscription = inscriptions.firstWhere(
-      (i) => i['annee_academique_id'] == _anneeIdEnCours,
-      orElse: () => inscriptions.last,
-    );
-    return inscription['classe'];
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
+
+  Map<String, dynamic>? get _eleve => _details?['eleve'] as Map<String, dynamic>?;
+
+  Map<String, dynamic>? get _inscriptionActuelle =>
+      _details?['inscription_actuelle'] as Map<String, dynamic>?;
+
+  Map<String, dynamic>? get _classeActuelle =>
+      _inscriptionActuelle?['classe'] as Map<String, dynamic>?;
+
+  int? get _anneeId => _inscriptionActuelle?['annee_academique_id'] as int?;
+
+  int? get _classeId => _inscriptionActuelle?['classe_id'] as int?;
 
   Future<void> _chargerTout() async {
     setState(() => _chargement = true);
     try {
-      final resultats = await Future.wait([
-        EleveService.getEleve(widget.eleveId),
-        AnneeService.listerAnnees(),
-        PaiementService.paiementsEleve(widget.eleveId),
-        AbsenceService.historiqueEleve(widget.eleveId),
-      ]);
+      final details = await EleveService.details(widget.eleveId);
+      final inscription = details['inscription_actuelle'] as Map<String, dynamic>?;
+      final anneeId = inscription?['annee_academique_id'] as int?;
+      final classeId = inscription?['classe_id'] as int?;
 
-      final eleve = resultats[0] as Map<String, dynamic>;
-      final annees = resultats[1] as List;
-      final paiementsData = resultats[2] as Map<String, dynamic>;
-      final absencesData = resultats[3] as Map<String, dynamic>;
-
-      final anneeEnCours = annees.firstWhere(
-        (a) => a['statut'] == 'en_cours',
-        orElse: () => annees.isNotEmpty ? annees.first : null,
-      );
-      final anneeId = anneeEnCours?['id'] as int?;
-
-      List<dynamic> periodes = [];
       Map<String, dynamic>? situationFinanciere;
-      final bulletins = <int, Map<String, dynamic>>{};
+      List<dynamic> periodes = [];
+
+      final taches = <Future>[
+        DisciplineService.historiqueEleve(widget.eleveId),
+        EleveService.chronologie(widget.eleveId),
+        PaiementService.paiementsEleve(widget.eleveId),
+      ];
 
       if (anneeId != null) {
-        final resultatsAnnee = await Future.wait([
-          AnneeService.listerPeriodes(anneeId),
-          FraisScolaireService.situationEleve(
-            eleveId: widget.eleveId,
-            anneeId: anneeId,
-          ),
-        ]);
-        periodes = resultatsAnnee[0] as List;
-        situationFinanciere = resultatsAnnee[1] as Map<String, dynamic>;
+        taches.add(FraisScolaireService.situationEleve(eleveId: widget.eleveId, anneeId: anneeId));
+        taches.add(AnneeService.listerPeriodes(anneeId));
+      }
 
-        final bulletinsListe = await Future.wait(
-          periodes.map((p) {
-            return BulletinService.genererBulletin(
-              eleveId: widget.eleveId,
-              periodeId: p['id'] as int,
-            );
-          }),
-        );
-        for (var i = 0; i < periodes.length; i++) {
-          bulletins[periodes[i]['id'] as int] = bulletinsListe[i];
-        }
+      final resultats = await Future.wait(taches);
+
+      final sanctions = resultats[0] as List<dynamic>;
+      final chronologie = resultats[1] as List<dynamic>;
+      final paiementsData = resultats[2] as Map<String, dynamic>;
+
+      if (anneeId != null) {
+        situationFinanciere = resultats[3] as Map<String, dynamic>;
+        periodes = resultats[4] as List<dynamic>;
       }
 
       setState(() {
-        _eleve = eleve;
-        _anneeIdEnCours = anneeId;
-        _periodes = periodes;
-        _situationFinanciere = situationFinanciere;
+        _details = details;
+        _sanctions = sanctions;
+        _chronologieComplete = chronologie;
         _paiements = (paiementsData['paiements'] as List?) ?? [];
-        _bulletins = bulletins;
-        _absencesData = absencesData;
+        _situationFinanciere = situationFinanciere;
+        _periodes = periodes;
+        _periodeSelectionneeId ??= periodes.isNotEmpty
+            ? (periodes.firstWhere((p) => p['statut'] == 'ouverte', orElse: () => periodes.first)['id'] as int)
+            : null;
         _chargement = false;
       });
+
+      if (classeId != null) {
+        await _chargerBulletinsEtRangs(classeId, periodes);
+      }
     } catch (e) {
       setState(() => _chargement = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
+  Future<void> _chargerBulletinsEtRangs(int classeId, List<dynamic> periodes) async {
+    try {
+      final bulletins = await Future.wait(
+        periodes.map((p) => BulletinService.genererBulletin(eleveId: widget.eleveId, periodeId: p['id'] as int)),
+      );
+      final rangs = await Future.wait(
+        periodes.map((p) => AnneeService.rangsClasseDetail(classeId: classeId, periodeId: p['id'] as int)),
+      );
+      if (!mounted) return;
+      setState(() {
+        for (var i = 0; i < periodes.length; i++) {
+          _bulletins[periodes[i]['id'] as int] = bulletins[i];
+          _rangs[periodes[i]['id'] as int] = rangs[i];
+        }
+      });
+    } catch (_) {
+      // Non bloquant : les onglets Notes/Bulletins afficheront ce qui est disponible.
+    }
+  }
+
   Future<void> _rechargerFinances() async {
-    if (_anneeIdEnCours == null) return;
+    if (_anneeId == null) return;
     try {
       final resultats = await Future.wait([
-        FraisScolaireService.situationEleve(
-          eleveId: widget.eleveId,
-          anneeId: _anneeIdEnCours!,
-        ),
+        FraisScolaireService.situationEleve(eleveId: widget.eleveId, anneeId: _anneeId!),
         PaiementService.paiementsEleve(widget.eleveId),
       ]);
       setState(() {
         _situationFinanciere = resultats[0];
         _paiements = (resultats[1]['paiements'] as List?) ?? [];
       });
-    } catch (_) {
-      // Silencieux : les données restent celles du dernier chargement réussi.
-    }
+    } catch (_) {}
+  }
+
+  Future<void> _rechargerDocuments() async {
+    try {
+      final details = await EleveService.details(widget.eleveId);
+      setState(() => _details = details);
+    } catch (_) {}
+  }
+
+  Future<void> _rechargerChronologie() async {
+    try {
+      final chrono = await EleveService.chronologie(widget.eleveId);
+      setState(() => _chronologieComplete = chrono);
+    } catch (_) {}
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _vert));
   }
 
   Future<void> _changerPhoto() async {
     final picker = ImagePicker();
-    final image = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 80,
-    );
+    final image = await picker.pickImage(source: ImageSource.gallery, maxWidth: 800, maxHeight: 800, imageQuality: 80);
     if (image == null) return;
 
     setState(() => _uploadPhotoEnCours = true);
     try {
       await EleveService.uploaderPhoto(widget.eleveId, File(image.path));
-      final eleve = await EleveService.getEleve(widget.eleveId);
+      final details = await EleveService.details(widget.eleveId);
       setState(() {
-        _eleve = eleve;
+        _details = details;
         _uploadPhotoEnCours = false;
       });
       _afficherSucces('Photo mise à jour');
+      _rechargerChronologie();
     } catch (e) {
       setState(() => _uploadPhotoEnCours = false);
-      _afficherErreur('Erreur upload photo : $e');
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  Future<void> _contacterWhatsApp() async {
-    final tel = _eleve?['telephone_parent'] as String?;
-    if (tel == null || tel.isEmpty) {
-      _afficherErreur('Aucun numéro de téléphone parent enregistré');
-      return;
-    }
-    final nomEcole = _eleve?['ecole']?['nom'] ?? 'l\'école';
-    final message =
-        'Bonjour, ceci est un message de $nomEcole concernant '
-        '${_eleve?['nom']} ${_eleve?['prenom']}.';
-
-    final succes = await WhatsAppService.envoyerMessage(
-      numeroTelephone: tel,
-      message: message,
-    );
-    if (!succes && mounted) _afficherErreur('Impossible d\'ouvrir WhatsApp');
-  }
-
-  Future<void> _afficherDialogPaiementRapide() async {
-    final classe = _classeActuelle;
-    if (classe == null || _anneeIdEnCours == null) {
-      _afficherErreur('Classe ou année académique introuvable');
-      return;
+  @override
+  Widget build(BuildContext context) {
+    if (_chargement || _eleve == null) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator(color: _indigo)));
     }
 
-    final resultat = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (_) => _DialogPaiementRapide(
-        eleveId: widget.eleveId,
-        classeId: classe['id'] as int,
-        anneeId: _anneeIdEnCours!,
-      ),
-    );
+    final sexe = _eleve!['sexe'] as String? ?? 'M';
 
-    if (resultat == null || !mounted) return;
-
-    _afficherSucces('Paiement enregistré avec succès');
-    _rechargerFinances();
-
-    final telephoneParent = _eleve?['telephone_parent'] as String?;
-    if (telephoneParent == null || telephoneParent.isEmpty) return;
-
-    final envoyer = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Envoyer un reçu WhatsApp ?'),
-        content: const Text(
-          'Envoyer une confirmation de paiement au parent par WhatsApp ?',
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: RefreshIndicator(
+        onRefresh: _chargerTout,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(child: _heroSection(sexe)),
+            SliverPersistentHeader(pinned: true, delegate: _TabBarDelegate(_tabBar())),
+          ],
+          body: TabBarView(
+            controller: _tabController,
+            children: [
+              _tabInfos(),
+              _tabParents(),
+              _tabFinances(),
+              _tabNotes(),
+              _tabBulletins(),
+              _tabDiscipline(),
+              _tabDocuments(),
+              _tabChronologie(),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Non'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Oui, envoyer',
-              style: TextStyle(color: Colors.white),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (envoyer != true) return;
-
-    final message = WhatsAppService.messageRecuPaiement(
-      nomParent: 'Cher parent',
-      nomEleve: '${_eleve?['nom']} ${_eleve?['prenom']}',
-      classe: classe['nom'] as String? ?? '',
-      montant: '${resultat['montant']}',
-      tranche: resultat['tranche_label'] as String? ?? '',
-      nomEcole: _eleve?['ecole']?['nom'] ?? '',
-    );
-
-    final succes = await WhatsAppService.envoyerMessage(
-      numeroTelephone: telephoneParent,
-      message: message,
-    );
-    if (!succes && mounted) _afficherErreur('Impossible d\'ouvrir WhatsApp');
-  }
-
-  Future<void> _envoyerRappelWhatsApp() async {
-    final telephoneParent = _eleve?['telephone_parent'] as String?;
-    if (telephoneParent == null || telephoneParent.isEmpty) {
-      _afficherErreur('Aucun numéro de téléphone parent enregistré');
-      return;
-    }
-
-    final classe = _classeActuelle;
-    final montantRestant = _situationFinanciere?['montant_restant'];
-
-    final message = WhatsAppService.messageRappelPaiement(
-      nomParent: 'Cher parent',
-      nomEleve: '${_eleve?['nom']} ${_eleve?['prenom']}',
-      classe: classe?['nom'] as String? ?? '',
-      montantDu: '$montantRestant',
-      dateLimit: 'dès que possible',
-      nomEcole: _eleve?['ecole']?['nom'] ?? '',
-    );
-
-    final succes = await WhatsAppService.envoyerMessage(
-      numeroTelephone: telephoneParent,
-      message: message,
-    );
-    if (!succes && mounted) _afficherErreur('Impossible d\'ouvrir WhatsApp');
-  }
-
-  Future<void> _afficherHistoriqueComplet() async {
-    final absences = (_absencesData?['absences'] as List?) ?? [];
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Historique complet des absences'),
-        content: SizedBox(
-          width: 350,
-          child: absences.isEmpty
-              ? const Text('Aucune absence enregistrée')
-              : SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: absences.map((a) {
-                      final justifiee = a['justifiee'] == true;
-                      return ListTile(
-                        dense: true,
-                        leading: Icon(
-                          justifiee ? Icons.check_circle : Icons.cancel,
-                          color: justifiee ? Colors.green : Colors.red,
-                        ),
-                        title: Text('${a['date_absence']}'),
-                        subtitle: a['motif'] != null
-                            ? Text(a['motif'] as String)
-                            : Text(justifiee ? 'Justifiée' : 'Non justifiée'),
-                      );
-                    }).toList(),
-                  ),
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  // SECTION 1 — Informations personnelles
+  // HERO
   // ══════════════════════════════════════════════════════
 
-  Widget _sectionInfosPersonnelles() {
+  Widget _heroSection(String sexe) {
     final eleve = _eleve!;
-    final sexe = eleve['sexe'] as String;
+    final classe = _classeActuelle;
     final photoUrl = eleve['photo_url'] as String?;
     final telephoneParent = eleve['telephone_parent'] as String?;
-    final classe = _classeActuelle;
 
-    return Center(
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 8, bottom: 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: sexe == 'F' ? [_rose, _violet] : [_indigo, _teal],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Expanded(
+                  child: Text('Fiche élève', textAlign: TextAlign.center,
+                      style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  onPressed: _dialogModifierInfos,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           Stack(
             children: [
               CircleAvatar(
-                radius: 50,
-                backgroundColor: sexe == 'M' ? Colors.blue : Colors.pink,
-                backgroundImage: photoUrl != null
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: _uploadPhotoEnCours
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : photoUrl == null
-                    ? Text(
-                        eleve['prenom'].toString().substring(0, 1),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    : null,
+                radius: 55,
+                backgroundColor: Colors.white,
+                child: CircleAvatar(
+                  radius: 52,
+                  backgroundColor: Colors.white24,
+                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                  child: _uploadPhotoEnCours
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : photoUrl == null
+                          ? Text((eleve['prenom'] as String? ?? '?').substring(0, 1),
+                              style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white))
+                          : null,
+                ),
               ),
               Positioned(
                 bottom: 0,
@@ -398,304 +462,704 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                   onTap: _changerPhoto,
                   child: Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: Colors.black26, blurRadius: 3),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      size: 18,
-                      color: Colors.deepOrange,
-                    ),
+                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                    child: const Icon(Icons.camera_alt, size: 16, color: _indigo),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            '${eleve['nom']} ${eleve['prenom']}',
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Matricule : ${eleve['matricule']}',
-            style: const TextStyle(color: Colors.grey),
-          ),
-          Text('Classe : ${classe?['nom'] ?? 'Non définie'}'),
-          Text('Né(e) le : ${eleve['date_naissance'] ?? 'Non renseignée'}'),
-          Text('Sexe : ${sexe == 'M' ? 'Masculin' : 'Féminin'}'),
           const SizedBox(height: 10),
-          if (telephoneParent != null && telephoneParent.isNotEmpty)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.phone, size: 16, color: Colors.grey),
-                const SizedBox(width: 4),
-                Text(telephoneParent),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.chat, color: Colors.green),
-                  tooltip: 'Contacter via WhatsApp',
-                  onPressed: _contacterWhatsApp,
-                ),
-              ],
-            )
-          else
-            const Text(
-              'Aucun numéro de téléphone parent',
-              style: TextStyle(color: Colors.orange, fontSize: 12),
-            ),
+          Text('${eleve['nom']}', style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
+          Text('${eleve['prenom']}', style: GoogleFonts.inter(fontSize: 16, color: Colors.white.withValues(alpha: 0.8))),
+          const SizedBox(height: 10),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 6,
+            children: [
+              SSMBadge(label: 'Matricule: ${eleve['matricule']}', couleur: Colors.white),
+              SSMBadge(label: classe?['nom']?.toString() ?? 'Non affecté', couleur: Colors.white),
+              SSMBadge(label: (eleve['statut'] as String? ?? 'actif'), couleur: _couleurStatutEleve(eleve['statut'] as String?)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _actionRapide(Icons.edit, 'Modifier', _dialogModifierInfos),
+              if (telephoneParent != null && telephoneParent.isNotEmpty)
+                _actionRapide(Icons.chat, 'WhatsApp', _dialogCommuniquer),
+              _actionRapide(Icons.picture_as_pdf, 'Bulletin', () => _tabController.animateTo(4)),
+              _actionRapide(Icons.more_vert, 'Plus', _dialogPlusActions),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════
-  // SECTION 2 — Situation financière
-  // ══════════════════════════════════════════════════════
-
-  Widget _sectionSituationFinanciere() {
-    final s = _situationFinanciere;
-    if (s == null) {
-      return const Text(
-        'Situation financière indisponible',
-        style: TextStyle(color: Colors.grey),
-      );
-    }
-
-    final statut = s['statut'] as String;
-    final montantDu = double.tryParse(s['montant_total_du'].toString()) ?? 0;
-    final montantPaye = double.tryParse(s['montant_paye'].toString()) ?? 0;
-    final montantRestant =
-        double.tryParse(s['montant_restant'].toString()) ?? 0;
-    final progression = montantDu > 0
-        ? (montantPaye / montantDu).clamp(0.0, 1.0)
-        : 1.0;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _couleurStatut(statut).withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _couleurStatut(statut).withOpacity(0.4)),
-      ),
+  Widget _actionRapide(IconData icone, String label, VoidCallback onTap) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            _libelleStatut(statut),
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: _couleurStatut(statut),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text('Montant total dû : ${montantDu.toStringAsFixed(0)} FCFA'),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progression,
-              minHeight: 10,
-              backgroundColor: Colors.grey[300],
-              color: _couleurStatut(statut),
+          Material(
+            color: Colors.white.withValues(alpha: 0.2),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: onTap,
+              child: Padding(padding: const EdgeInsets.all(10), child: Icon(icone, color: Colors.white, size: 20)),
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            '${montantPaye.toStringAsFixed(0)} / ${montantDu.toStringAsFixed(0)} FCFA payé',
-          ),
-          Text(
-            'Restant : ${montantRestant.toStringAsFixed(0)} FCFA',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: _couleurStatut(statut),
+          Text(label, style: GoogleFonts.inter(fontSize: 10, color: Colors.white.withValues(alpha: 0.8))),
+        ],
+      ),
+    );
+  }
+
+  Widget _tabBar() {
+    return Container(
+      color: Colors.white.withValues(alpha: 0.95),
+      child: TabBar(
+        controller: _tabController,
+        isScrollable: true,
+        indicatorColor: _indigo,
+        labelColor: _indigo,
+        unselectedLabelColor: _gris,
+        labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
+        tabs: const [
+          Tab(text: '📋 Infos'),
+          Tab(text: '👨‍👩‍👦 Parents'),
+          Tab(text: '💰 Finances'),
+          Tab(text: '📊 Notes'),
+          Tab(text: '📄 Bulletins'),
+          Tab(text: '🏛️ Discipline'),
+          Tab(text: '📁 Docs'),
+          Tab(text: '📅 Chronologie'),
+        ],
+      ),
+    );
+  }
+
+  void _dialogPlusActions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.swap_horiz, color: _orange),
+              title: const Text('Changer le statut'),
+              onTap: () {
+                Navigator.pop(context);
+                _dialogChangerStatut();
+              },
             ),
+            ListTile(
+              leading: const Icon(Icons.refresh, color: _indigo),
+              title: const Text('Rafraîchir'),
+              onTap: () {
+                Navigator.pop(context);
+                _chargerTout();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 1 — INFORMATIONS
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabInfos() {
+    final eleve = _eleve!;
+    final stats = (_details?['statistiques'] as Map?) ?? {};
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _carteGlass(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SSMSectionTitre(titre: 'Informations personnelles'),
+              SSMListeTile(titre: 'Date de naissance', sousTitre: _formatDateCourt(eleve['date_naissance'] as String?), icone: Icons.cake, couleurIcone: _indigo),
+              SSMListeTile(titre: 'Lieu de naissance', sousTitre: eleve['lieu_naissance']?.toString() ?? 'Non renseigné', icone: Icons.place, couleurIcone: _teal),
+              SSMListeTile(titre: 'Nationalité', sousTitre: eleve['nationalite']?.toString() ?? 'Non renseignée', icone: Icons.flag, couleurIcone: _ambre),
+              SSMListeTile(titre: 'Sexe', sousTitre: eleve['sexe'] == 'F' ? 'Féminin' : 'Masculin', icone: Icons.wc, couleurIcone: _violet),
+              SSMListeTile(titre: "N° d'appel", sousTitre: eleve['numero_appel']?.toString() ?? 'Non renseigné', icone: Icons.confirmation_number, couleurIcone: _rouge),
+              SSMListeTile(titre: "Date d'inscription", sousTitre: _formatDateCourt(eleve['date_inscription'] as String?), icone: Icons.calendar_today, couleurIcone: _grisFonce),
+            ],
           ),
-          const SizedBox(height: 14),
-          const Text(
-            'Historique des paiements',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          if (_paiements.isEmpty)
-            const Text(
-              'Aucun paiement enregistré',
-              style: TextStyle(color: Colors.grey),
-            )
-          else
-            ..._paiements.map((p) {
-              final enregistrePar = p['enregistre_par'];
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(child: _miniStat('${stats['nombre_absences_total'] ?? 0}', 'absences', _orange)),
+            const SizedBox(width: 10),
+            Expanded(child: _miniStat(stats['rang_actuel'] != null ? 'Rang ${stats['rang_actuel']}' : '—', '', _indigo)),
+            const SizedBox(width: 10),
+            Expanded(child: _miniStat(stats['moyenne_generale_actuelle'] != null ? '${stats['moyenne_generale_actuelle']}/20' : '—', 'moy.', _vert)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _miniStat(String valeur, String label, Color couleur) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [
+        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
+      ]),
+      child: Column(
+        children: [
+          Text(valeur, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: couleur), textAlign: TextAlign.center),
+          if (label.isNotEmpty) Text(label, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+        ],
+      ),
+    );
+  }
+
+  Widget _carteGlass({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+      ),
+      child: child,
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 2 — PARENTS
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabParents() {
+    final parents = (_details?['parents'] as List?) ?? [];
+
+    return Stack(
+      children: [
+        parents.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${p['montant']} FCFA — ${p['tranche']}',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            '${p['date_paiement']}'
-                            '${enregistrePar != null ? ' • Par ${enregistrePar['name']}' : ''}',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
+                    const Icon(Icons.family_restroom, size: 56, color: _gris),
+                    const SizedBox(height: 12),
+                    Text('Aucun parent enregistré', style: GoogleFonts.inter(color: _gris)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+                      onPressed: _dialogGererParents,
+                      child: const Text('Ajouter un parent'),
                     ),
                   ],
                 ),
-              );
-            }),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _afficherDialogPaiementRapide,
-                  icon: const Icon(Icons.payment, size: 18),
-                  label: const Text('Enregistrer un paiement'),
-                ),
+              )
+            : ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                children: parents.map((p) => _carteParent(p as Map<String, dynamic>)).toList(),
               ),
-              if (montantRestant > 0) ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _envoyerRappelWhatsApp,
-                    icon: const Icon(
-                      Icons.message,
-                      size: 18,
-                      color: Colors.green,
-                    ),
-                    label: const Text('Rappel WhatsApp'),
-                  ),
-                ),
-              ],
-            ],
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            backgroundColor: _indigo,
+            foregroundColor: Colors.white,
+            onPressed: _dialogGererParents,
+            icon: const Icon(Icons.edit),
+            label: const Text('Modifier les parents'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _carteParent(Map<String, dynamic> parent) {
+    final lienLabels = {'pere': 'Père', 'mere': 'Mère', 'tuteur': 'Tuteur', 'autre': 'Autre'};
+    final telPrincipal = parent['telephone_principal'] as String?;
+    final telSecondaire = parent['telephone_secondaire'] as String?;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: _carteGlass(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SSMBadge(label: lienLabels[parent['lien_parente']] ?? 'Autre', couleur: _indigo),
+            const SizedBox(height: 8),
+            Text('${parent['nom']} ${parent['prenom'] ?? ''}', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600)),
+            if (parent['profession'] != null) Text(parent['profession'] as String, style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+            const SizedBox(height: 10),
+            if (telPrincipal != null && telPrincipal.isNotEmpty)
+              _ligneTelephone(telPrincipal),
+            if (telSecondaire != null && telSecondaire.isNotEmpty)
+              _ligneTelephone(telSecondaire),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _ligneTelephone(String tel) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          const Icon(Icons.phone, size: 16, color: _gris),
+          const SizedBox(width: 6),
+          Text(tel, style: GoogleFonts.inter(fontSize: 13)),
+          const Spacer(),
+          IconButton(
+            icon: const Icon(Icons.call, size: 18, color: _indigo),
+            onPressed: () => launchUrl(Uri.parse('tel:$tel')),
+          ),
+          IconButton(
+            icon: const Icon(Icons.chat, size: 18, color: _vert),
+            onPressed: () => WhatsAppService.envoyerMessage(numeroTelephone: tel, message: 'Bonjour,'),
           ),
         ],
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════
-  // SECTION 3 — Résultats scolaires
-  // ══════════════════════════════════════════════════════
+  void _dialogGererParents() {
+    final parents = ((_details?['parents'] as List?) ?? [])
+        .map((p) => <String, dynamic>{
+              'lien_parente': p['lien_parente'],
+              'nom': TextEditingController(text: p['nom']),
+              'prenom': TextEditingController(text: p['prenom']),
+              'telephone_principal': TextEditingController(text: p['telephone_principal']),
+              'telephone_secondaire': TextEditingController(text: p['telephone_secondaire']),
+              'profession': TextEditingController(text: p['profession']),
+            })
+        .toList();
 
-  Widget _sectionResultatsScolaires() {
-    if (_periodes.isEmpty) {
-      return const Text(
-        'Aucune période académique disponible',
-        style: TextStyle(color: Colors.grey),
-      );
+    if (parents.isEmpty) {
+      parents.add({
+        'lien_parente': 'pere',
+        'nom': TextEditingController(),
+        'prenom': TextEditingController(),
+        'telephone_principal': TextEditingController(),
+        'telephone_secondaire': TextEditingController(),
+        'profession': TextEditingController(),
+      });
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: _periodes.map((periode) {
-        final bulletin = _bulletins[periode['id'] as int];
-        final estActif = periode['statut'] == 'actif';
-        final moyenneGenerale = bulletin != null
-            ? double.tryParse(bulletin['moyenne_generale'].toString())
-            : null;
+    bool enCours = false;
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: estActif
-                ? const BorderSide(color: Colors.blue, width: 2)
-                : BorderSide.none,
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          Widget carte(int index) {
+            final p = parents[index];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: _gris.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<String>(
+                    initialValue: p['lien_parente'] as String,
+                    decoration: const InputDecoration(labelText: 'Lien', border: OutlineInputBorder(), isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: 'pere', child: Text('Père')),
+                      DropdownMenuItem(value: 'mere', child: Text('Mère')),
+                      DropdownMenuItem(value: 'tuteur', child: Text('Tuteur')),
+                      DropdownMenuItem(value: 'autre', child: Text('Autre')),
+                    ],
+                    onChanged: (v) => setStateDialog(() => p['lien_parente'] = v),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(controller: p['nom'] as TextEditingController, decoration: const InputDecoration(labelText: 'Nom *', border: OutlineInputBorder(), isDense: true)),
+                  const SizedBox(height: 8),
+                  TextField(controller: p['prenom'] as TextEditingController, decoration: const InputDecoration(labelText: 'Prénom', border: OutlineInputBorder(), isDense: true)),
+                  const SizedBox(height: 8),
+                  TextField(controller: p['telephone_principal'] as TextEditingController, decoration: const InputDecoration(labelText: 'Téléphone principal *', border: OutlineInputBorder(), isDense: true)),
+                  const SizedBox(height: 8),
+                  TextField(controller: p['telephone_secondaire'] as TextEditingController, decoration: const InputDecoration(labelText: 'Téléphone secondaire', border: OutlineInputBorder(), isDense: true)),
+                  const SizedBox(height: 8),
+                  TextField(controller: p['profession'] as TextEditingController, decoration: const InputDecoration(labelText: 'Profession', border: OutlineInputBorder(), isDense: true)),
+                ],
+              ),
+            );
+          }
+
+          return Dialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            backgroundColor: Colors.white,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Parents / Tuteurs', style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 16),
+                    Flexible(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children: [
+                            ...List.generate(parents.length, carte),
+                            if (parents.length < 2)
+                              OutlinedButton.icon(
+                                onPressed: () => setStateDialog(() => parents.add({
+                                      'lien_parente': 'mere',
+                                      'nom': TextEditingController(),
+                                      'prenom': TextEditingController(),
+                                      'telephone_principal': TextEditingController(),
+                                      'telephone_secondaire': TextEditingController(),
+                                      'profession': TextEditingController(),
+                                    })),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Ajouter un 2ème parent'),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+                            onPressed: enCours
+                                ? null
+                                : () async {
+                                    setStateDialog(() => enCours = true);
+                                    try {
+                                      final data = parents
+                                          .where((p) => (p['nom'] as TextEditingController).text.trim().isNotEmpty)
+                                          .map((p) => {
+                                                'lien_parente': p['lien_parente'],
+                                                'nom': (p['nom'] as TextEditingController).text.trim(),
+                                                'prenom': (p['prenom'] as TextEditingController).text.trim(),
+                                                'telephone_principal': (p['telephone_principal'] as TextEditingController).text.trim(),
+                                                'telephone_secondaire': (p['telephone_secondaire'] as TextEditingController).text.trim(),
+                                                'profession': (p['profession'] as TextEditingController).text.trim(),
+                                              })
+                                          .toList();
+                                      await EleveService.gererParents(widget.eleveId, data);
+                                      if (!context.mounted) return;
+                                      Navigator.pop(context);
+                                      _afficherSucces('Parents mis à jour');
+                                      final details = await EleveService.details(widget.eleveId);
+                                      setState(() => _details = details);
+                                    } catch (e) {
+                                      setStateDialog(() => enCours = false);
+                                      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                                    }
+                                  },
+                            child: const Text('Enregistrer'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 3 — FINANCES
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabFinances() {
+    final s = _situationFinanciere;
+    if (s == null) {
+      return Center(child: Text('Situation financière indisponible', style: GoogleFonts.inter(color: _gris)));
+    }
+
+    final statut = s['statut'] as String;
+    final enRegle = statut == 'en_regle';
+    final montantDu = double.tryParse(s['montant_total_du'].toString()) ?? 0;
+    final montantPaye = double.tryParse(s['montant_paye'].toString()) ?? 0;
+    final montantRestant = double.tryParse(s['montant_restant'].toString()) ?? 0;
+    final progression = montantDu > 0 ? (montantPaye / montantDu).clamp(0.0, 1.0) : 1.0;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _carteGlass(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(color: enRegle ? _vert : _rouge, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(enRegle ? 'En règle' : 'En retard de paiement',
+                      style: GoogleFonts.sora(fontWeight: FontWeight.w700, fontSize: 16, color: enRegle ? _vert : _rouge)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _colonneMontant('Total dû', montantDu),
+                  _colonneMontant('Payé', montantPaye),
+                  _colonneMontant('Reste', montantRestant),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: LinearProgressIndicator(value: progression, minHeight: 8, backgroundColor: const Color(0xFFF1F5F9), color: enRegle ? _vert : _rouge),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
+                  onPressed: _dialogPaiementRapide,
+                  icon: const Icon(Icons.payment),
+                  label: const Text('Enregistrer un paiement'),
+                ),
+              ),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
+        ),
+        const SizedBox(height: 16),
+        const SSMSectionTitre(titre: 'Historique des paiements'),
+        if (_paiements.isEmpty)
+          Text('Aucun paiement enregistré', style: GoogleFonts.inter(color: _gris))
+        else
+          ..._paiements.map((p) => Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: SSMListeTile(
+                  titre: '${p['montant']} FCFA',
+                  sousTitre: '${p['tranche']} · ${_formatDateCourt(p['date_paiement'] as String?)}',
+                  icone: Icons.payment,
+                  couleurIcone: _teal,
+                  trailing: IconButton(
+                    icon: const Icon(Icons.receipt_long, color: _indigo),
+                    onPressed: () async {
+                      try {
+                        final chemin = await PaiementService.telechargerRecuPdf(p['id'] as int);
+                        await OpenFile.open(chemin);
+                      } catch (e) {
+                        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                      }
+                    },
+                  ),
+                ),
+              )),
+      ],
+    );
+  }
+
+  Widget _colonneMontant(String label, double valeur) {
+    return Column(
+      children: [
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+        Text(valeur.toStringAsFixed(0), style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+
+  Future<void> _dialogPaiementRapide() async {
+    final classe = _classeActuelle;
+    if (classe == null || _anneeId == null) {
+      _afficherErreur('Classe ou année académique introuvable');
+      return;
+    }
+    final resultat = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (_) => _DialogPaiementRapide(eleveId: widget.eleveId, classeId: classe['id'] as int, anneeId: _anneeId!),
+    );
+    if (resultat == null || !mounted) return;
+    _afficherSucces('Paiement enregistré avec succès');
+    _rechargerFinances();
+    _rechargerChronologie();
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 4 — NOTES
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabNotes() {
+    if (_periodes.isEmpty) {
+      return Center(child: Text('Aucune période académique disponible', style: GoogleFonts.inter(color: _gris)));
+    }
+
+    final periodeId = _periodeSelectionneeId ?? (_periodes.first['id'] as int);
+    final bulletin = _bulletins[periodeId];
+    final classement = _rangs[periodeId];
+    final moyenneGenerale = bulletin != null ? double.tryParse(bulletin['moyenne_generale'].toString()) : null;
+
+    int? rang;
+    int total = 0;
+    if (classement != null) {
+      total = (classement['eleves'] as List).length;
+      final entree = (classement['eleves'] as List).cast<Map<String, dynamic>>().firstWhere(
+            (e) => e['eleve_id'] == widget.eleveId,
+            orElse: () => {},
+          );
+      rang = entree['rang'] as int?;
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        DropdownButtonFormField<int>(
+          initialValue: periodeId,
+          decoration: const InputDecoration(labelText: 'Période', border: OutlineInputBorder(), isDense: true),
+          items: _periodes.cast<Map<String, dynamic>>().map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
+          onChanged: (v) => setState(() => _periodeSelectionneeId = v),
+        ),
+        const SizedBox(height: 16),
+        if (bulletin == null)
+          const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: _indigo)))
+        else ...[
+          ...((bulletin['notes'] as List).map((n) => _carteMatiereNote(n as Map<String, dynamic>))),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
+            child: Column(
+              children: [
+                Text('Moyenne générale', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('${bulletin['moyenne_generale']}/20', style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: _indigo)),
+                SSMBadge(label: bulletin['mention_generale']?.toString() ?? '', couleur: _couleurMoyenne(moyenneGenerale)),
+                if (rang != null) Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text('Rang $rangème / $total élèves', style: GoogleFonts.inter(fontSize: 13, color: _gris)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _carteMatiereNote(Map<String, dynamic> n) {
+    final moyenneFinale = n['moyenne_finale'] != null ? double.tryParse(n['moyenne_finale'].toString()) : null;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: _carteGlass(
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(n['matiere'] as String, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text('Coefficient ${n['coefficient']}', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                  if (n['note_composition'] != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Chip(label: Text('Compo: ${n['note_composition']}'), backgroundColor: _ambre.withValues(alpha: 0.15), labelStyle: const TextStyle(fontSize: 11)),
+                    ),
+                ],
+              ),
+            ),
+            Text(moyenneFinale != null ? moyenneFinale.toStringAsFixed(2) : '-',
+                style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _couleurMoyenne(moyenneFinale))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 5 — BULLETINS
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabBulletins() {
+    final periodesAvecNotes = _periodes.where((p) {
+      final b = _bulletins[p['id'] as int];
+      return b != null && (b['total_matieres'] as int? ?? 0) > 0;
+    }).toList();
+
+    if (periodesAvecNotes.isEmpty) {
+      return Center(child: Text('Aucun bulletin disponible pour le moment', style: GoogleFonts.inter(color: _gris)));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: periodesAvecNotes.map((p) {
+        final periodeId = p['id'] as int;
+        final bulletin = _bulletins[periodeId]!;
+        final classement = _rangs[periodeId];
+        int? rang;
+        int total = 0;
+        if (classement != null) {
+          total = (classement['eleves'] as List).length;
+          final entree = (classement['eleves'] as List).cast<Map<String, dynamic>>().firstWhere((e) => e['eleve_id'] == widget.eleveId, orElse: () => {});
+          rang = entree['rang'] as int?;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: _carteGlass(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(p['nom'] as String, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('${bulletin['moyenne_generale']}/20 — ${bulletin['mention_generale']}', style: GoogleFonts.inter(fontSize: 13, color: _grisFonce)),
+                if (rang != null) Text('Rang $rang / $total élèves', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                const SizedBox(height: 10),
                 Row(
                   children: [
-                    Text(
-                      periode['nom'] as String,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    if (estActif) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.blue,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Text(
-                          'En cours',
-                          style: TextStyle(color: Colors.white, fontSize: 10),
-                        ),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _dialogApercuBulletin(p['nom'] as String, bulletin),
+                        child: const Text('Aperçu'),
                       ),
-                    ],
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          try {
+                            final chemin = await BulletinService.telechargerPdf(eleveId: widget.eleveId, periodeId: periodeId);
+                            await OpenFile.open(chemin);
+                          } catch (e) {
+                            _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                          }
+                        },
+                        child: const Text('PDF'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(foregroundColor: _vert),
+                        onPressed: () => _envoyerBulletinWhatsApp(p['nom'] as String, bulletin),
+                        child: const Text('WhatsApp'),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 6),
-                if (bulletin == null)
-                  const Text(
-                    'Chargement...',
-                    style: TextStyle(color: Colors.grey),
-                  )
-                else ...[
-                  Text(
-                    'Moyenne générale : ${bulletin['moyenne_generale']}/20 — ${bulletin['mention_generale']}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: _couleurMoyenne(moyenneGenerale),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ...((bulletin['notes'] as List).map((n) {
-                    final moyenneFinale = n['moyenne_finale'];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 2),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              n['matiere'] as String,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              moyenneFinale != null
-                                  ? 'Moy : $moyenneFinale'
-                                  : 'Moy : -',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              'Coef ${n['coefficient']}',
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  })),
-                ],
               ],
             ),
           ),
@@ -704,185 +1168,659 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════
-  // SECTION 4 — Absences
-  // ══════════════════════════════════════════════════════
-
-  Widget _sectionAbsences() {
-    final total = (_absencesData?['total'] as int?) ?? 0;
-    final nonJustifiees = (_absencesData?['non_justifiees'] as int?) ?? 0;
-    final justifiees = total - nonJustifiees;
-    final dernieres = ((_absencesData?['absences'] as List?) ?? [])
-        .take(5)
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _miniStatAbsence('Total', total, Colors.grey),
-            _miniStatAbsence('Justifiées', justifiees, Colors.green),
-            _miniStatAbsence('Non justifiées', nonJustifiees, Colors.red),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (dernieres.isEmpty)
-          const Text(
-            'Aucune absence enregistrée',
-            style: TextStyle(color: Colors.grey),
-          )
-        else
-          ...dernieres.map((a) {
-            final justifiee = a['justifiee'] == true;
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              leading: Icon(
-                justifiee ? Icons.check_circle : Icons.cancel,
-                color: justifiee ? Colors.green : Colors.red,
-              ),
-              title: Text('${a['date_absence']}'),
-              subtitle: Text(justifiee ? 'Justifiée' : 'Non justifiée'),
-            );
-          }),
-        Center(
-          child: TextButton(
-            onPressed: _afficherHistoriqueComplet,
-            child: Text('Voir tout l\'historique ($total)'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _miniStatAbsence(String label, int valeur, Color couleur) {
-    return Column(
-      children: [
-        Text(
-          '$valeur',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: couleur,
-          ),
-        ),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-      ],
-    );
-  }
-
-  Widget _titreSection(String titre) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Text(
-        titre,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _eleve != null
-              ? '${_eleve!['nom']} ${_eleve!['prenom']}'
-              : 'Fiche élève',
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        backgroundColor: Colors.deepOrange,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _chargerTout),
-        ],
-      ),
-      body: _chargement || _eleve == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
+  void _dialogApercuBulletin(String periodeNom, Map<String, dynamic> bulletin) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _breadcrumb(),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _chargerTout,
-                    child: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _sectionInfosPersonnelles(),
-                        const Divider(height: 32),
-                        _titreSection('Situation financière'),
-                        _sectionSituationFinanciere(),
-                        const Divider(height: 32),
-                        _titreSection('Résultats scolaires'),
-                        _sectionResultatsScolaires(),
-                        const Divider(height: 32),
-                        _titreSection('Absences'),
-                        _sectionAbsences(),
-                      ],
+                Text('Bulletin — $periodeNom', style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      children: (bulletin['notes'] as List)
+                          .map((n) => _carteMatiereNote(n as Map<String, dynamic>))
+                          .toList(),
                     ),
                   ),
                 ),
+                const SizedBox(height: 12),
+                Text('Moyenne générale : ${bulletin['moyenne_generale']}/20 (${bulletin['mention_generale']})',
+                    style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: _indigo)),
+                const SizedBox(height: 12),
+                Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer'))),
               ],
             ),
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _breadcrumb() {
-    final classe = _classeActuelle;
-    final classeNom = classe?['nom'] as String? ?? '—';
-    final nomEleve = _eleve != null
-        ? '${_eleve!['nom']} ${_eleve!['prenom']}'
-        : '';
+  Future<void> _envoyerBulletinWhatsApp(String periodeNom, Map<String, dynamic> bulletin) async {
+    final tel = _eleve?['telephone_parent'] as String?;
+    if (tel == null || tel.isEmpty) {
+      _afficherErreur('Aucun numéro de téléphone parent enregistré');
+      return;
+    }
+    final message = WhatsAppService.messageBulletin(
+      nomParent: 'Cher parent',
+      nomEleve: '${_eleve?['nom']} ${_eleve?['prenom']}',
+      classe: _classeActuelle?['nom']?.toString() ?? '',
+      periode: periodeNom,
+      moyenne: '${bulletin['moyenne_generale']}',
+      mention: bulletin['mention_generale']?.toString() ?? '',
+      nomEcole: "L'établissement",
+    );
+    await WhatsAppService.envoyerMessage(numeroTelephone: tel, message: message);
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 6 — DISCIPLINE
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabDiscipline() {
+    final retards = _sanctions.where((s) => s['type'] == 'retard').length;
+    final avertissements = _sanctions.where((s) => s['type'] == 'avertissement').length;
+    final exclusions = _sanctions.where((s) => s['type'] == 'exclusion').length;
+
+    return Stack(
+      children: [
+        ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+          children: [
+            Row(
+              children: [
+                Expanded(child: _miniStat('$retards', 'retards', _orange)),
+                const SizedBox(width: 10),
+                Expanded(child: _miniStat('$avertissements', 'avertissements', _ambre)),
+                const SizedBox(width: 10),
+                Expanded(child: _miniStat('$exclusions', 'exclusions', _rouge)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (_sanctions.isEmpty)
+              Center(child: Padding(padding: const EdgeInsets.all(20), child: Text('Aucune sanction enregistrée', style: GoogleFonts.inter(color: _gris))))
+            else
+              ..._sanctions.map((s) => _carteSanction(s as Map<String, dynamic>)),
+          ],
+        ),
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: FloatingActionButton.extended(
+            backgroundColor: _rouge,
+            foregroundColor: Colors.white,
+            onPressed: _dialogAjouterSanction,
+            icon: const Icon(Icons.add),
+            label: const Text('Ajouter une sanction'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _carteSanction(Map<String, dynamic> s) {
+    final couleur = _couleurSanction(s['type'] as String?);
     return Container(
-      width: double.infinity,
-      color: Colors.white.withOpacity(0.5),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(12),
+        border: Border(left: BorderSide(color: couleur, width: 4)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TextButton(
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text(
-              'Élèves',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+          Row(
+            children: [
+              Text(_formatDateCourt(s['date_sanction'] as String?), style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 8),
+              SSMBadge(label: (s['type'] as String? ?? '').toUpperCase(), couleur: couleur),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(s['description'] as String? ?? '', style: GoogleFonts.inter(fontSize: 13)),
+        ],
+      ),
+    );
+  }
+
+  void _dialogAjouterSanction() {
+    final descriptionController = TextEditingController();
+    String type = 'retard';
+    DateTime date = DateTime.now();
+    bool enCours = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Ajouter une sanction'),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: 'retard', child: Text('Retard')),
+                    DropdownMenuItem(value: 'avertissement', child: Text('Avertissement')),
+                    DropdownMenuItem(value: 'exclusion', child: Text('Exclusion')),
+                    DropdownMenuItem(value: 'observation', child: Text('Observation')),
+                    DropdownMenuItem(value: 'conseil_discipline', child: Text('Conseil de discipline')),
+                  ],
+                  onChanged: (v) => setStateDialog(() => type = v!),
+                ),
+                const SizedBox(height: 12),
+                TextField(controller: descriptionController, maxLines: 3, decoration: const InputDecoration(labelText: 'Description *', border: OutlineInputBorder())),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.date_range),
+                  title: Text('Date : ${date.day}/${date.month}/${date.year}'),
+                  onTap: () async {
+                    final d = await showDatePicker(context: context, initialDate: date, firstDate: DateTime(2020), lastDate: DateTime(2100));
+                    if (d != null) setStateDialog(() => date = d);
+                  },
+                ),
+              ],
             ),
           ),
-          const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+              onPressed: enCours || _classeId == null
+                  ? null
+                  : () async {
+                      if (descriptionController.text.trim().isEmpty) return;
+                      setStateDialog(() => enCours = true);
+                      try {
+                        await DisciplineService.creer(
+                          eleveId: widget.eleveId,
+                          classeId: _classeId!,
+                          type: type,
+                          description: descriptionController.text.trim(),
+                          dateSanction: _formatDate(date),
+                        );
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                        _afficherSucces('Sanction enregistrée');
+                        final sanctions = await DisciplineService.historiqueEleve(widget.eleveId);
+                        setState(() => _sanctions = sanctions);
+                        _rechargerChronologie();
+                      } catch (e) {
+                        setStateDialog(() => enCours = false);
+                        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                      }
+                    },
+              child: const Text('Enregistrer'),
             ),
-            child: Text(
-              classeNom,
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 7 — DOCUMENTS
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabDocuments() {
+    final documents = (_details?['documents'] as List?) ?? [];
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        GestureDetector(
+          onTap: _dialogUploadDocument,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: _gris.withValues(alpha: 0.4), style: BorderStyle.solid, width: 1.4),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.upload_file, size: 40, color: _gris),
+                const SizedBox(height: 8),
+                Text('Ajouter un document', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _grisFonce)),
+                Text('Tap pour sélectionner', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+              ],
             ),
           ),
-          const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
-          Text(
-            nomEleve,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.black87,
-              fontWeight: FontWeight.w600,
-            ),
+        ),
+        const SizedBox(height: 16),
+        if (documents.isEmpty)
+          Center(child: Padding(padding: const EdgeInsets.all(20), child: Text('Aucun document', style: GoogleFonts.inter(color: _gris))))
+        else
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 10,
+            childAspectRatio: 0.95,
+            children: documents.map((d) => _carteDocument(d as Map<String, dynamic>)).toList(),
+          ),
+      ],
+    );
+  }
+
+  Widget _carteDocument(Map<String, dynamic> doc) {
+    final couleur = _couleurTypeDocument(doc['type'] as String?);
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        children: [
+          Icon(_iconeTypeDocument(doc['type'] as String?), size: 48, color: couleur),
+          const SizedBox(height: 8),
+          Text(doc['nom'] as String? ?? '', textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(doc['type'] as String? ?? '', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.download, size: 18, color: _indigo),
+                onPressed: () => launchUrl(Uri.parse(doc['url_fichier'] as String)),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, size: 18, color: _rouge),
+                onPressed: () async {
+                  try {
+                    await EleveService.supprimerDocument(widget.eleveId, doc['id'] as int);
+                    _afficherSucces('Document supprimé');
+                    _rechargerDocuments();
+                  } catch (e) {
+                    _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+
+  void _dialogUploadDocument() {
+    final nomController = TextEditingController();
+    String type = 'autre';
+    File? fichier;
+    String? nomFichier;
+    bool enCours = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Ajouter un document'),
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: nomController, decoration: const InputDecoration(labelText: 'Nom du document *', border: OutlineInputBorder())),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: type,
+                  decoration: const InputDecoration(labelText: 'Type *', border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: 'acte_naissance', child: Text('Acte de naissance')),
+                    DropdownMenuItem(value: 'certificat_scolarite', child: Text('Certificat de scolarité')),
+                    DropdownMenuItem(value: 'photo', child: Text('Photo')),
+                    DropdownMenuItem(value: 'bulletin', child: Text('Bulletin')),
+                    DropdownMenuItem(value: 'certificat_transfert', child: Text('Certificat de transfert')),
+                    DropdownMenuItem(value: 'autre', child: Text('Autre')),
+                  ],
+                  onChanged: (v) => setStateDialog(() => type = v!),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    final resultat = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png']);
+                    if (resultat != null && resultat.files.single.path != null) {
+                      setStateDialog(() {
+                        fichier = File(resultat.files.single.path!);
+                        nomFichier = resultat.files.single.name;
+                      });
+                    }
+                  },
+                  icon: const Icon(Icons.attach_file),
+                  label: const Text('Choisir le fichier'),
+                ),
+                if (nomFichier != null)
+                  Padding(padding: const EdgeInsets.only(top: 8), child: Text(nomFichier!, style: GoogleFonts.inter(fontSize: 12, color: _gris))),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              onPressed: enCours
+                  ? null
+                  : () async {
+                      if (nomController.text.trim().isEmpty || fichier == null) return;
+                      setStateDialog(() => enCours = true);
+                      try {
+                        await EleveService.uploaderDocument(widget.eleveId, nom: nomController.text.trim(), type: type, fichier: fichier!);
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                        _afficherSucces('Document ajouté avec succès');
+                        _rechargerDocuments();
+                        _rechargerChronologie();
+                      } catch (e) {
+                        setStateDialog(() => enCours = false);
+                        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                      }
+                    },
+              child: const Text('Envoyer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // TAB 8 — CHRONOLOGIE
+  // ══════════════════════════════════════════════════════
+
+  Widget _tabChronologie() {
+    if (_chronologieComplete.isEmpty) {
+      return Center(child: Text('Aucun événement enregistré', style: GoogleFonts.inter(color: _gris)));
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      itemCount: _chronologieComplete.length,
+      itemBuilder: (context, i) {
+        final evt = _chronologieComplete[i] as Map<String, dynamic>;
+        final couleur = _couleurTypeChronologie(evt['type'] as String?);
+        final estDernier = i == _chronologieComplete.length - 1;
+
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                children: [
+                  Container(width: 14, height: 14, decoration: BoxDecoration(color: couleur, shape: BoxShape.circle)),
+                  if (!estDernier) Expanded(child: Container(width: 2, color: couleur.withValues(alpha: 0.2))),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(_iconeTypeChronologie(evt['type'] as String?), color: couleur, size: 20),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(evt['titre'] as String? ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                            if (evt['description'] != null)
+                              Text(evt['description'] as String, style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                            Text(_formatDateHeure(evt['created_at'] as String?), style: GoogleFonts.inter(fontSize: 11, color: _gris.withValues(alpha: 0.7))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // DIALOGS COMMUNS
+  // ══════════════════════════════════════════════════════
+
+  void _dialogCommuniquer() {
+    final tel = _eleve?['telephone_parent'] as String?;
+    if (tel == null || tel.isEmpty) {
+      _afficherErreur('Aucun numéro de téléphone parent enregistré');
+      return;
+    }
+    final nomEleve = '${_eleve?['nom']} ${_eleve?['prenom']}';
+    final classeNom = _classeActuelle?['nom']?.toString() ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.money_off, color: _rouge),
+              title: const Text('Rappel de paiement'),
+              onTap: () async {
+                Navigator.pop(context);
+                final message = WhatsAppService.messageRappelPaiement(
+                  nomParent: 'Cher parent',
+                  nomEleve: nomEleve,
+                  classe: classeNom,
+                  montantDu: '${_situationFinanciere?['montant_restant'] ?? 0}',
+                  dateLimit: 'dès que possible',
+                  nomEcole: "L'établissement",
+                );
+                await WhatsAppService.envoyerMessage(numeroTelephone: tel, message: message);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf, color: _ambre),
+              title: const Text('Envoyer le bulletin'),
+              onTap: () {
+                Navigator.pop(context);
+                _tabController.animateTo(4);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.event, color: _orange),
+              title: const Text('Convocation'),
+              onTap: () async {
+                Navigator.pop(context);
+                final message = 'Bonjour,\n\nNous souhaitons vous rencontrer au sujet de $nomEleve ($classeNom). '
+                    'Merci de vous présenter à l\'établissement dès que possible.';
+                await WhatsAppService.envoyerMessage(numeroTelephone: tel, message: message);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.chat, color: _vert),
+              title: const Text('Information générale'),
+              onTap: () async {
+                Navigator.pop(context);
+                await WhatsAppService.envoyerMessage(numeroTelephone: tel, message: 'Bonjour,');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _dialogModifierInfos() {
+    final eleve = _eleve!;
+    final nomController = TextEditingController(text: eleve['nom'] as String?);
+    final prenomController = TextEditingController(text: eleve['prenom'] as String?);
+    final lieuController = TextEditingController(text: eleve['lieu_naissance'] as String?);
+    final nationaliteController = TextEditingController(text: eleve['nationalite'] as String?);
+    final telephoneController = TextEditingController(text: eleve['telephone_parent'] as String?);
+    final numeroAppelController = TextEditingController(text: eleve['numero_appel']?.toString());
+    bool enCours = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Modifier les informations'),
+          content: SizedBox(
+            width: 420,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(controller: nomController, decoration: const InputDecoration(labelText: 'Nom *', border: OutlineInputBorder())),
+                  const SizedBox(height: 10),
+                  TextField(controller: prenomController, decoration: const InputDecoration(labelText: 'Prénom *', border: OutlineInputBorder())),
+                  const SizedBox(height: 10),
+                  TextField(controller: lieuController, decoration: const InputDecoration(labelText: 'Lieu de naissance', border: OutlineInputBorder())),
+                  const SizedBox(height: 10),
+                  TextField(controller: nationaliteController, decoration: const InputDecoration(labelText: 'Nationalité', border: OutlineInputBorder())),
+                  const SizedBox(height: 10),
+                  TextField(controller: telephoneController, decoration: const InputDecoration(labelText: 'Téléphone parent', border: OutlineInputBorder())),
+                  const SizedBox(height: 10),
+                  TextField(controller: numeroAppelController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "N° d'appel", border: OutlineInputBorder())),
+                ],
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              onPressed: enCours
+                  ? null
+                  : () async {
+                      setStateDialog(() => enCours = true);
+                      try {
+                        await EleveService.modifier(widget.eleveId, {
+                          'nom': nomController.text.trim(),
+                          'prenom': prenomController.text.trim(),
+                          'sexe': eleve['sexe'],
+                          'lieu_naissance': lieuController.text.trim(),
+                          'nationalite': nationaliteController.text.trim(),
+                          'telephone_parent': telephoneController.text.trim(),
+                          'numero_appel': int.tryParse(numeroAppelController.text.trim()),
+                        });
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                        _afficherSucces('Informations mises à jour');
+                        _chargerTout();
+                      } catch (e) {
+                        setStateDialog(() => enCours = false);
+                        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                      }
+                    },
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _dialogChangerStatut() {
+    String statut = _eleve!['statut'] as String? ?? 'actif';
+    final motifController = TextEditingController();
+    bool enCours = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          title: const Text('Changer le statut'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<String>(
+                initialValue: statut,
+                decoration: const InputDecoration(labelText: 'Statut', border: OutlineInputBorder()),
+                items: const [
+                  DropdownMenuItem(value: 'actif', child: Text('Actif')),
+                  DropdownMenuItem(value: 'suspendu', child: Text('Suspendu')),
+                  DropdownMenuItem(value: 'exclu', child: Text('Exclu')),
+                  DropdownMenuItem(value: 'transfere', child: Text('Transféré')),
+                  DropdownMenuItem(value: 'diplome', child: Text('Diplômé')),
+                  DropdownMenuItem(value: 'abandon', child: Text('Abandon')),
+                ],
+                onChanged: (v) => setStateDialog(() => statut = v!),
+              ),
+              const SizedBox(height: 12),
+              TextField(controller: motifController, decoration: const InputDecoration(labelText: 'Motif (optionnel)', border: OutlineInputBorder())),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.white),
+              onPressed: enCours
+                  ? null
+                  : () async {
+                      setStateDialog(() => enCours = true);
+                      try {
+                        await EleveService.changerStatut(widget.eleveId, statut, motif: motifController.text.trim().isEmpty ? null : motifController.text.trim());
+                        if (!context.mounted) return;
+                        Navigator.pop(context);
+                        _afficherSucces('Statut mis à jour');
+                        _chargerTout();
+                      } catch (e) {
+                        setStateDialog(() => enCours = false);
+                        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                      }
+                    },
+              child: const Text('Confirmer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// Delegate — TabBar sticky
+// ══════════════════════════════════════════════════════════
+
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  final Widget tabBar;
+  _TabBarDelegate(this.tabBar);
+
+  @override
+  double get minExtent => 48;
+  @override
+  double get maxExtent => 48;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => tabBar;
+
+  @override
+  bool shouldRebuild(_TabBarDelegate oldDelegate) => false;
 }
 
 // ══════════════════════════════════════════════════════════
@@ -894,11 +1832,7 @@ class _DialogPaiementRapide extends StatefulWidget {
   final int classeId;
   final int anneeId;
 
-  const _DialogPaiementRapide({
-    required this.eleveId,
-    required this.classeId,
-    required this.anneeId,
-  });
+  const _DialogPaiementRapide({required this.eleveId, required this.classeId, required this.anneeId});
 
   @override
   State<_DialogPaiementRapide> createState() => _DialogPaiementRapideState();
@@ -930,10 +1864,7 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
 
   Future<void> _chargerFrais() async {
     try {
-      final frais = await FraisScolaireService.listerFrais(
-        classeId: widget.classeId,
-        anneeId: widget.anneeId,
-      );
+      final frais = await FraisScolaireService.listerFrais(classeId: widget.classeId, anneeId: widget.anneeId);
       setState(() {
         _frais = frais;
         _chargement = false;
@@ -945,10 +1876,7 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
   }
 
   void _recalculerMontant() {
-    final frais = _frais.firstWhere(
-      (f) => f['type'] == _type,
-      orElse: () => null,
-    );
+    final frais = _frais.firstWhere((f) => f['type'] == _type, orElse: () => null);
     if (frais == null) {
       _montantController.text = '';
       return;
@@ -965,12 +1893,7 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
   Future<void> _enregistrer() async {
     final montant = double.tryParse(_montantController.text);
     if (montant == null || montant <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Montant invalide'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Montant invalide'), backgroundColor: _rouge));
       return;
     }
 
@@ -984,26 +1907,13 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
         montant: montant,
         tranche: '$typeLabel — $_tranche',
         datePaiement: _formatDate(_date),
-        reference: _referenceController.text.isEmpty
-            ? null
-            : _referenceController.text,
+        reference: _referenceController.text.isEmpty ? null : _referenceController.text,
       );
-
-      if (mounted) {
-        Navigator.pop(context, {
-          'montant': montant,
-          'tranche_label': '$typeLabel ($_tranche)',
-        });
-      }
+      if (mounted) Navigator.pop(context, {'montant': montant, 'tranche_label': '$typeLabel ($_tranche)'});
     } catch (e) {
       setState(() => _enregistrement = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString().replaceAll('Exception: ', '')),
-            backgroundColor: Colors.red,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge));
       }
     }
   }
@@ -1019,21 +1929,11 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
-                value: _type,
-                decoration: const InputDecoration(
-                  labelText: 'Type',
-                  prefixIcon: Icon(Icons.category),
-                  border: OutlineInputBorder(),
-                ),
+                initialValue: _type,
+                decoration: const InputDecoration(labelText: 'Type', prefixIcon: Icon(Icons.category), border: OutlineInputBorder()),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'inscription',
-                    child: Text('Inscription'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'scolarite',
-                    child: Text('Scolarité'),
-                  ),
+                  DropdownMenuItem(value: 'inscription', child: Text('Inscription')),
+                  DropdownMenuItem(value: 'scolarite', child: Text('Scolarité')),
                 ],
                 onChanged: (v) => setState(() {
                   _type = v!;
@@ -1042,29 +1942,13 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _tranche,
-                decoration: const InputDecoration(
-                  labelText: 'Tranche',
-                  prefixIcon: Icon(Icons.layers),
-                  border: OutlineInputBorder(),
-                ),
+                initialValue: _tranche,
+                decoration: const InputDecoration(labelText: 'Tranche', prefixIcon: Icon(Icons.layers), border: OutlineInputBorder()),
                 items: const [
-                  DropdownMenuItem(
-                    value: 'Tranche 1',
-                    child: Text('Tranche 1'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Tranche 2',
-                    child: Text('Tranche 2'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Tranche 3',
-                    child: Text('Tranche 3'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'Paiement complet',
-                    child: Text('Paiement complet'),
-                  ),
+                  DropdownMenuItem(value: 'Tranche 1', child: Text('Tranche 1')),
+                  DropdownMenuItem(value: 'Tranche 2', child: Text('Tranche 2')),
+                  DropdownMenuItem(value: 'Tranche 3', child: Text('Tranche 3')),
+                  DropdownMenuItem(value: 'Paiement complet', child: Text('Paiement complet')),
                 ],
                 onChanged: (v) => setState(() {
                   _tranche = v!;
@@ -1075,11 +1959,7 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
               TextField(
                 controller: _montantController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Montant (FCFA)',
-                  prefixIcon: Icon(Icons.attach_money),
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Montant (FCFA)', prefixIcon: Icon(Icons.attach_money), border: OutlineInputBorder()),
               ),
               const SizedBox(height: 12),
               ListTile(
@@ -1087,52 +1967,26 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
                 leading: const Icon(Icons.date_range),
                 title: Text('Date : ${_date.day}/${_date.month}/${_date.year}'),
                 onTap: () async {
-                  final d = await showDatePicker(
-                    context: context,
-                    initialDate: _date,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime(2030),
-                  );
+                  final d = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2030));
                   if (d != null) setState(() => _date = d);
                 },
               ),
               TextField(
                 controller: _referenceController,
-                decoration: const InputDecoration(
-                  labelText: 'Référence (optionnel)',
-                  prefixIcon: Icon(Icons.receipt),
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Référence (optionnel)', prefixIcon: Icon(Icons.receipt), border: OutlineInputBorder()),
               ),
-              if (_chargement)
-                const Padding(
-                  padding: EdgeInsets.only(top: 12),
-                  child: LinearProgressIndicator(),
-                ),
+              if (_chargement) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
             ],
           ),
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
-        ),
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.teal,
-            foregroundColor: Colors.white,
-          ),
+          style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white),
           onPressed: _enregistrement ? null : _enregistrer,
           child: _enregistrement
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Text('Enregistrer'),
         ),
       ],

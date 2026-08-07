@@ -151,10 +151,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/periodes/alertes',                   [PeriodeAcademiqueController::class, 'alertes']);
 
     // Élèves
-    Route::get('/eleves',                    [EleveController::class, 'index']);
-    Route::get('/eleves/classe/{classeId}',  [EleveController::class, 'parClasse']);
-    Route::post('/eleves',                   [EleveController::class, 'creer']);
-    Route::get('/eleves/{id}',               [EleveController::class, 'show']);
+    Route::get('/eleves/tableau-de-bord',       [EleveController::class, 'tableauDeBord']);
+    Route::get('/eleves/liste-intelligente',        [EleveController::class, 'listeIntelligente']);
+    Route::get('/eleves/liste-intelligente/pdf',    [EleveController::class, 'exporterListeIntelligentePdf']);
+    Route::get('/eleves/liste-intelligente/excel',  [EleveController::class, 'exporterListeIntelligenteExcel']);
+    Route::get('/eleves/exporter-pdf',          [EleveController::class, 'exporterPdf']);
+    Route::get('/eleves/exporter-excel',        [EleveController::class, 'exporterExcel']);
+    Route::get('/eleves/classe/{classeId}',     [EleveController::class, 'elevesParClasse']);
+    Route::get('/eleves',                       [EleveController::class, 'index']);
+    Route::post('/eleves',                      [EleveController::class, 'store']);
+    Route::get('/eleves/{id}',                  [EleveController::class, 'show']);
+    Route::put('/eleves/{id}',                  [EleveController::class, 'update']);
+    Route::patch('/eleves/{id}/statut',         [EleveController::class, 'changerStatut']);
+    Route::post('/eleves/{id}/photo',           [EleveController::class, 'uploaderPhoto']);
+    Route::post('/eleves/{id}/parents',         [EleveController::class, 'gererParents']);
+    Route::post('/eleves/{id}/documents',       [EleveController::class, 'uploaderDocument']);
+    Route::delete('/eleves/{eleveId}/documents/{docId}', [EleveController::class, 'supprimerDocument']);
+    Route::get('/eleves/{id}/chronologie',      [EleveController::class, 'chronologie']);
 
     // Notes
     Route::get('/notes',              [NoteController::class, 'index']);
@@ -199,7 +212,6 @@ Route::get('/absences/eleve/{eleveId}',    [AbsenceController::class, 'parEleve'
 Route::get('/absences/statistiques',       [AbsenceController::class, 'statistiques']);
 Route::post('/bulletins/eleve/pdf', [BulletinController::class, 'genererPdf']);
 Route::get('/paiements/{id}/recu', [PaiementController::class, 'genererRecuPdf']);
-Route::post('/eleves/{id}/photo', [EleveController::class, 'uploaderPhoto']);
 
 
 // Dans le groupe auth:sanctum

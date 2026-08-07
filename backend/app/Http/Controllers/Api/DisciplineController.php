@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ChronologieEleve;
 use App\Models\Classe;
 use App\Models\Sanction;
 use Illuminate\Http\Request;
@@ -47,6 +48,17 @@ class DisciplineController extends Controller
             ...$data,
             'notifie_parent' => $data['notifie_parent'] ?? false,
             'prononce_par'   => $request->user()->id,
+        ]);
+
+        ChronologieEleve::create([
+            'eleve_id'    => $sanction->eleve_id,
+            'type'        => 'sanction',
+            'titre'       => 'Sanction — ' . $sanction->type,
+            'description' => $sanction->description,
+            'icone'       => 'gavel',
+            'couleur'     => '#DC2626',
+            'reference_id'   => $sanction->id,
+            'reference_type' => 'Sanction',
         ]);
 
         return response()->json([

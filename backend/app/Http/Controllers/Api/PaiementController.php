@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Paiement;
 use App\Models\Eleve;
 use App\Models\Inscription;
+use App\Models\ChronologieEleve;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\NotificationAttente;
@@ -62,6 +63,17 @@ class PaiementController extends Controller
         'date_paiement'       => $request->date_paiement,
         'reference'           => $request->reference,
         'enregistre_par'      => $request->user()->id,
+    ]);
+
+    ChronologieEleve::create([
+        'eleve_id'    => $request->eleve_id,
+        'type'        => 'paiement',
+        'titre'       => 'Paiement enregistré',
+        'description' => number_format($request->montant, 0, ',', ' ') . ' FCFA — ' . $request->tranche,
+        'icone'       => 'payment',
+        'couleur'     => '#0D9488',
+        'reference_id'   => $paiement->id,
+        'reference_type' => 'Paiement',
     ]);
 
     // ── Créer automatiquement la notification en attente ──

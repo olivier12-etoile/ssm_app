@@ -15,6 +15,7 @@ import 'screens/directeur/fiche_annee_screen.dart';
 import 'screens/directeur/rangs_classe_screen.dart';
 import 'screens/directeur/eleves_non_en_regle_screen.dart';
 import 'screens/directeur/gestion_eleves_screen.dart';
+import 'screens/directeur/liste_intelligente_screen.dart';
 import 'screens/directeur/eleves_par_classe_screen.dart';
 import 'screens/directeur/fiche_eleve_screen.dart';
 import 'screens/directeur/gestion_affectations_screen.dart';
@@ -133,6 +134,15 @@ class SSMApp extends StatelessWidget {
             const ElevesNonEnRegleScreen(),
         '/directeur/frais': (context) => const GestionFraisScreen(),
         '/directeur/eleves': (context) => const GestionElevesScreen(),
+        '/eleves/liste-intelligente': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
+          return ListeIntelligenteScreen(
+            type: args['type'] as String,
+            titre: args['titre'] as String,
+          );
+        },
         '/directeur/eleves/classe': (context) {
           final args =
               ModalRoute.of(context)!.settings.arguments
