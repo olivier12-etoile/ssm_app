@@ -6,7 +6,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../services/statistique_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/absence_service.dart';
-import '../../services/frais_scolaire_service.dart';
+import '../../services/dashboard_frais_service.dart';
 import '../../widgets/ssm_widgets.dart';
 
 const Color _indigo = Color(0xFF1E3A8A);
@@ -129,6 +129,14 @@ class _StatistiquesScreenState extends State<StatistiquesScreen>
     }
   }
 
+  Future<Map<String, dynamic>> _chargerResumeFinancierSecurise() async {
+    try {
+      return await DashboardFraisService.resume();
+    } catch (_) {
+      return <String, dynamic>{};
+    }
+  }
+
   Future<void> _chargerStats() async {
     setState(() => _chargement = true);
     try {
@@ -138,9 +146,7 @@ class _StatistiquesScreenState extends State<StatistiquesScreen>
           periodeId: _periodeId,
         ),
         AbsenceService.statistiques(),
-        _anneeId != null
-            ? FraisScolaireService.rapportFinancier(anneeId: _anneeId!)
-            : Future.value(<String, dynamic>{}),
+        _chargerResumeFinancierSecurise(),
       ]);
 
       setState(() {
@@ -214,17 +220,11 @@ class _StatistiquesScreenState extends State<StatistiquesScreen>
   }
 
   double get _totalAttendu =>
-      (_rapportFinancier?['total_global']?['total_attendu'] as num?)
-          ?.toDouble() ??
-      0;
+      (_rapportFinancier?['montant_attendu'] as num?)?.toDouble() ?? 0;
   double get _totalEncaisseAnnee =>
-      (_rapportFinancier?['total_global']?['total_encaisse'] as num?)
-          ?.toDouble() ??
-      0;
+      (_rapportFinancier?['montant_encaisse'] as num?)?.toDouble() ?? 0;
   double get _resteAPercevoir =>
-      (_rapportFinancier?['total_global']?['total_restant'] as num?)
-          ?.toDouble() ??
-      0;
+      (_rapportFinancier?['montant_restant'] as num?)?.toDouble() ?? 0;
 
   @override
   Widget build(BuildContext context) {

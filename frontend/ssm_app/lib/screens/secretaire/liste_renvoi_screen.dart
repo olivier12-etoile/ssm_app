@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/paiement_service.dart';
+import '../../services/dashboard_frais_service.dart';
 import '../../services/classe_service.dart';
-import '../../services/annee_service.dart';
 
 class ListeRenvoiScreen extends StatefulWidget {
   const ListeRenvoiScreen({super.key});
@@ -12,12 +11,10 @@ class ListeRenvoiScreen extends StatefulWidget {
 
 class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
   List<dynamic> _classes = [];
-  List<dynamic> _annees = [];
   List<dynamic> _nonAJour = [];
   bool _chargement = true;
   bool _chargementListe = false;
   int? _classeId;
-  int? _anneeId;
   final _montantController = TextEditingController();
 
   @override
@@ -34,13 +31,9 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
 
   Future<void> _chargerDonnees() async {
     try {
-      final resultats = await Future.wait([
-        ClasseService.listerClasses(),
-        AnneeService.listerAnnees(),
-      ]);
+      final classes = await ClasseService.listerClasses();
       setState(() {
-        _classes = resultats[0] as List;
-        _annees = resultats[1] as List;
+        _classes = classes;
         _chargement = false;
       });
     } catch (e) {
@@ -49,10 +42,10 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
     }
   }
 
+  // Liste les débiteurs de la classe dont le montant déjà payé est
+  // inférieur au montant exigé pour être autorisé en classe.
   Future<void> _genererListe() async {
-    if (_classeId == null ||
-        _anneeId == null ||
-        _montantController.text.isEmpty) {
+    if (_classeId == null || _montantController.text.isEmpty) {
       _afficherErreur('Remplissez tous les champs');
       return;
     }
@@ -66,13 +59,13 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
     setState(() => _chargementListe = true);
 
     try {
-      final data = await PaiementService.listeRenvoi(
-        classeId: _classeId!,
-        anneeAcademiqueId: _anneeId!,
-        montantExige: montant,
-      );
+      final data = await DashboardFraisService.debiteurs(classeId: _classeId);
+      final nonAJour = (data['debiteurs'] as List).where((d) {
+        final montantPaye = double.tryParse(d['montant_paye'].toString()) ?? 0;
+        return montantPaye < montant;
+      }).toList();
       setState(() {
-        _nonAJour = data['non_a_jour'] as List;
+        _nonAJour = nonAJour;
         _chargementListe = false;
       });
     } catch (e) {
@@ -111,7 +104,7 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
                     children: [
                       // Classe
                       DropdownButtonFormField<int>(
-                        value: _classeId,
+                        initialValue: _classeId,
                         isExpanded: true,
                         decoration: const InputDecoration(
                           labelText: 'Classe',
@@ -126,26 +119,6 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
                           );
                         }).toList(),
                         onChanged: (v) => setState(() => _classeId = v),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Année
-                      DropdownButtonFormField<int>(
-                        value: _anneeId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Année académique',
-                          prefixIcon: Icon(Icons.calendar_month),
-                          border: OutlineInputBorder(),
-                        ),
-                        hint: const Text('Choisir une année'),
-                        items: _annees.map((a) {
-                          return DropdownMenuItem<int>(
-                            value: a['id'] as int,
-                            child: Text(a['libelle'] as String),
-                          );
-                        }).toList(),
-                        onChanged: (v) => setState(() => _anneeId = v),
                       ),
                       const SizedBox(height: 12),
 
@@ -248,7 +221,7 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
                                   ),
                                 ),
                                 subtitle: Text(
-                                  'Matricule : ${e['matricule']}\nPayé : ${e['total_paye']} FCFA',
+                                  'Matricule : ${e['matricule']}\nPayé : ${e['montant_paye']} FCFA',
                                 ),
                                 trailing: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -261,7 +234,7 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
                                       ),
                                     ),
                                     Text(
-                                      '${e['montant_du']} FCFA',
+                                      '${e['montant_restant']} FCFA',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         color: Colors.red[700],

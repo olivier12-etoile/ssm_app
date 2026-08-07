@@ -105,6 +105,7 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
     final prenomController = TextEditingController();
     final telParentController = TextEditingController();
     String sexeSelectionne = 'M';
+    DateTime? dateNaissance;
 
     await showDialog(
       context: context,
@@ -151,6 +152,27 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
                           setStateDialog(() => sexeSelectionne = v!),
                     ),
                     const SizedBox(height: 12),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.cake),
+                      title: Text(
+                        dateNaissance != null
+                            ? '${dateNaissance!.day}/${dateNaissance!.month}/${dateNaissance!.year}'
+                            : 'Date de naissance',
+                      ),
+                      onTap: () async {
+                        final choisie = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime(2015),
+                          firstDate: DateTime(1995),
+                          lastDate: DateTime.now(),
+                        );
+                        if (choisie != null) {
+                          setStateDialog(() => dateNaissance = choisie);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: telParentController,
                       keyboardType: TextInputType.phone,
@@ -175,20 +197,33 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
                   foregroundColor: Colors.white,
                 ),
                 onPressed:
-                    nomController.text.isEmpty || prenomController.text.isEmpty
+                    nomController.text.isEmpty ||
+                        prenomController.text.isEmpty ||
+                        dateNaissance == null
                     ? null
                     : () async {
                         try {
-                          await EleveService.creerEleve(
+                          final resultat = await EleveService.creer(
                             nom: nomController.text,
                             prenom: prenomController.text,
                             sexe: sexeSelectionne,
+                            dateNaissance:
+                                '${dateNaissance!.year.toString().padLeft(4, '0')}-'
+                                '${dateNaissance!.month.toString().padLeft(2, '0')}-'
+                                '${dateNaissance!.day.toString().padLeft(2, '0')}',
                             classeId: widget.classeId,
                             anneeAcademiqueId: widget.anneeId,
-                            telephoneParent: telParentController.text.isEmpty
-                                ? null
-                                : telParentController.text,
                           );
+                          if (telParentController.text.isNotEmpty) {
+                            final eleveId = resultat['eleve']['id'] as int;
+                            await EleveService.modifier(eleveId, {
+                              'nom': nomController.text,
+                              'prenom': prenomController.text,
+                              'sexe': sexeSelectionne,
+                              'telephone_parent': telParentController.text,
+                            });
+                          }
+                          if (!context.mounted) return;
                           Navigator.pop(context);
                           _afficherSucces('Élève inscrit avec succès');
                           _chargerEleves();

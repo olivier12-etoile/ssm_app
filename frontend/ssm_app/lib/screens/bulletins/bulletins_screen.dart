@@ -58,20 +58,36 @@ class _BulletinsScreenState extends State<BulletinsScreen>
   Future<void> _chargerDonnees() async {
     try {
       final resultats = await Future.wait([
-        EleveService.listerEleves(),
+        _chargerTousLesEleves(),
         ClasseService.listerClasses(),
         AnneeService.listerAnnees(),
       ]);
       setState(() {
-        _eleves = resultats[0] as List;
-        _classes = resultats[1] as List;
-        _annees = resultats[2] as List;
+        _eleves = resultats[0];
+        _classes = resultats[1];
+        _annees = resultats[2];
         _chargement = false;
       });
     } catch (e) {
       setState(() => _chargement = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
+  }
+
+  // EleveService.lister() est paginé (30/page) : on parcourt toutes les
+  // pages pour reconstituer la liste complète attendue par le dropdown.
+  Future<List<dynamic>> _chargerTousLesEleves() async {
+    final tous = <dynamic>[];
+    var page = 1;
+    while (true) {
+      final resultat = await EleveService.lister(page: page);
+      tous.addAll(resultat['data'] as List);
+      final currentPage = resultat['current_page'] as int? ?? page;
+      final lastPage = resultat['last_page'] as int? ?? currentPage;
+      if (currentPage >= lastPage) break;
+      page++;
+    }
+    return tous;
   }
 
   Future<void> _chargerPeriodes(int anneeId, bool pourClasse) async {

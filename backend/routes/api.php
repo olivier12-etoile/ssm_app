@@ -23,6 +23,10 @@ use App\Http\Controllers\Api\AppreciationController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\EvaluationController;
 use App\Http\Controllers\Api\FraisScolaireController;
+use App\Http\Controllers\Api\DashboardFraisController;
+use App\Http\Controllers\Api\SituationFinanciereController;
+use App\Http\Controllers\Api\RemiseController;
+use App\Http\Controllers\Api\ExonerationController;
 use App\Http\Controllers\Api\EmploiDuTempsController;
 use App\Http\Controllers\Api\CahierTexteController;
 use App\Http\Controllers\Api\DisciplineController;
@@ -95,12 +99,46 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/evaluations/moyennes-classe', [EvaluationController::class, 'moyennesClasse']);
 
     // Frais scolaires
-    Route::get('/frais-scolaires',                     [FraisScolaireController::class, 'index']);
-    Route::post('/frais-scolaires',                    [FraisScolaireController::class, 'enregistrer']);
-    Route::get('/frais-scolaires/situation/{eleveId}',  [FraisScolaireController::class, 'situationEleve']);
-    Route::get('/frais-scolaires/situation-classe',     [FraisScolaireController::class, 'situationClasse']);
-    Route::get('/frais-scolaires/rapport',              [FraisScolaireController::class, 'rapportFinancier']);
-    Route::get('/frais-scolaires/rapport-pdf',          [FraisScolaireController::class, 'genererRapportPdf']);
+    Route::prefix('frais-scolaires')->group(function () {
+        Route::get('/',        [FraisScolaireController::class, 'index']);
+        Route::post('/',       [FraisScolaireController::class, 'store']);
+        Route::get('/{id}',    [FraisScolaireController::class, 'show']);
+        Route::put('/{id}',    [FraisScolaireController::class, 'update']);
+        Route::delete('/{id}', [FraisScolaireController::class, 'destroy']);
+    });
+
+    // Frais scolaires — tableau de bord et rapports
+    Route::prefix('frais-scolaires/dashboard')->group(function () {
+        Route::get('/resume',                 [DashboardFraisController::class, 'resume']);
+        Route::get('/debiteurs',              [DashboardFraisController::class, 'debiteurs']);
+        Route::get('/a-jour',                 [DashboardFraisController::class, 'elevesAJour']);
+        Route::get('/statistiques',           [DashboardFraisController::class, 'statistiques']);
+        Route::get('/rapport',                [DashboardFraisController::class, 'rapport']);
+        Route::get('/journal',                [DashboardFraisController::class, 'journalOperations']);
+        Route::get('/debiteurs/export-excel', [DashboardFraisController::class, 'exportDebiteursExcel']);
+        Route::get('/debiteurs/export-pdf',   [DashboardFraisController::class, 'exportDebiteursPdf']);
+    });
+
+    // Paiements
+    Route::get('/paiements',                [PaiementController::class, 'index']);
+    Route::post('/paiements',               [PaiementController::class, 'store']);
+    Route::post('/paiements/{id}/annuler',  [PaiementController::class, 'annuler']);
+    Route::get('/paiements/{id}/recu',      [PaiementController::class, 'recu']);
+
+    // Situation financière
+    Route::get('/eleves/{id}/situation-financiere', [SituationFinanciereController::class, 'show']);
+
+    // Remises
+    Route::get('/remises',        [RemiseController::class, 'index']);
+    Route::post('/remises',       [RemiseController::class, 'store']);
+    Route::put('/remises/{id}',   [RemiseController::class, 'update']);
+    Route::delete('/remises/{id}', [RemiseController::class, 'destroy']);
+
+    // Exonérations
+    Route::get('/exonerations',        [ExonerationController::class, 'index']);
+    Route::post('/exonerations',       [ExonerationController::class, 'store']);
+    Route::put('/exonerations/{id}',   [ExonerationController::class, 'update']);
+    Route::delete('/exonerations/{id}', [ExonerationController::class, 'destroy']);
 
     // Emploi du temps
     Route::get('/emploi-du-temps/classe',              [EmploiDuTempsController::class, 'parClasse']);
@@ -176,15 +214,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notes/valider',     [NoteController::class, 'valider']);
     Route::post('/notes/rejeter',     [NoteController::class, 'rejeter']);
 
-    
-
-// Paiements
-Route::get('/paiements',                   [PaiementController::class, 'index']);
-Route::get('/paiements/eleve/{eleveId}',   [PaiementController::class, 'parEleve']);
-Route::post('/paiements',                  [PaiementController::class, 'enregistrer']);
-Route::post('/paiements/liste-renvoi',     [PaiementController::class, 'listeRenvoi']);
-Route::get('/paiements/statistiques',      [PaiementController::class, 'statistiques']);
-
 
 
 // Dans le groupe auth:sanctum
@@ -211,7 +240,6 @@ Route::patch('/absences/{id}/justifier',   [AbsenceController::class, 'justifier
 Route::get('/absences/eleve/{eleveId}',    [AbsenceController::class, 'parEleve']);
 Route::get('/absences/statistiques',       [AbsenceController::class, 'statistiques']);
 Route::post('/bulletins/eleve/pdf', [BulletinController::class, 'genererPdf']);
-Route::get('/paiements/{id}/recu', [PaiementController::class, 'genererRecuPdf']);
 
 
 // Dans le groupe auth:sanctum

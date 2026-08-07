@@ -5,10 +5,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../models/frais_scolaire_model.dart';
 import '../../services/eleve_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/paiement_service.dart';
 import '../../services/frais_scolaire_service.dart';
+import '../../services/situation_financiere_service.dart';
 import '../../services/bulletin_service.dart';
 import '../../services/discipline_service.dart';
 import '../../services/whatsapp_service.dart';
@@ -245,7 +247,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       ];
 
       if (anneeId != null) {
-        taches.add(FraisScolaireService.situationEleve(eleveId: widget.eleveId, anneeId: anneeId));
+        taches.add(SituationFinanciereService.getSituation(widget.eleveId, anneeScolaireId: anneeId));
         taches.add(AnneeService.listerPeriodes(anneeId));
       }
 
@@ -306,7 +308,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
     if (_anneeId == null) return;
     try {
       final resultats = await Future.wait([
-        FraisScolaireService.situationEleve(eleveId: widget.eleveId, anneeId: _anneeId!),
+        SituationFinanciereService.getSituation(widget.eleveId, anneeScolaireId: _anneeId!),
         PaiementService.paiementsEleve(widget.eleveId),
       ]);
       setState(() {
@@ -892,11 +894,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       return Center(child: Text('Situation financière indisponible', style: GoogleFonts.inter(color: _gris)));
     }
 
-    final statut = s['statut'] as String;
-    final enRegle = statut == 'en_regle';
-    final montantDu = double.tryParse(s['montant_total_du'].toString()) ?? 0;
+    final montantDu = double.tryParse(s['montant_attendu'].toString()) ?? 0;
     final montantPaye = double.tryParse(s['montant_paye'].toString()) ?? 0;
-    final montantRestant = double.tryParse(s['montant_restant'].toString()) ?? 0;
+    final montantRestant = double.tryParse(s['reste_a_payer'].toString()) ?? 0;
+    final enRegle = montantRestant <= 0;
     final progression = montantDu > 0 ? (montantPaye / montantDu).clamp(0.0, 1.0) : 1.0;
 
     return ListView(
@@ -950,13 +951,18 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
         if (_paiements.isEmpty)
           Text('Aucun paiement enregistré', style: GoogleFonts.inter(color: _gris))
         else
-          ..._paiements.map((p) => Container(
+          ..._paiements.map((p) {
+            final frais = p['frais_scolaire'] as Map<String, dynamic>?;
+            final echeance = p['echeance'] as Map<String, dynamic>?;
+            final estAnnule = p['statut'] == 'annule';
+            final libelle = [frais?['nom'], echeance?['libelle']].where((v) => v != null).join(' — ');
+            return Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 child: SSMListeTile(
-                  titre: '${p['montant']} FCFA',
-                  sousTitre: '${p['tranche']} · ${_formatDateCourt(p['date_paiement'] as String?)}',
+                  titre: '${p['montant']} FCFA${estAnnule ? ' (annulé)' : ''}',
+                  sousTitre: '$libelle · ${_formatDateCourt(p['date_paiement'] as String?)}',
                   icone: Icons.payment,
-                  couleurIcone: _teal,
+                  couleurIcone: estAnnule ? _gris : _teal,
                   trailing: IconButton(
                     icon: const Icon(Icons.receipt_long, color: _indigo),
                     onPressed: () async {
@@ -969,7 +975,8 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                     },
                   ),
                 ),
-              )),
+              );
+          }),
       ],
     );
   }
@@ -1635,7 +1642,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                   nomParent: 'Cher parent',
                   nomEleve: nomEleve,
                   classe: classeNom,
-                  montantDu: '${_situationFinanciere?['montant_restant'] ?? 0}',
+                  montantDu: '${_situationFinanciere?['reste_a_payer'] ?? 0}',
                   dateLimit: 'dès que possible',
                   nomEcole: "L'établissement",
                 );
@@ -1839,9 +1846,10 @@ class _DialogPaiementRapide extends StatefulWidget {
 }
 
 class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
-  String _type = 'scolarite';
-  String _tranche = 'Tranche 1';
-  List<dynamic> _frais = [];
+  List<FraisScolaire> _frais = [];
+  FraisScolaire? _fraisSelectionne;
+  EcheanceFrais? _echeanceSelectionnee;
+  String _modePaiement = 'especes';
   bool _chargement = true;
   bool _enregistrement = false;
   DateTime _date = DateTime.now();
@@ -1864,52 +1872,58 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
 
   Future<void> _chargerFrais() async {
     try {
-      final frais = await FraisScolaireService.listerFrais(classeId: widget.classeId, anneeId: widget.anneeId);
+      final frais = await FraisScolaireService.getFrais(
+        classeId: widget.classeId,
+        anneeScolaireId: widget.anneeId,
+        actif: true,
+      );
       setState(() {
         _frais = frais;
+        _fraisSelectionne = frais.isNotEmpty ? frais.first : null;
         _chargement = false;
-        _recalculerMontant();
       });
+      _recalculerMontant();
     } catch (e) {
       setState(() => _chargement = false);
     }
   }
 
   void _recalculerMontant() {
-    final frais = _frais.firstWhere((f) => f['type'] == _type, orElse: () => null);
-    if (frais == null) {
-      _montantController.text = '';
-      return;
-    }
-    final montant = switch (_tranche) {
-      'Tranche 1' => frais['montant_tranche_1'],
-      'Tranche 2' => frais['montant_tranche_2'],
-      'Tranche 3' => frais['montant_tranche_3'],
-      _ => frais['montant_total'],
-    };
-    _montantController.text = montant != null ? montant.toString() : '';
+    final montant = _echeanceSelectionnee?.montant ?? _fraisSelectionne?.montant;
+    _montantController.text = montant != null
+        ? (montant == montant.roundToDouble() ? montant.toInt().toString() : montant.toString())
+        : '';
   }
 
   Future<void> _enregistrer() async {
-    final montant = double.tryParse(_montantController.text);
+    final montant = double.tryParse(_montantController.text.replaceAll(',', '.'));
+    if (_fraisSelectionne == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sélectionnez un frais'), backgroundColor: _rouge));
+      return;
+    }
     if (montant == null || montant <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Montant invalide'), backgroundColor: _rouge));
       return;
     }
 
     setState(() => _enregistrement = true);
-    final typeLabel = _type == 'inscription' ? 'Inscription' : 'Scolarité';
 
     try {
       await PaiementService.enregistrer(
         eleveId: widget.eleveId,
-        anneeAcademiqueId: widget.anneeId,
+        fraisScolaireId: _fraisSelectionne!.id!,
+        echeanceId: _echeanceSelectionnee?.id,
         montant: montant,
-        tranche: '$typeLabel — $_tranche',
-        datePaiement: _formatDate(_date),
+        modePaiement: _modePaiement,
+        datePaiement: formatDateApi(_date),
         reference: _referenceController.text.isEmpty ? null : _referenceController.text,
       );
-      if (mounted) Navigator.pop(context, {'montant': montant, 'tranche_label': '$typeLabel ($_tranche)'});
+      if (mounted) {
+        Navigator.pop(context, {
+          'montant': montant,
+          'tranche_label': _echeanceSelectionnee?.libelle ?? _fraisSelectionne!.nom,
+        });
+      }
     } catch (e) {
       setState(() => _enregistrement = false);
       if (mounted) {
@@ -1920,6 +1934,8 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
 
   @override
   Widget build(BuildContext context) {
+    final echeances = _fraisSelectionne?.echeances ?? [];
+
     return AlertDialog(
       title: const Text('Enregistrer un paiement'),
       content: SizedBox(
@@ -1928,54 +1944,75 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              DropdownButtonFormField<String>(
-                initialValue: _type,
-                decoration: const InputDecoration(labelText: 'Type', prefixIcon: Icon(Icons.category), border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'inscription', child: Text('Inscription')),
-                  DropdownMenuItem(value: 'scolarite', child: Text('Scolarité')),
+              if (_chargement)
+                const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: LinearProgressIndicator())
+              else if (_frais.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Text('Aucun frais configuré pour cette classe', style: GoogleFonts.inter(color: _gris)),
+                )
+              else ...[
+                DropdownButtonFormField<FraisScolaire>(
+                  initialValue: _fraisSelectionne,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Frais *', prefixIcon: Icon(Icons.category), border: OutlineInputBorder()),
+                  items: _frais.map((f) => DropdownMenuItem(value: f, child: Text(f.nom))).toList(),
+                  onChanged: (v) => setState(() {
+                    _fraisSelectionne = v;
+                    _echeanceSelectionnee = null;
+                    _recalculerMontant();
+                  }),
+                ),
+                if (echeances.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<EcheanceFrais?>(
+                    initialValue: _echeanceSelectionnee,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Échéance', prefixIcon: Icon(Icons.layers), border: OutlineInputBorder()),
+                    items: [
+                      const DropdownMenuItem<EcheanceFrais?>(value: null, child: Text('Paiement complet')),
+                      ...echeances.map((e) => DropdownMenuItem(value: e, child: Text(e.libelle))),
+                    ],
+                    onChanged: (v) => setState(() {
+                      _echeanceSelectionnee = v;
+                      _recalculerMontant();
+                    }),
+                  ),
                 ],
-                onChanged: (v) => setState(() {
-                  _type = v!;
-                  _recalculerMontant();
-                }),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _tranche,
-                decoration: const InputDecoration(labelText: 'Tranche', prefixIcon: Icon(Icons.layers), border: OutlineInputBorder()),
-                items: const [
-                  DropdownMenuItem(value: 'Tranche 1', child: Text('Tranche 1')),
-                  DropdownMenuItem(value: 'Tranche 2', child: Text('Tranche 2')),
-                  DropdownMenuItem(value: 'Tranche 3', child: Text('Tranche 3')),
-                  DropdownMenuItem(value: 'Paiement complet', child: Text('Paiement complet')),
-                ],
-                onChanged: (v) => setState(() {
-                  _tranche = v!;
-                  _recalculerMontant();
-                }),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _montantController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Montant (FCFA)', prefixIcon: Icon(Icons.attach_money), border: OutlineInputBorder()),
-              ),
-              const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.date_range),
-                title: Text('Date : ${_date.day}/${_date.month}/${_date.year}'),
-                onTap: () async {
-                  final d = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2030));
-                  if (d != null) setState(() => _date = d);
-                },
-              ),
-              TextField(
-                controller: _referenceController,
-                decoration: const InputDecoration(labelText: 'Référence (optionnel)', prefixIcon: Icon(Icons.receipt), border: OutlineInputBorder()),
-              ),
-              if (_chargement) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _montantController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Montant (FCFA)', prefixIcon: Icon(Icons.attach_money), border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: _modePaiement,
+                  decoration: const InputDecoration(labelText: 'Mode de paiement *', prefixIcon: Icon(Icons.payment), border: OutlineInputBorder()),
+                  items: const [
+                    DropdownMenuItem(value: 'especes', child: Text('Espèces')),
+                    DropdownMenuItem(value: 'moov_money', child: Text('Moov Money')),
+                    DropdownMenuItem(value: 'wave', child: Text('Wave')),
+                    DropdownMenuItem(value: 'virement', child: Text('Virement')),
+                    DropdownMenuItem(value: 'cheque', child: Text('Chèque')),
+                  ],
+                  onChanged: (v) => setState(() => _modePaiement = v!),
+                ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.date_range),
+                  title: Text('Date : ${_date.day}/${_date.month}/${_date.year}'),
+                  onTap: () async {
+                    final d = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2030));
+                    if (d != null) setState(() => _date = d);
+                  },
+                ),
+                TextField(
+                  controller: _referenceController,
+                  decoration: const InputDecoration(labelText: 'Référence (optionnel)', prefixIcon: Icon(Icons.receipt), border: OutlineInputBorder()),
+                ),
+              ],
             ],
           ),
         ),
@@ -1984,7 +2021,7 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
         ElevatedButton(
           style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white),
-          onPressed: _enregistrement ? null : _enregistrer,
+          onPressed: _enregistrement || _frais.isEmpty ? null : _enregistrer,
           child: _enregistrement
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
               : const Text('Enregistrer'),

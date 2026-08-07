@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/annee_service.dart';
-import '../../services/frais_scolaire_service.dart';
+import '../../services/dashboard_frais_service.dart';
 import '../../widgets/ssm_widgets.dart';
 
 const Color _indigo = Color(0xFF1E3A8A);
@@ -826,10 +826,9 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
               ),
               onPressed: () async {
                 try {
-                  final chemin =
-                      await FraisScolaireService.telechargerRapportPdf(
-                        anneeId: widget.anneeId,
-                      );
+                  final chemin = await DashboardFraisService.telechargerRapport(
+                    anneeScolaireId: widget.anneeId,
+                  );
                   await OpenFile.open(chemin);
                 } catch (e) {
                   _afficherErreur(e.toString().replaceAll('Exception: ', ''));

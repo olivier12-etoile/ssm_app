@@ -1473,6 +1473,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     final nomController = TextEditingController();
     final prenomController = TextEditingController();
     String sexe = 'M';
+    DateTime? dateNaissance;
 
     if (_anneeId == null) {
       _afficherErreur('Aucune année académique active');
@@ -1507,6 +1508,27 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   onSelectionChanged: (s) =>
                       setStateDialog(() => sexe = s.first),
                 ),
+                const SizedBox(height: 12),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.cake),
+                  title: Text(
+                    dateNaissance != null
+                        ? '${dateNaissance!.day}/${dateNaissance!.month}/${dateNaissance!.year}'
+                        : 'Date de naissance',
+                  ),
+                  onTap: () async {
+                    final choisie = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime(2015),
+                      firstDate: DateTime(1995),
+                      lastDate: DateTime.now(),
+                    );
+                    if (choisie != null) {
+                      setStateDialog(() => dateNaissance = choisie);
+                    }
+                  },
+                ),
               ],
             ),
             actions: [
@@ -1517,13 +1539,19 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               ElevatedButton(
                 onPressed: () async {
                   if (nomController.text.isEmpty ||
-                      prenomController.text.isEmpty)
+                      prenomController.text.isEmpty ||
+                      dateNaissance == null) {
                     return;
+                  }
                   try {
-                    await EleveService.creerEleve(
+                    await EleveService.creer(
                       nom: nomController.text,
                       prenom: prenomController.text,
                       sexe: sexe,
+                      dateNaissance:
+                          '${dateNaissance!.year.toString().padLeft(4, '0')}-'
+                          '${dateNaissance!.month.toString().padLeft(2, '0')}-'
+                          '${dateNaissance!.day.toString().padLeft(2, '0')}',
                       classeId: widget.classeId,
                       anneeAcademiqueId: _anneeId!,
                     );

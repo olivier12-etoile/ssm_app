@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
+import '../../models/frais_scolaire_model.dart';
 import '../../services/paiement_service.dart';
 import '../../services/frais_scolaire_service.dart';
+import '../../services/dashboard_frais_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
@@ -14,6 +16,14 @@ const List<String> _moisFrancais = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
   'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
+
+const Map<String, String> _libellesModePaiement = {
+  'especes': 'Espèces',
+  'moov_money': 'Moov Money',
+  'wave': 'Wave',
+  'virement': 'Virement',
+  'cheque': 'Chèque',
+};
 
 String _libelleStatut(String statut) {
   switch (statut) {
@@ -68,15 +78,14 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
   // ── Onglet 2 : Situation des élèves ───────────────────
   int? _situationClasseId;
   Map<String, dynamic>? _situationData;
-  List<dynamic> _elevesInfoClasse = [];
   bool _chargementSituation = false;
   String _filtreStatut = 'tous';
 
   // ── Onglet 3 : Rapport financier ──────────────────────
+  Map<String, dynamic>? _resume;
+  bool _chargementResume = false;
   int? _rapportAnneeId;
-  int? _rapportMois;
-  Map<String, dynamic>? _rapportData;
-  bool _chargementRapport = false;
+  String _formatExport = 'pdf';
   bool _exportEnCours = false;
 
   @override
@@ -116,7 +125,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
         _chargementInitial = false;
       });
 
-      await _chargerPaiements();
+      await Future.wait([_chargerPaiements(), _chargerResume()]);
     } catch (e) {
       setState(() => _chargementInitial = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
@@ -150,7 +159,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
   Future<void> _chargerPaiements() async {
     setState(() => _chargementPaiements = true);
     try {
-      final paiements = await PaiementService.listerPaiements();
+      final paiements = await PaiementService.lister();
       setState(() {
         _paiements = paiements;
         _chargementPaiements = false;
@@ -223,6 +232,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
 
     _afficherSucces('Paiement enregistré avec succès');
     _chargerPaiements();
+    _chargerResume();
     if (_situationClasseId != null) _chargerSituationClasse();
 
     final eleve = resultat['eleve'];
@@ -260,7 +270,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
       nomEleve: '${eleve['nom']} ${eleve['prenom']}',
       classe: resultat['classe_nom'] as String? ?? '',
       montant: '${resultat['montant']}',
-      tranche: resultat['tranche_label'] as String? ?? '',
+      tranche: resultat['frais_nom'] as String? ?? '',
       nomEcole: 'École (Code : $_nomEcole)',
     );
 
@@ -278,13 +288,13 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
     return Column(
       children: [
         Container(
-          color: Colors.teal.withOpacity(0.05),
+          color: Colors.teal.withValues(alpha: 0.05),
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
               Expanded(
                 child: DropdownButtonFormField<int?>(
-                  value: _filtreClasseId,
+                  initialValue: _filtreClasseId,
                   isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Classe',
@@ -307,7 +317,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<int?>(
-                  value: _filtreMois,
+                  initialValue: _filtreMois,
                   isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Mois',
@@ -347,8 +357,14 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
                         final p = _paiementsFiltres[index];
                         final eleve = p['eleve'];
                         final paiementId = p['id'] as int;
-                        final enregistrePar = p['enregistre_par'];
+                        final creePar = p['cree_par'];
                         final photoUrl = eleve?['photo_url'] as String?;
+                        final frais = p['frais_scolaire'] as Map<String, dynamic>?;
+                        final echeance = p['echeance'] as Map<String, dynamic>?;
+                        final estAnnule = p['statut'] == 'annule';
+                        final libelle = [frais?['nom'], echeance?['libelle']]
+                            .where((v) => v != null)
+                            .join(' — ');
 
                         return Card(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -358,7 +374,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
                           child: ListTile(
                             contentPadding: const EdgeInsets.all(12),
                             leading: CircleAvatar(
-                              backgroundColor: Colors.teal,
+                              backgroundColor: estAnnule ? Colors.grey : Colors.teal,
                               backgroundImage:
                                   photoUrl != null ? NetworkImage(photoUrl) : null,
                               child: photoUrl == null
@@ -374,24 +390,24 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('${p['tranche']}  •  ${p['date_paiement']}'),
-                                if (enregistrePar != null)
+                                Text('$libelle  •  ${p['date_paiement']}'),
+                                if (creePar != null)
                                   Text(
-                                    'Enregistré par ${enregistrePar['name']}',
+                                    'Enregistré par ${creePar['name']}',
                                     style: const TextStyle(
                                         fontSize: 11, color: Colors.grey),
                                   ),
                               ],
                             ),
-                            isThreeLine: enregistrePar != null,
+                            isThreeLine: creePar != null,
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 Text(
-                                  '${p['montant']} FCFA',
-                                  style: const TextStyle(
+                                  '${p['montant']} FCFA${estAnnule ? ' (annulé)' : ''}',
+                                  style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.green,
+                                    color: estAnnule ? Colors.red : Colors.green,
                                     fontSize: 14,
                                   ),
                                 ),
@@ -425,34 +441,60 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
   // ══════════════════════════════════════════════════════
 
   Future<void> _chargerSituationClasse() async {
-    if (_situationClasseId == null || _anneeIdEnCours == null) return;
+    if (_situationClasseId == null) return;
 
     setState(() => _chargementSituation = true);
     try {
       final resultats = await Future.wait([
-        FraisScolaireService.situationClasse(
-          classeId: _situationClasseId!,
-          anneeId: _anneeIdEnCours!,
-        ),
-        EleveService.elevesParClasse(_situationClasseId!, _anneeIdEnCours!),
+        DashboardFraisService.debiteurs(classeId: _situationClasseId),
+        DashboardFraisService.elevesAJour(classeId: _situationClasseId),
       ]);
 
+      final debiteurs = (resultats[0]['debiteurs'] as List).map((d) {
+        final montantPaye = double.tryParse(d['montant_paye'].toString()) ?? 0;
+        return {
+          'eleve_id': d['eleve_id'],
+          'nom': d['nom'],
+          'prenom': d['prenom'],
+          'montant_du': d['montant_attendu'],
+          'montant_paye': d['montant_paye'],
+          'montant_restant': d['montant_restant'],
+          'statut': montantPaye > 0 ? 'partiel' : 'non_paye',
+          'telephone_parent': d['telephone_parent'],
+        };
+      }).toList();
+
+      final aJour = (resultats[1]['eleves'] as List).map((e) {
+        return {
+          'eleve_id': e['eleve_id'],
+          'nom': e['nom'],
+          'prenom': e['prenom'],
+          'montant_du': e['montant_attendu'],
+          'montant_paye': e['montant_paye'],
+          'montant_restant': 0,
+          'statut': 'en_regle',
+          'telephone_parent': null,
+        };
+      }).toList();
+
+      final tousLesEleves = [...aJour, ...debiteurs];
+
       setState(() {
-        _situationData = resultats[0] as Map<String, dynamic>;
-        _elevesInfoClasse = resultats[1] as List;
+        _situationData = {
+          'eleves': tousLesEleves,
+          'statistiques': {
+            'total_eleves': tousLesEleves.length,
+            'en_regle': aJour.length,
+            'partiel': debiteurs.where((e) => e['statut'] == 'partiel').length,
+            'non_paye': debiteurs.where((e) => e['statut'] == 'non_paye').length,
+          },
+        };
         _chargementSituation = false;
       });
     } catch (e) {
       setState(() => _chargementSituation = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
-  }
-
-  dynamic _infoEleve(int eleveId) {
-    return _elevesInfoClasse.firstWhere(
-      (e) => e['id'] == eleveId,
-      orElse: () => null,
-    );
   }
 
   List<dynamic> get _elevesFiltresParStatut {
@@ -462,8 +504,7 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
   }
 
   Future<void> _notifierParent(dynamic eleveSituation) async {
-    final info = _infoEleve(eleveSituation['eleve_id'] as int);
-    final telephoneParent = info?['telephone_parent'] as String?;
+    final telephoneParent = eleveSituation['telephone_parent'] as String?;
 
     if (telephoneParent == null || telephoneParent.isEmpty) {
       _afficherErreur('Aucun numéro de téléphone parent enregistré');
@@ -495,10 +536,10 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
     return Column(
       children: [
         Container(
-          color: Colors.purple.withOpacity(0.05),
+          color: Colors.purple.withValues(alpha: 0.05),
           padding: const EdgeInsets.all(16),
           child: DropdownButtonFormField<int>(
-            value: _situationClasseId,
+            initialValue: _situationClasseId,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Classe',
@@ -661,131 +702,59 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
   // ONGLET 3 — Rapport financier
   // ══════════════════════════════════════════════════════
 
-  Future<void> _chargerRapport() async {
-    if (_rapportAnneeId == null) return;
-
-    setState(() => _chargementRapport = true);
+  Future<void> _chargerResume() async {
+    setState(() => _chargementResume = true);
     try {
-      final data = await FraisScolaireService.rapportFinancier(
-        anneeId: _rapportAnneeId!,
-        mois: _rapportMois,
-      );
+      final data = await DashboardFraisService.resume();
       setState(() {
-        _rapportData = data;
-        _chargementRapport = false;
+        _resume = data;
+        _chargementResume = false;
       });
     } catch (e) {
-      setState(() => _chargementRapport = false);
-      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+      setState(() => _chargementResume = false);
     }
   }
 
-  Future<void> _exporterPdf() async {
+  Future<void> _exporterRapport() async {
     if (_rapportAnneeId == null) return;
 
     setState(() => _exportEnCours = true);
     try {
-      final chemin = await FraisScolaireService.telechargerRapportPdf(
-        anneeId: _rapportAnneeId!,
-        mois: _rapportMois,
+      final chemin = await DashboardFraisService.telechargerRapport(
+        anneeScolaireId: _rapportAnneeId,
+        format: _formatExport,
       );
       await OpenFile.open(chemin);
     } catch (e) {
-      _afficherErreur('Erreur export PDF : $e');
+      _afficherErreur('Erreur export du rapport : $e');
     } finally {
       if (mounted) setState(() => _exportEnCours = false);
     }
   }
 
   Widget _ongletRapport() {
-    final totalGlobal = _rapportData?['total_global'] as Map<String, dynamic>?;
-    final parClasse = (_rapportData?['par_classe'] as List?) ?? [];
-
-    final totalAttendu = double.tryParse(
-            totalGlobal?['total_attendu']?.toString() ?? '0') ??
-        0;
-    final totalEncaisse = double.tryParse(
-            totalGlobal?['total_encaisse']?.toString() ?? '0') ??
-        0;
-    final totalRestant = double.tryParse(
-            totalGlobal?['total_restant']?.toString() ?? '0') ??
-        0;
-    final pourcentageRecouvrement =
-        totalAttendu > 0 ? (totalEncaisse / totalAttendu * 100) : 0;
+    final montantAttendu = double.tryParse(_resume?['montant_attendu']?.toString() ?? '0') ?? 0;
+    final montantEncaisse = double.tryParse(_resume?['montant_encaisse']?.toString() ?? '0') ?? 0;
+    final montantRestant = double.tryParse(_resume?['montant_restant']?.toString() ?? '0') ?? 0;
+    final tauxRecouvrement = double.tryParse(_resume?['taux_recouvrement']?.toString() ?? '0') ?? 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  value: _rapportAnneeId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Année académique',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: _annees.map((a) {
-                    return DropdownMenuItem<int>(
-                      value: a['id'] as int,
-                      child: Text(a['libelle'] as String),
-                    );
-                  }).toList(),
-                  onChanged: (v) => setState(() => _rapportAnneeId = v),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: DropdownButtonFormField<int?>(
-                  value: _rapportMois,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Mois (optionnel)',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: [
-                    const DropdownMenuItem<int?>(
-                      value: null,
-                      child: Text('Toute l\'année'),
-                    ),
-                    ...List.generate(12, (i) => i + 1).map((m) {
-                      return DropdownMenuItem<int?>(
-                        value: m,
-                        child: Text(_moisFrancais[m - 1]),
-                      );
-                    }),
-                  ],
-                  onChanged: (v) => setState(() => _rapportMois = v),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: _rapportAnneeId == null ? null : _chargerRapport,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo,
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.search),
-            label: const Text('Charger le rapport'),
-          ),
-          const SizedBox(height: 20),
-          if (_chargementRapport)
+          Text('Résumé — ${_resume?['annee_libelle'] ?? 'année en cours'}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 10),
+          if (_chargementResume)
             const Center(child: CircularProgressIndicator())
-          else if (_rapportData != null) ...[
-            // ── Cartes résumé ────────────────────────────
+          else if (_resume != null)
             Row(
               children: [
                 Expanded(
                   child: SSMStatCard(
                     titre: 'Attendu',
-                    valeur: '${totalAttendu.toStringAsFixed(0)} F',
+                    valeur: '${montantAttendu.toStringAsFixed(0)} F',
                     icone: Icons.account_balance_wallet,
                     couleurIcone: const Color(0xFF1E3A8A),
                   ),
@@ -794,78 +763,81 @@ class _GestionPaiementsScreenState extends State<GestionPaiementsScreen>
                 Expanded(
                   child: SSMStatCard(
                     titre: 'Encaissé',
-                    valeur: '${totalEncaisse.toStringAsFixed(0)} F',
+                    valeur: '${montantEncaisse.toStringAsFixed(0)} F',
                     icone: Icons.payments,
                     couleurIcone: const Color(0xFF0D9488),
-                    variation:
-                        '${pourcentageRecouvrement.toStringAsFixed(0)}% recouvré',
+                    variation: '${tauxRecouvrement.toStringAsFixed(0)}% recouvré',
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: SSMStatCard(
                     titre: 'Restant',
-                    valeur: '${totalRestant.toStringAsFixed(0)} F',
+                    valeur: '${montantRestant.toStringAsFixed(0)} F',
                     icone: Icons.warning_amber,
                     couleurIcone: const Color(0xFFEA580C),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // ── Tableau par classe ──────────────────────
-            const Text('Détail par classe',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            const SizedBox(height: 10),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Classe')),
-                  DataColumn(label: Text('Attendu')),
-                  DataColumn(label: Text('Encaissé')),
-                  DataColumn(label: Text('Restant')),
-                  DataColumn(label: Text('%')),
-                ],
-                rows: parClasse.map((c) {
-                  final attendu =
-                      double.tryParse(c['total_attendu'].toString()) ?? 0;
-                  final encaisse =
-                      double.tryParse(c['total_encaisse'].toString()) ?? 0;
-                  final restant =
-                      double.tryParse(c['total_restant'].toString()) ?? 0;
-                  final pourcentage = attendu > 0 ? (encaisse / attendu * 100) : 0;
-
-                  return DataRow(cells: [
-                    DataCell(Text(c['classe_nom'] as String)),
-                    DataCell(Text('$attendu')),
-                    DataCell(Text('$encaisse')),
-                    DataCell(Text('$restant')),
-                    DataCell(Text('${pourcentage.toStringAsFixed(0)}%')),
-                  ]);
-                }).toList(),
-              ),
+          const SizedBox(height: 24),
+          const Text('Télécharger un rapport',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<int>(
+            initialValue: _rapportAnneeId,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Année académique',
+              border: OutlineInputBorder(),
+              isDense: true,
             ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: _exportEnCours ? null : _exporterPdf,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E3A8A),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+            items: _annees.map((a) {
+              return DropdownMenuItem<int>(
+                value: a['id'] as int,
+                child: Text(a['libelle'] as String),
+              );
+            }).toList(),
+            onChanged: (v) => setState(() => _rapportAnneeId = v),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('PDF'),
+                  selected: _formatExport == 'pdf',
+                  onSelected: (_) => setState(() => _formatExport = 'pdf'),
+                ),
               ),
-              icon: _exportEnCours
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.picture_as_pdf),
-              label: const Text('Exporter en PDF'),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('Excel'),
+                  selected: _formatExport == 'excel',
+                  onSelected: (_) => setState(() => _formatExport = 'excel'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: _rapportAnneeId == null || _exportEnCours ? null : _exporterRapport,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
             ),
-          ],
+            icon: _exportEnCours
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  )
+                : Icon(_formatExport == 'excel' ? Icons.table_chart : Icons.picture_as_pdf),
+            label: Text('Télécharger le rapport (${_formatExport.toUpperCase()})'),
+          ),
         ],
       ),
     );
@@ -945,10 +917,11 @@ class _DialogNouveauPaiement extends StatefulWidget {
 class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
   int? _classeId;
   int? _eleveId;
-  String _type = 'scolarite';
-  String _tranche = 'Tranche 1';
   List<dynamic> _eleves = [];
-  List<dynamic> _frais = [];
+  List<FraisScolaire> _frais = [];
+  FraisScolaire? _fraisSelectionne;
+  EcheanceFrais? _echeanceSelectionnee;
+  String _modePaiement = 'especes';
   bool _chargementClasse = false;
   bool _enregistrement = false;
   DateTime _date = DateTime.now();
@@ -976,16 +949,18 @@ class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
     try {
       final resultats = await Future.wait([
         EleveService.elevesParClasse(classeId, widget.anneeIdEnCours),
-        FraisScolaireService.listerFrais(
+        FraisScolaireService.getFrais(
           classeId: classeId,
-          anneeId: widget.anneeIdEnCours,
+          anneeScolaireId: widget.anneeIdEnCours,
+          actif: true,
         ),
       ]);
       setState(() {
         _eleves = resultats[0];
-        _frais = resultats[1];
+        _frais = resultats[1] as List<FraisScolaire>;
+        _fraisSelectionne = null;
+        _echeanceSelectionnee = null;
         _chargementClasse = false;
-        _recalculerMontant();
       });
     } catch (e) {
       setState(() => _chargementClasse = false);
@@ -993,43 +968,34 @@ class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
   }
 
   void _recalculerMontant() {
-    final frais = _frais.firstWhere(
-      (f) => f['type'] == _type,
-      orElse: () => null,
-    );
-    if (frais == null) {
+    if (_fraisSelectionne == null) {
       _montantController.text = '';
       return;
     }
-    final montant = switch (_tranche) {
-      'Tranche 1' => frais['montant_tranche_1'],
-      'Tranche 2' => frais['montant_tranche_2'],
-      'Tranche 3' => frais['montant_tranche_3'],
-      _ => frais['montant_total'],
-    };
-    _montantController.text = montant != null ? montant.toString() : '';
+    final montant = _echeanceSelectionnee?.montant ?? _fraisSelectionne!.montant;
+    _montantController.text = montant.toString();
   }
 
   Future<void> _enregistrer() async {
     final montant = double.tryParse(_montantController.text);
-    if (_eleveId == null || montant == null || montant <= 0) {
+    if (_eleveId == null || _fraisSelectionne == null || montant == null || montant <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Montant invalide'), backgroundColor: Colors.red),
+            content: Text('Veuillez choisir un frais et un montant valide'),
+            backgroundColor: Colors.red),
       );
       return;
     }
 
     setState(() => _enregistrement = true);
 
-    final typeLabel = _type == 'inscription' ? 'Inscription' : 'Scolarité';
-
     try {
       await PaiementService.enregistrer(
         eleveId: _eleveId!,
-        anneeAcademiqueId: widget.anneeIdEnCours,
+        fraisScolaireId: _fraisSelectionne!.id!,
+        echeanceId: _echeanceSelectionnee?.id,
         montant: montant,
-        tranche: '$typeLabel — $_tranche',
+        modePaiement: _modePaiement,
         datePaiement: _formatDate(_date),
         reference: _referenceController.text.isEmpty
             ? null
@@ -1050,7 +1016,7 @@ class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
           'eleve': eleve,
           'classe_nom': classe?['nom'],
           'montant': montant,
-          'tranche_label': '$typeLabel ($_tranche)',
+          'frais_nom': _fraisSelectionne!.nom,
         });
       }
     } catch (e) {
@@ -1077,7 +1043,7 @@ class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<int>(
-                value: _classeId,
+                initialValue: _classeId,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Classe',
@@ -1097,13 +1063,15 @@ class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
                     _eleveId = null;
                     _eleves = [];
                     _frais = [];
+                    _fraisSelectionne = null;
+                    _echeanceSelectionnee = null;
                   });
                   if (v != null) _chargerClasse(v);
                 },
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<int>(
-                value: _eleveId,
+                initialValue: _eleveId,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Élève',
@@ -1122,43 +1090,69 @@ class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
                     : (v) => setState(() => _eleveId = v),
               ),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _type,
+              DropdownButtonFormField<FraisScolaire>(
+                initialValue: _fraisSelectionne,
+                isExpanded: true,
                 decoration: const InputDecoration(
-                  labelText: 'Type',
+                  labelText: 'Frais scolaire',
                   prefixIcon: Icon(Icons.category),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(
-                      value: 'inscription', child: Text('Inscription')),
-                  DropdownMenuItem(
-                      value: 'scolarite', child: Text('Scolarité')),
-                ],
-                onChanged: (v) => setState(() {
-                  _type = v!;
-                  _recalculerMontant();
-                }),
+                hint: const Text('Choisir un frais'),
+                items: _frais.map((f) {
+                  return DropdownMenuItem<FraisScolaire>(
+                    value: f,
+                    child: Text(f.nom),
+                  );
+                }).toList(),
+                onChanged: _frais.isEmpty
+                    ? null
+                    : (v) => setState(() {
+                          _fraisSelectionne = v;
+                          _echeanceSelectionnee = null;
+                          _recalculerMontant();
+                        }),
               ),
+              if (_fraisSelectionne != null && _fraisSelectionne!.echeances.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<EcheanceFrais?>(
+                  initialValue: _echeanceSelectionnee,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: 'Échéance',
+                    prefixIcon: Icon(Icons.layers),
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem<EcheanceFrais?>(
+                      value: null,
+                      child: Text('Paiement complet'),
+                    ),
+                    ..._fraisSelectionne!.echeances.map((e) {
+                      return DropdownMenuItem<EcheanceFrais?>(
+                        value: e,
+                        child: Text('${e.libelle} (${e.montant.toStringAsFixed(0)} F)'),
+                      );
+                    }),
+                  ],
+                  onChanged: (v) => setState(() {
+                    _echeanceSelectionnee = v;
+                    _recalculerMontant();
+                  }),
+                ),
+              ],
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _tranche,
+                initialValue: _modePaiement,
                 decoration: const InputDecoration(
-                  labelText: 'Tranche',
-                  prefixIcon: Icon(Icons.layers),
+                  labelText: 'Mode de paiement',
+                  prefixIcon: Icon(Icons.account_balance_wallet),
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Tranche 1', child: Text('Tranche 1')),
-                  DropdownMenuItem(value: 'Tranche 2', child: Text('Tranche 2')),
-                  DropdownMenuItem(value: 'Tranche 3', child: Text('Tranche 3')),
-                  DropdownMenuItem(
-                      value: 'Paiement complet', child: Text('Paiement complet')),
-                ],
-                onChanged: (v) => setState(() {
-                  _tranche = v!;
-                  _recalculerMontant();
-                }),
+                items: _libellesModePaiement.entries.map((entry) {
+                  return DropdownMenuItem(value: entry.key, child: Text(entry.value));
+                }).toList(),
+                onChanged: (v) => setState(() => _modePaiement = v!),
               ),
               const SizedBox(height: 12),
               TextField(
@@ -1214,7 +1208,9 @@ class _DialogNouveauPaiementState extends State<_DialogNouveauPaiement> {
             backgroundColor: Colors.teal,
             foregroundColor: Colors.white,
           ),
-          onPressed: _eleveId == null || _enregistrement ? null : _enregistrer,
+          onPressed: _eleveId == null || _fraisSelectionne == null || _enregistrement
+              ? null
+              : _enregistrer,
           child: _enregistrement
               ? const SizedBox(
                   width: 16,

@@ -10,13 +10,13 @@ use App\Models\Classe;
 use App\Models\ClasseMatiere;
 use App\Models\DocumentEleve;
 use App\Models\Eleve;
-use App\Models\FraisScolaire;
 use App\Models\Inscription;
 use App\Models\Note;
 use App\Models\Paiement;
 use App\Models\ParentEleve;
 use App\Models\PeriodeAcademique;
 use App\Models\Sanction;
+use App\Services\FraisCalculService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +26,10 @@ use Illuminate\Support\Str;
 class EleveController extends Controller
 {
     private const STATUTS = ['actif', 'suspendu', 'exclu', 'transfere', 'diplome', 'abandon'];
+
+    public function __construct(private FraisCalculService $fraisCalcul)
+    {
+    }
 
     // ════════════════════════════════════════════════════════════
     // 1. Tableau de bord
@@ -74,7 +78,7 @@ class EleveController extends Controller
                 ->whereHas('inscriptions', fn($q) => $q->where('annee_academique_id', '!=', $annee->id))
                 ->count();
 
-            $rapport = (new FraisScolaireController())->calculerRapportFinancier($ecoleId, $annee->id, null);
+            $rapport = $this->fraisCalcul->rapportEcole($ecoleId, $annee->id);
             $inscritsAnnee = Inscription::where('annee_academique_id', $annee->id)
                 ->whereHas('eleve', fn($q) => $q->where('ecole_id', $ecoleId))
                 ->count();
@@ -199,7 +203,7 @@ class EleveController extends Controller
             case 'en_retard_paiement':
             case 'en_regle':
                 if ($annee) {
-                    $rapport = (new FraisScolaireController())->calculerRapportFinancier($ecoleId, $annee->id, null);
+                    $rapport = $this->fraisCalcul->rapportEcole($ecoleId, $annee->id);
                     if ($type === 'en_retard_paiement') {
                         foreach ($rapport['debiteurs'] as $d) {
                             $eleveIds->push($d['eleve_id']);
@@ -345,7 +349,7 @@ class EleveController extends Controller
             ?? optional(AnneeAcademique::where('ecole_id', $ecoleId)->where('statut', 'active')->first())->id;
 
         if ($request->has('en_regle') && $anneeId) {
-            $rapport = (new FraisScolaireController())->calculerRapportFinancier($ecoleId, $anneeId, null);
+            $rapport = $this->fraisCalcul->rapportEcole($ecoleId, $anneeId);
             $debiteursIds = collect($rapport['debiteurs'])->pluck('eleve_id');
             if ($request->boolean('en_regle')) {
                 $query->whereNotIn('eleves.id', $debiteursIds);
@@ -378,27 +382,17 @@ class EleveController extends Controller
 
         $eleves = $query->paginate(30);
 
-        $montantParClasse = $anneeId
-            ? FraisScolaire::where('annee_academique_id', $anneeId)
-                ->select('classe_id', DB::raw('SUM(montant_total) as total'))
-                ->groupBy('classe_id')
-                ->pluck('total', 'classe_id')
-            : collect();
-
-        $eleves->getCollection()->transform(function ($eleve) use ($anneeId, $montantParClasse) {
+        $eleves->getCollection()->transform(function ($eleve) use ($anneeId) {
             $inscription = Inscription::where('eleve_id', $eleve->id)
                 ->when($anneeId, fn($q) => $q->where('annee_academique_id', $anneeId))
                 ->with('classe')
                 ->latest('id')
                 ->first();
 
-            $montantDu = $inscription ? ($montantParClasse[$inscription->classe_id] ?? 0) : 0;
-            $montantPaye = $anneeId
-                ? Paiement::where('eleve_id', $eleve->id)->where('annee_academique_id', $anneeId)->sum('montant')
-                : 0;
-
             $eleve->classe_actuelle = $inscription?->classe;
-            $eleve->dette = max(0, $montantDu - $montantPaye);
+            $eleve->dette = $anneeId
+                ? $this->fraisCalcul->situationEleve($eleve, $anneeId)['reste_a_payer']
+                : 0;
 
             return $eleve;
         });
@@ -503,16 +497,9 @@ class EleveController extends Controller
             ->limit(5)
             ->get();
 
-        $detteActuelle = 0;
-        if ($anneeActuelle && $classeActuelle) {
-            $montantDu = FraisScolaire::where('classe_id', $classeActuelle->id)
-                ->where('annee_academique_id', $anneeActuelle->id)
-                ->sum('montant_total');
-            $montantPaye = Paiement::where('eleve_id', $eleve->id)
-                ->where('annee_academique_id', $anneeActuelle->id)
-                ->sum('montant');
-            $detteActuelle = max(0, $montantDu - $montantPaye);
-        }
+        $detteActuelle = $anneeActuelle
+            ? $this->fraisCalcul->situationEleve($eleve, $anneeActuelle->id)['reste_a_payer']
+            : 0;
 
         $dernieresNotesParPeriode = collect();
         $moyenneGeneraleActuelle = null;
@@ -964,23 +951,18 @@ class EleveController extends Controller
             }
         };
 
-        $montantDuClasse = $anneeId
-            ? FraisScolaire::where('classe_id', $classeId)->where('annee_academique_id', $anneeId)->sum('montant_total')
-            : 0;
-
         $eleves = Eleve::where('ecole_id', $request->user()->ecole_id)
             ->whereHas('inscriptions', $filtreInscription)
             ->with(['inscriptions' => $filtreInscription])
             ->orderBy('nom')
             ->get()
-            ->map(function ($eleve) use ($anneeId, $montantDuClasse, $classeId) {
+            ->map(function ($eleve) use ($anneeId, $classeId) {
                 $eleve->inscription_statut = optional($eleve->inscriptions->first())->statut;
                 unset($eleve->inscriptions);
 
-                $montantPaye = $anneeId
-                    ? Paiement::where('eleve_id', $eleve->id)->where('annee_academique_id', $anneeId)->sum('montant')
+                $eleve->dette = $anneeId
+                    ? $this->fraisCalcul->situationEleve($eleve, (int) $anneeId)['reste_a_payer']
                     : 0;
-                $eleve->dette = max(0, $montantDuClasse - $montantPaye);
 
                 $eleve->derniere_absence = Absence::where('eleve_id', $eleve->id)
                     ->where('classe_id', $classeId)

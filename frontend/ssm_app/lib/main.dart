@@ -21,7 +21,7 @@ import 'screens/directeur/fiche_eleve_screen.dart';
 import 'screens/directeur/gestion_affectations_screen.dart';
 import 'screens/directeur/affectations_classe_screen.dart';
 import 'screens/directeur/validation_notes_screen.dart';
-import 'screens/directeur/gestion_frais_screen.dart';
+import 'screens/parametres/frais_scolaires_screen.dart';
 import 'screens/directeur/dashboard_censeur_screen.dart';
 import 'screens/censeur/suivi_absences_classe_screen.dart';
 import 'screens/enseignant/saisie_notes_screen.dart';
@@ -132,7 +132,7 @@ class SSMApp extends StatelessWidget {
         },
         '/directeur/eleves-non-regle': (context) =>
             const ElevesNonEnRegleScreen(),
-        '/directeur/frais': (context) => const GestionFraisScreen(),
+        '/directeur/frais': (context) => const FraisScolairesScreen(),
         '/directeur/eleves': (context) => const GestionElevesScreen(),
         '/eleves/liste-intelligente': (context) {
           final args =

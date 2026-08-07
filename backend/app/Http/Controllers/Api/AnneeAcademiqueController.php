@@ -14,6 +14,7 @@ use App\Models\JournalAction;
 use App\Models\Note;
 use App\Models\Paiement;
 use App\Models\PeriodeAcademique;
+use App\Services\FraisCalculService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -21,6 +22,10 @@ use Illuminate\Support\Facades\DB;
 
 class AnneeAcademiqueController extends Controller
 {
+    public function __construct(private FraisCalculService $fraisCalcul)
+    {
+    }
+
     private const NIVEAUX_PAR_CYCLE = [
         'college'          => ['6ème', '5ème', '4ème', '3ème'],
         'lycee_moderne'    => ['Seconde', 'Première', 'Terminale'],
@@ -546,7 +551,9 @@ class AnneeAcademiqueController extends Controller
             : round($moyennesParEleve->filter(fn($m) => $m >= 10)->count() / $moyennesParEleve->count() * 100, 1);
         $tauxEchec = $moyennesParEleve->isEmpty() ? 0 : round(100 - $tauxReussite, 1);
 
-        $totalPaiements = Paiement::where('annee_academique_id', $annee->id)->sum('montant');
+        $totalPaiements = Paiement::where('statut', 'valide')
+            ->whereHas('fraisScolaire', fn($q) => $q->where('annee_scolaire_id', $annee->id))
+            ->sum('montant');
 
         $absencesTotal = Absence::whereHas('classe', fn($q) => $q->where('annee_academique_id', $annee->id))->count();
 
@@ -671,7 +678,7 @@ class AnneeAcademiqueController extends Controller
             ];
         })->values();
 
-        $rapport = (new FraisScolaireController())->calculerRapportFinancier($ecoleId, $annee->id, null);
+        $rapport = $this->fraisCalcul->rapportEcole($ecoleId, $annee->id);
 
         $historiqueComplet = JournalAction::where('ecole_id', $ecoleId)
             ->where(function ($q) use ($annee) {
@@ -940,7 +947,7 @@ class AnneeAcademiqueController extends Controller
         $parEleve = [];
 
         if (in_array('paiement', $motifs)) {
-            $rapport = (new FraisScolaireController())->calculerRapportFinancier($ecoleId, $annee->id, null);
+            $rapport = $this->fraisCalcul->rapportEcole($ecoleId, $annee->id);
             foreach ($rapport['debiteurs'] as $d) {
                 $parEleve[$d['eleve_id']]['eleve_id'] = $d['eleve_id'];
                 $parEleve[$d['eleve_id']]['nom'] = $d['nom'];
@@ -1012,7 +1019,8 @@ class AnneeAcademiqueController extends Controller
             'moyenne'  => round($m->moyenne, 2),
         ];
 
-        $paiements = Paiement::where('annee_academique_id', $periode->annee_academique_id)
+        $paiements = Paiement::where('statut', 'valide')
+            ->whereHas('fraisScolaire', fn($q) => $q->where('annee_scolaire_id', $periode->annee_academique_id))
             ->whereBetween('date_paiement', [$periode->date_debut, $periode->date_fin])
             ->sum('montant');
 

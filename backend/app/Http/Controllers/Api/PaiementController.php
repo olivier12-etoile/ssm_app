@@ -3,208 +3,185 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Paiement;
 use App\Models\Eleve;
-use App\Models\Inscription;
-use App\Models\ChronologieEleve;
-use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Models\FraisScolaire;
+use App\Models\JournalOperationFrais;
+use App\Models\Paiement;
 use App\Models\NotificationAttente;
+use App\Services\FraisCalculService;
 use App\Services\MessageTemplateService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
 
 class PaiementController extends Controller
 {
-    // Liste des paiements de l'école
+    public function __construct(private FraisCalculService $fraisCalcul)
+    {
+    }
+
+    // GET /paiements
     public function index(Request $request)
     {
-        $paiements = Paiement::whereHas('eleve', function ($q) use ($request) {
-                $q->where('ecole_id', $request->user()->ecole_id);
-            })
-            ->with(['eleve', 'annee', 'enregistrePar'])
-            ->orderBy('date_paiement', 'desc')
+        $paiements = Paiement::with(['eleve', 'fraisScolaire', 'echeance', 'creePar'])
+            ->when($request->filled('eleve_id'), fn($q) => $q->where('eleve_id', $request->eleve_id))
+            ->when($request->filled('frais_scolaire_id'), fn($q) => $q->where('frais_scolaire_id', $request->frais_scolaire_id))
+            ->when($request->filled('mode_paiement'), fn($q) => $q->where('mode_paiement', $request->mode_paiement))
+            ->when($request->filled('statut'), fn($q) => $q->where('statut', $request->statut))
+            ->when($request->filled('date_debut'), fn($q) => $q->whereDate('date_paiement', '>=', $request->date_debut))
+            ->when($request->filled('date_fin'), fn($q) => $q->whereDate('date_paiement', '<=', $request->date_fin))
+            ->orderByDesc('date_paiement')
+            ->orderByDesc('id')
             ->get();
 
         return response()->json($paiements);
     }
 
-    // Paiements d'un élève
-    public function parEleve(Request $request, $eleveId)
+    // POST /paiements
+    public function store(Request $request)
     {
-        $paiements = Paiement::where('eleve_id', $eleveId)
-            ->with(['annee', 'enregistrePar'])
-            ->orderBy('date_paiement', 'desc')
-            ->get();
-
-        $totalPaye = $paiements->sum('montant');
-
-        return response()->json([
-            'paiements'   => $paiements,
-            'total_paye'  => $totalPaye,
-        ]);
-    }
-
-    // Enregistrer un paiement
-    public function enregistrer(Request $request)
-{
-    $request->validate([
-        'eleve_id'            => 'required|integer',
-        'annee_academique_id' => 'required|integer',
-        'montant'             => 'required|numeric|min:1',
-        'tranche'             => 'required|string|max:50',
-        'date_paiement'       => 'required|date',
-        'reference'           => 'nullable|string|max:50',
-    ]);
-
-    $paiement = Paiement::create([
-        'eleve_id'            => $request->eleve_id,
-        'annee_academique_id' => $request->annee_academique_id,
-        'montant'             => $request->montant,
-        'tranche'             => $request->tranche,
-        'date_paiement'       => $request->date_paiement,
-        'reference'           => $request->reference,
-        'enregistre_par'      => $request->user()->id,
-    ]);
-
-    ChronologieEleve::create([
-        'eleve_id'    => $request->eleve_id,
-        'type'        => 'paiement',
-        'titre'       => 'Paiement enregistré',
-        'description' => number_format($request->montant, 0, ',', ' ') . ' FCFA — ' . $request->tranche,
-        'icone'       => 'payment',
-        'couleur'     => '#0D9488',
-        'reference_id'   => $paiement->id,
-        'reference_type' => 'Paiement',
-    ]);
-
-    // ── Créer automatiquement la notification en attente ──
-    $eleve = Eleve::with('ecole')->find($request->eleve_id);
-    if ($eleve && $eleve->telephone_parent) {
-        $message = MessageTemplateService::paiement(
-            $eleve->nom . ' ' . $eleve->prenom,
-            number_format($request->montant, 0, ',', ' '),
-            $request->tranche,
-            $eleve->ecole->nom ?? ''
-        );
-
-        NotificationAttente::create([
-            'ecole_id'         => $request->user()->ecole_id,
-            'eleve_id'         => $eleve->id,
-            'type'             => 'paiement',
-            'telephone_parent' => $eleve->telephone_parent,
-            'message'          => $message,
-            'statut'           => 'en_attente',
-        ]);
-    }
-
-    return response()->json([
-        'message'  => 'Paiement enregistré avec succès',
-        'paiement' => $paiement,
-    ], 201);
-}
-
-    // Liste de renvoi — élèves non à jour
-    public function listeRenvoi(Request $request)
-    {
-        $request->validate([
-            'classe_id'           => 'required|integer',
-            'annee_academique_id' => 'required|integer',
-            'montant_exige'       => 'required|numeric',
+        $data = $request->validate([
+            'eleve_id'          => 'required|integer',
+            'frais_scolaire_id' => 'required|integer',
+            'echeance_id'       => 'nullable|integer',
+            'montant'           => 'required|numeric|min:1',
+            'mode_paiement'     => 'required|in:especes,moov_money,wave,virement,cheque',
+            'reference'         => 'nullable|string|max:255',
+            'date_paiement'     => 'required|date',
+            'observation'       => 'nullable|string',
         ]);
 
-        // Élèves de la classe
-        $eleves = Eleve::where('ecole_id', $request->user()->ecole_id)
-            ->whereHas('inscriptions', function ($q) use ($request) {
-                $q->where('classe_id', $request->classe_id)
-                  ->where('annee_academique_id', $request->annee_academique_id);
-            })
-            ->with(['paiements' => function ($q) use ($request) {
-                $q->where('annee_academique_id', $request->annee_academique_id);
-            }])
-            ->get();
+        $ecoleId = $request->user()->ecole_id;
 
-        $nonAJour = [];
+        $eleve = Eleve::where('id', $data['eleve_id'])->where('ecole_id', $ecoleId)->firstOrFail();
+        $frais = FraisScolaire::findOrFail($data['frais_scolaire_id']);
 
-        foreach ($eleves as $eleve) {
-            $totalPaye = $eleve->paiements->sum('montant');
-            $dette     = $request->montant_exige - $totalPaye;
+        $resteAPayer = $this->fraisCalcul->resteAPayer($eleve, $frais);
 
-            if ($dette > 0) {
-                $nonAJour[] = [
-                    'id'          => $eleve->id,
-                    'nom'         => $eleve->nom,
-                    'prenom'      => $eleve->prenom,
-                    'matricule'   => $eleve->matricule,
-                    'total_paye'  => $totalPaye,
-                    'montant_du'  => $dette,
-                ];
-            }
+        if ($data['montant'] > $resteAPayer + 0.01) {
+            return response()->json([
+                'message'        => "Le montant dépasse le reste à payer ({$resteAPayer} FCFA).",
+                'reste_a_payer'  => $resteAPayer,
+            ], 422);
+        }
+
+        $paiement = Paiement::create([
+            'eleve_id'          => $eleve->id,
+            'frais_scolaire_id' => $frais->id,
+            'echeance_id'       => $data['echeance_id'] ?? null,
+            'montant'           => $data['montant'],
+            'mode_paiement'     => $data['mode_paiement'],
+            'reference'         => $data['reference'] ?? null,
+            'date_paiement'     => $data['date_paiement'],
+            'observation'       => $data['observation'] ?? null,
+            'statut'            => 'valide',
+            'created_by'        => $request->user()->id,
+        ]);
+
+        JournalOperationFrais::create([
+            'user_id'     => $request->user()->id,
+            'action'      => 'paiement_enregistre',
+            'description' => "Paiement de {$paiement->montant} FCFA pour {$eleve->nom} {$eleve->prenom} — {$frais->nom} (reçu {$paiement->numero_recu})",
+            'paiement_id' => $paiement->id,
+        ]);
+
+        if ($eleve->telephone_parent) {
+            NotificationAttente::create([
+                'ecole_id'         => $ecoleId,
+                'eleve_id'         => $eleve->id,
+                'type'             => 'paiement',
+                'telephone_parent' => $eleve->telephone_parent,
+                'message'          => MessageTemplateService::paiement(
+                    $eleve->nom . ' ' . $eleve->prenom,
+                    number_format($paiement->montant, 0, ',', ' '),
+                    $frais->nom,
+                    $request->user()->ecole->nom ?? ''
+                ),
+                'statut' => 'en_attente',
+            ]);
         }
 
         return response()->json([
-            'classe_id'     => $request->classe_id,
-            'montant_exige' => $request->montant_exige,
-            'non_a_jour'    => $nonAJour,
-            'total'         => count($nonAJour),
-        ]);
+            'message'  => 'Paiement enregistré avec succès',
+            'paiement' => $paiement->load(['eleve', 'fraisScolaire', 'echeance']),
+        ], 201);
     }
 
-    // Statistiques paiements
-    public function statistiques(Request $request)
+    // POST /paiements/{id}/annuler
+    public function annuler(Request $request, $id)
     {
-        $anneeId = $request->query('annee_id');
+        if ($request->user()->role !== 'directeur') {
+            return response()->json([
+                'message' => 'Seul le directeur peut annuler un paiement.',
+            ], 403);
+        }
 
-        $totalEncaisse = Paiement::whereHas('eleve', function ($q) use ($request) {
-                $q->where('ecole_id', $request->user()->ecole_id);
-            })
-            ->when($anneeId, fn($q) => $q->where('annee_academique_id', $anneeId))
-            ->sum('montant');
+        $request->validate([
+            'motif_annulation' => 'required|string|max:500',
+        ]);
 
-        $nombrePaiements = Paiement::whereHas('eleve', function ($q) use ($request) {
-                $q->where('ecole_id', $request->user()->ecole_id);
-            })
-            ->when($anneeId, fn($q) => $q->where('annee_academique_id', $anneeId))
-            ->count();
+        $paiement = Paiement::findOrFail($id);
+
+        if ($paiement->statut === 'annule') {
+            return response()->json(['message' => 'Ce paiement est déjà annulé.'], 409);
+        }
+
+        $paiement->update([
+            'statut'           => 'annule',
+            'motif_annulation' => $request->motif_annulation,
+            'annule_par'       => $request->user()->id,
+        ]);
+
+        JournalOperationFrais::create([
+            'user_id'     => $request->user()->id,
+            'action'      => 'paiement_annule',
+            'description' => "Paiement {$paiement->numero_recu} annulé — Motif : {$request->motif_annulation}",
+            'paiement_id' => $paiement->id,
+        ]);
 
         return response()->json([
-            'total_encaisse'   => $totalEncaisse,
-            'nombre_paiements' => $nombrePaiements,
+            'message'  => 'Paiement annulé avec succès',
+            'paiement' => $paiement->fresh(),
         ]);
     }
 
-    public function genererRecuPdf(Request $request, $paiementId)
-{
-    $paiement = Paiement::where('id', $paiementId)
-        ->whereHas('eleve', function ($q) use ($request) {
-            $q->where('ecole_id', $request->user()->ecole_id);
-        })
-        ->with(['eleve.ecole', 'annee'])
-        ->firstOrFail();
+    // GET /paiements/{id}/recu
+    public function recu(Request $request, $id)
+    {
+        $paiement = Paiement::with(['eleve.ecole', 'fraisScolaire', 'echeance'])->findOrFail($id);
 
-    $data = [
-        'numero_recu'    => 'REC-' . str_pad($paiement->id, 6, '0', STR_PAD_LEFT),
-        'eleve'          => [
-            'nom'       => $paiement->eleve->nom,
-            'prenom'    => $paiement->eleve->prenom,
-            'matricule' => $paiement->eleve->matricule,
-        ],
-        'annee'          => $paiement->annee->libelle,
-        'tranche'        => $paiement->tranche,
-        'montant'        => $paiement->montant,
-        'date_paiement'  => \Carbon\Carbon::parse($paiement->date_paiement)->format('d/m/Y'),
-        'reference'      => $paiement->reference,
-        'ecole'          => [
-            'nom'              => $paiement->eleve->ecole->nom,
-            'code_ecole'       => $paiement->eleve->ecole->code_ecole,
-            'couleur_primaire' => $paiement->eleve->ecole->couleur_primaire,
-            'telephone'        => $paiement->eleve->ecole->telephone,
-            'adresse'          => $paiement->eleve->ecole->adresse,
-        ],
-        'genere_le'      => now()->format('d/m/Y à H:i'),
-    ];
+        $data = [
+            'numero_recu'      => $paiement->numero_recu,
+            'eleve'            => [
+                'nom'       => $paiement->eleve->nom,
+                'prenom'    => $paiement->eleve->prenom,
+                'matricule' => $paiement->eleve->matricule,
+            ],
+            'frais_nom'        => $paiement->fraisScolaire->nom,
+            'echeance_libelle' => $paiement->echeance?->libelle,
+            'mode_paiement'    => match ($paiement->mode_paiement) {
+                'especes'    => 'Espèces',
+                'moov_money' => 'Moov Money',
+                'wave'       => 'Wave',
+                'virement'   => 'Virement',
+                'cheque'     => 'Chèque',
+                default      => $paiement->mode_paiement,
+            },
+            'montant'          => $paiement->montant,
+            'date_paiement'    => $paiement->date_paiement->format('d/m/Y'),
+            'reference'        => $paiement->reference,
+            'statut'           => $paiement->statut,
+            'ecole'            => [
+                'nom'              => $paiement->eleve->ecole->nom,
+                'code_ecole'       => $paiement->eleve->ecole->code_ecole,
+                'couleur_primaire' => $paiement->eleve->ecole->couleur_primaire,
+                'telephone'        => $paiement->eleve->ecole->telephone,
+                'adresse'          => $paiement->eleve->ecole->adresse,
+            ],
+            'genere_le'        => now()->format('d/m/Y à H:i'),
+        ];
 
-    $pdf = Pdf::loadView('pdf.recu', $data);
-    $nomFichier = 'recu_' . $data['numero_recu'] . '.pdf';
+        $pdf = Pdf::loadView('pdf.recu', $data);
 
-    return $pdf->download($nomFichier);
-}
+        return $pdf->download('recu_' . $paiement->numero_recu . '.pdf');
+    }
 }

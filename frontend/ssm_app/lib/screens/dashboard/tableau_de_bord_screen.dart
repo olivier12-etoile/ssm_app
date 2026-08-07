@@ -81,7 +81,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
       final resultats = await Future.wait([
         StatistiqueService.chargerStatistiques(anneeId: anneeId),
         AbsenceService.statistiques(),
-        PaiementService.listerPaiements(),
+        PaiementService.lister(),
         NotificationAttenteService.lister(),
       ]);
 
@@ -1115,7 +1115,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
                     headingTextStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: const Color(0xFF334155), letterSpacing: 0.4),
                     columns: const [
                       DataColumn(label: Text('ÉLÈVE')),
-                      DataColumn(label: Text('TRANCHE')),
+                      DataColumn(label: Text('FRAIS')),
                       DataColumn(label: Text('MONTANT')),
                       DataColumn(label: Text('DATE')),
                       DataColumn(label: Text('STATUT')),
@@ -1124,15 +1124,18 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
                     rows: _derniersPaiements.map((p) {
                       final eleve = p['eleve'];
                       final nomEleve = eleve != null ? '${eleve['nom']} ${eleve['prenom']}' : 'Élève inconnu';
+                      final frais = p['frais_scolaire'];
+                      final estValide = p['statut'] == 'valide';
+                      final couleurStatut = estValide ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
                       return DataRow(cells: [
                         DataCell(Text(nomEleve, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13))),
-                        DataCell(Text('${p['tranche']}', style: GoogleFonts.inter(fontSize: 13))),
+                        DataCell(Text('${frais?['nom'] ?? '—'}', style: GoogleFonts.inter(fontSize: 13))),
                         DataCell(Text('${p['montant']} FCFA', style: GoogleFonts.inter(fontSize: 13))),
                         DataCell(Text('${p['date_paiement']}', style: GoogleFonts.inter(fontSize: 13))),
                         DataCell(Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(color: const Color(0xFF16A34A).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-                          child: Text('Payé', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A))),
+                          decoration: BoxDecoration(color: couleurStatut.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+                          child: Text(estValide ? 'Payé' : 'Annulé', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: couleurStatut)),
                         )),
                         DataCell(OutlinedButton(
                           onPressed: () => Navigator.pushNamed(context, '/paiements'),

@@ -3,7 +3,7 @@ import 'package:url_launcher/url_launcher.dart';
 class WhatsAppService {
   // Nettoie un numéro de téléphone pour WhatsApp
   // Accepte: "90123456" ou "+22890123456" ou "228 90 12 34 56"
-  static String _nettoyerNumero(String numero) {
+  static String nettoyerNumero(String numero) {
     String n = numero.replaceAll(RegExp(r'[^\d+]'), '');
     // Si pas d'indicatif pays, on ajoute le Togo (228) par défaut
     if (!n.startsWith('+')) {
@@ -21,7 +21,7 @@ class WhatsAppService {
     required String numeroTelephone,
     required String message,
   }) async {
-    final numero = _nettoyerNumero(numeroTelephone);
+    final numero = nettoyerNumero(numeroTelephone);
     final messageEncode = Uri.encodeComponent(message);
     final url = 'https://wa.me/$numero?text=$messageEncode';
 

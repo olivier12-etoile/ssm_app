@@ -122,12 +122,18 @@
             <td>{{ $eleve['matricule'] }}</td>
         </tr>
         <tr>
-            <td class="label">Année académique</td>
-            <td>{{ $annee }}</td>
+            <td class="label">Frais scolaire</td>
+            <td>{{ $frais_nom }}</td>
         </tr>
+        @if(!empty($echeance_libelle))
         <tr>
-            <td class="label">Tranche</td>
-            <td>{{ $tranche }}</td>
+            <td class="label">Échéance</td>
+            <td>{{ $echeance_libelle }}</td>
+        </tr>
+        @endif
+        <tr>
+            <td class="label">Mode de paiement</td>
+            <td>{{ $mode_paiement }}</td>
         </tr>
         <tr>
             <td class="label">Date du paiement</td>
@@ -137,6 +143,12 @@
         <tr>
             <td class="label">Référence</td>
             <td>{{ $reference }}</td>
+        </tr>
+        @endif
+        @if($statut === 'annule')
+        <tr>
+            <td class="label">Statut</td>
+            <td><strong style="color:#DC2626;">ANNULÉ</strong></td>
         </tr>
         @endif
     </table>
