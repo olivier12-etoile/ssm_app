@@ -16,10 +16,10 @@ class _NotificationsAttenteScreenState
     extends State<NotificationsAttenteScreen> {
   List<dynamic> _notifications = [];
   Map<String, dynamic> _parType = {};
-  bool _chargement             = true;
-  String _filtreActuel         = 'tout';
-  bool _modeEnvoiChaine        = false;
-  int _indexChaine             = 0;
+  bool _chargement = true;
+  String _filtreActuel = 'tout';
+  bool _modeEnvoiChaine = false;
+  int _indexChaine = 0;
 
   @override
   void initState() {
@@ -30,13 +30,11 @@ class _NotificationsAttenteScreenState
   Future<void> _chargerNotifications() async {
     setState(() => _chargement = true);
     try {
-      final data = await NotificationAttenteService.lister(
-        type: _filtreActuel,
-      );
+      final data = await NotificationAttenteService.lister(type: _filtreActuel);
       setState(() {
         _notifications = data['notifications'] as List;
-        _parType       = data['par_type'] as Map<String, dynamic>;
-        _chargement    = false;
+        _parType = data['par_type'] as Map<String, dynamic>;
+        _chargement = false;
       });
     } catch (e) {
       setState(() => _chargement = false);
@@ -58,39 +56,46 @@ class _NotificationsAttenteScreenState
 
   IconData _iconeType(String type) {
     switch (type) {
-      case 'absence':  return Icons.event_busy;
-      case 'paiement': return Icons.payment;
-      case 'bulletin': return Icons.description;
-      default:         return Icons.notifications;
+      case 'absence':
+        return Icons.event_busy;
+      case 'paiement':
+        return Icons.payment;
+      case 'bulletin':
+        return Icons.description;
+      default:
+        return Icons.notifications;
     }
   }
 
   Color _couleurType(String type) {
     switch (type) {
-      case 'absence':  return Colors.brown;
-      case 'paiement': return Colors.teal;
-      case 'bulletin': return Colors.deepPurple;
-      default:         return Colors.grey;
+      case 'absence':
+        return Colors.brown;
+      case 'paiement':
+        return Colors.teal;
+      case 'bulletin':
+        return Colors.deepPurple;
+      default:
+        return Colors.grey;
     }
   }
 
   // Envoyer une seule notification
   Future<void> _envoyerUne(dynamic notif) async {
-    final eleve     = notif['eleve'];
+    final eleve = notif['eleve'];
     final telephone = notif['telephone_parent'] as String;
-    final message   = notif['message'] as String;
-    final id        = notif['id'] as int;
+    final message = notif['message'] as String;
+    final id = notif['id'] as int;
 
     final succes = await WhatsAppService.envoyerMessage(
       numeroTelephone: telephone,
-      message:         message,
+      message: message,
     );
 
     if (succes) {
       try {
         await NotificationAttenteService.marquerEnvoyee(id);
-        _afficherSucces(
-            'Envoyé à ${eleve != null ? eleve['nom'] : 'parent'}');
+        _afficherSucces('Envoyé à ${eleve != null ? eleve['nom'] : 'parent'}');
         _chargerNotifications();
       } catch (e) {
         _afficherErreur('Erreur marquage envoyé');
@@ -105,7 +110,7 @@ class _NotificationsAttenteScreenState
     if (_notifications.isEmpty) return;
     setState(() {
       _modeEnvoiChaine = true;
-      _indexChaine     = 0;
+      _indexChaine = 0;
     });
     await _envoyerSuivantChaine();
   }
@@ -120,12 +125,12 @@ class _NotificationsAttenteScreenState
 
     final notif = _notifications[_indexChaine];
     final telephone = notif['telephone_parent'] as String;
-    final message   = notif['message'] as String;
-    final id        = notif['id'] as int;
+    final message = notif['message'] as String;
+    final id = notif['id'] as int;
 
     final succes = await WhatsAppService.envoyerMessage(
       numeroTelephone: telephone,
-      message:         message,
+      message: message,
     );
 
     if (succes) {
@@ -152,10 +157,17 @@ class _NotificationsAttenteScreenState
       appBar: AppBar(
         title: Text(
           'Notifications à envoyer',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.sora(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: const Color(0xFF16A34A),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -175,19 +187,31 @@ class _NotificationsAttenteScreenState
                     scrollDirection: Axis.horizontal,
                     child: Row(
                       children: [
-                        _chipFiltre('tout', 'Tout',
-                            (_parType['absence'] ?? 0) +
-                                (_parType['paiement'] ?? 0) +
-                                (_parType['bulletin'] ?? 0)),
+                        _chipFiltre(
+                          'tout',
+                          'Tout',
+                          (_parType['absence'] ?? 0) +
+                              (_parType['paiement'] ?? 0) +
+                              (_parType['bulletin'] ?? 0),
+                        ),
                         const SizedBox(width: 8),
-                        _chipFiltre('absence', 'Absences',
-                            _parType['absence'] ?? 0),
+                        _chipFiltre(
+                          'absence',
+                          'Absences',
+                          _parType['absence'] ?? 0,
+                        ),
                         const SizedBox(width: 8),
-                        _chipFiltre('paiement', 'Paiements',
-                            _parType['paiement'] ?? 0),
+                        _chipFiltre(
+                          'paiement',
+                          'Paiements',
+                          _parType['paiement'] ?? 0,
+                        ),
                         const SizedBox(width: 8),
-                        _chipFiltre('bulletin', 'Bulletins',
-                            _parType['bulletin'] ?? 0),
+                        _chipFiltre(
+                          'bulletin',
+                          'Bulletins',
+                          _parType['bulletin'] ?? 0,
+                        ),
                       ],
                     ),
                   ),
@@ -207,9 +231,7 @@ class _NotificationsAttenteScreenState
                           padding: const EdgeInsets.all(14),
                         ),
                         icon: const Icon(Icons.send),
-                        label: Text(
-                          'Envoyer tout (${_notifications.length})',
-                        ),
+                        label: Text('Envoyer tout (${_notifications.length})'),
                       ),
                     ),
                   ),
@@ -224,8 +246,7 @@ class _NotificationsAttenteScreenState
                       children: [
                         Text(
                           'Envoi en cours : ${_indexChaine + 1} / ${_notifications.length}',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 8),
                         ElevatedButton.icon(
@@ -248,8 +269,11 @@ class _NotificationsAttenteScreenState
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.check_circle_outline,
-                                  size: 64, color: Colors.green),
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 64,
+                                color: Colors.green,
+                              ),
                               SizedBox(height: 16),
                               Text(
                                 'Aucune notification en attente',
@@ -263,12 +287,14 @@ class _NotificationsAttenteScreenState
                           itemCount: _notifications.length,
                           itemBuilder: (context, index) {
                             final notif = _notifications[index];
-                            final type  = notif['type'] as String;
+                            final type = notif['type'] as String;
                             final eleve = notif['eleve'];
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),

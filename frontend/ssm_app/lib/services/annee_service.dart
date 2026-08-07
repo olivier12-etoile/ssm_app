@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../config/app_config.dart';
 import '../services/auth_service.dart';
 
@@ -14,6 +16,15 @@ class AnneeService {
   }
 
   // ── Années académiques ──────────────────────────────────
+
+  static Future<Map<String, dynamic>> tableauDeBord() async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/annees/tableau-de-bord'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement tableau de bord');
+  }
 
   static Future<List<dynamic>> listerAnnees() async {
     final response = await http.get(
@@ -42,7 +53,7 @@ class AnneeService {
     required String libelle,
     required String dateDebut,
     required String dateFin,
-    String typePeriodes = 'trimestres',
+    String typePeriodes = 'auto',
   }) async {
     final response = await http.post(
       Uri.parse('${AppConfig.apiBaseUrl}/annees'),
@@ -155,6 +166,139 @@ class AnneeService {
     throw Exception('Erreur chargement de l\'aperçu de passage');
   }
 
+  static Future<List<dynamic>> rangsClasse({
+    required int classeId,
+    required int periodeId,
+  }) async {
+    final response = await http.get(
+      Uri.parse(
+        '${AppConfig.apiBaseUrl}/annees/rangs?classe_id=$classeId&periode_id=$periodeId',
+      ),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['eleves'] as List<dynamic>;
+    }
+    throw Exception('Erreur chargement du classement');
+  }
+
+  // Version complète de rangsClasse() : inclut moyenne_classe, classe_nom,
+  // etc. en plus de la liste des élèves.
+  static Future<Map<String, dynamic>> rangsClasseDetail({
+    required int classeId,
+    required int periodeId,
+  }) async {
+    final response = await http.get(
+      Uri.parse(
+        '${AppConfig.apiBaseUrl}/annees/rangs?classe_id=$classeId&periode_id=$periodeId',
+      ),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement du classement');
+  }
+
+  static Future<Map<String, dynamic>> elevesNonEnRegle({
+    List<String>? motif,
+  }) async {
+    final query = motif != null && motif.isNotEmpty
+        ? '?${motif.map((m) => 'motif[]=$m').join('&')}'
+        : '';
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/annees/eleves-non-en-regle$query'),
+      headers: await _headers(),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 200 || response.statusCode == 404) {
+      return data;
+    }
+    throw Exception(data['message'] ?? 'Erreur chargement des élèves non en règle');
+  }
+
+  // Télécharge le PDF du classement et retourne le chemin local du fichier.
+  static Future<String> telechargerRangsPdf({
+    required int classeId,
+    required int periodeId,
+  }) async {
+    final token = await AuthService.getToken();
+    final response = await http.get(
+      Uri.parse(
+        '${AppConfig.apiBaseUrl}/annees/rangs/pdf?classe_id=$classeId&periode_id=$periodeId',
+      ),
+      headers: {
+        'Accept': 'application/pdf',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Erreur génération du PDF de classement');
+    }
+    final dossier = await getApplicationDocumentsDirectory();
+    final chemin = '${dossier.path}/classement_${classeId}_$periodeId.pdf';
+    await File(chemin).writeAsBytes(response.bodyBytes);
+    return chemin;
+  }
+
+  // Télécharge le PDF des élèves non en règle et retourne le chemin local.
+  static Future<String> telechargerElevesNonEnReglePdf({
+    List<String>? motif,
+  }) async {
+    final token = await AuthService.getToken();
+    final query = motif != null && motif.isNotEmpty
+        ? '?${motif.map((m) => 'motif[]=$m').join('&')}'
+        : '';
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/annees/eleves-non-en-regle/pdf$query'),
+      headers: {
+        'Accept': 'application/pdf',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Erreur génération du PDF');
+    }
+    final dossier = await getApplicationDocumentsDirectory();
+    final chemin = '${dossier.path}/eleves_non_en_regle.pdf';
+    await File(chemin).writeAsBytes(response.bodyBytes);
+    return chemin;
+  }
+
+  // Télécharge le CSV (compatible Excel) des élèves non en règle.
+  static Future<String> telechargerElevesNonEnRegleExcel({
+    List<String>? motif,
+  }) async {
+    final token = await AuthService.getToken();
+    final query = motif != null && motif.isNotEmpty
+        ? '?${motif.map((m) => 'motif[]=$m').join('&')}'
+        : '';
+    final response = await http.get(
+      Uri.parse(
+        '${AppConfig.apiBaseUrl}/annees/eleves-non-en-regle/excel$query',
+      ),
+      headers: {
+        'Accept': 'text/csv',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Erreur génération du fichier Excel');
+    }
+    final dossier = await getApplicationDocumentsDirectory();
+    final chemin = '${dossier.path}/eleves_non_en_regle.csv';
+    await File(chemin).writeAsBytes(response.bodyBytes);
+    return chemin;
+  }
+
+  static Future<List<dynamic>> journal() async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/annees/journal'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur chargement du journal');
+  }
+
   // ── Périodes académiques ────────────────────────────────
 
   static Future<List<dynamic>> listerPeriodes(int anneeId) async {
@@ -201,15 +345,71 @@ class AnneeService {
     }
   }
 
-  static Future<void> fermerPeriode(int id) async {
+  static Future<Map<String, dynamic>> fermerPeriode(int id) async {
     final response = await http.patch(
       Uri.parse('${AppConfig.apiBaseUrl}/periodes/$id/fermer'),
       headers: await _headers(),
     );
+    final data = jsonDecode(response.body);
     if (response.statusCode != 200) {
-      final data = jsonDecode(response.body);
       throw Exception(data['message'] ?? 'Erreur fermeture période');
     }
+    return data;
+  }
+
+  static Future<void> mettreEnValidation(int id) async {
+    final response = await http.patch(
+      Uri.parse('${AppConfig.apiBaseUrl}/periodes/$id/en-validation'),
+      headers: await _headers(),
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['message'] ?? 'Erreur mise en validation');
+    }
+  }
+
+  static Future<void> reouvrir(int id, String motif) async {
+    final response = await http.patch(
+      Uri.parse('${AppConfig.apiBaseUrl}/periodes/$id/reouvrir'),
+      headers: await _headers(),
+      body: jsonEncode({'motif': motif}),
+    );
+    if (response.statusCode != 200) {
+      final data = jsonDecode(response.body);
+      throw Exception(data['message'] ?? 'Erreur réouverture période');
+    }
+  }
+
+  static Future<Map<String, dynamic>> etatEnseignants(int id) async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/periodes/$id/etat-enseignants'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) {
+      return {'enseignants': jsonDecode(response.body)};
+    }
+    throw Exception('Erreur chargement état des enseignants');
+  }
+
+  static Future<Map<String, dynamic>> verifierAvantCloture(int id) async {
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/periodes/$id/verification'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) return jsonDecode(response.body);
+    throw Exception('Erreur vérification avant clôture');
+  }
+
+  static Future<Map<String, dynamic>> genererBulletinsEnMasse(int id) async {
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/periodes/$id/generer-bulletins'),
+      headers: await _headers(),
+    );
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200) {
+      throw Exception(data['message'] ?? 'Erreur génération des bulletins');
+    }
+    return data;
   }
 
   static Future<Map<String, dynamic>> alertesPeriodes() async {

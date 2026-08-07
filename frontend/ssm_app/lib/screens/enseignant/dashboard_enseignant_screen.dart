@@ -119,7 +119,7 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
     Color couleur;
     String label;
     switch (statut) {
-      case 'ouvert':
+      case 'ouverte':
         couleur = SSMBadge.succes;
         label = 'OUVERTE';
         break;
@@ -127,9 +127,13 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
         couleur = SSMBadge.avertissement;
         label = 'EN VEILLE';
         break;
-      case 'ferme':
+      case 'en_validation':
+        couleur = SSMBadge.avertissement;
+        label = 'EN VALIDATION';
+        break;
+      case 'cloturee':
         couleur = SSMBadge.erreur;
-        label = 'FERMÉE';
+        label = 'CLÔTURÉE';
         break;
       default:
         couleur = Colors.grey;

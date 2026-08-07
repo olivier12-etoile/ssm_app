@@ -20,11 +20,11 @@ class _BulletinsScreenState extends State<BulletinsScreen>
   late TabController _tabController;
 
   // Données
-  List<dynamic> _eleves   = [];
-  List<dynamic> _classes  = [];
-  List<dynamic> _annees   = [];
+  List<dynamic> _eleves = [];
+  List<dynamic> _classes = [];
+  List<dynamic> _annees = [];
   List<dynamic> _periodes = [];
-  bool _chargement        = true;
+  bool _chargement = true;
 
   // Sélections bulletin élève
   int? _eleveId;
@@ -32,8 +32,8 @@ class _BulletinsScreenState extends State<BulletinsScreen>
   int? _anneeIdEleve;
   Map<String, dynamic>? _bulletin;
   bool _chargementBulletin = false;
-  bool _telechargementPdf  = false;
-  bool _envoiNotification  = false;
+  bool _telechargementPdf = false;
+  bool _envoiNotification = false;
 
   // Sélections bulletin classe
   int? _classeId;
@@ -63,9 +63,9 @@ class _BulletinsScreenState extends State<BulletinsScreen>
         AnneeService.listerAnnees(),
       ]);
       setState(() {
-        _eleves    = resultats[0] as List;
-        _classes   = resultats[1] as List;
-        _annees    = resultats[2] as List;
+        _eleves = resultats[0] as List;
+        _classes = resultats[1] as List;
+        _annees = resultats[2] as List;
         _chargement = false;
       });
     } catch (e) {
@@ -100,11 +100,11 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
     try {
       final data = await BulletinService.genererBulletin(
-        eleveId:   _eleveId!,
+        eleveId: _eleveId!,
         periodeId: _periodeIdEleve!,
       );
       setState(() {
-        _bulletin           = data;
+        _bulletin = data;
         _chargementBulletin = false;
       });
     } catch (e) {
@@ -123,11 +123,11 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
     try {
       final data = await BulletinService.bulletinsClasse(
-        classeId:  _classeId!,
+        classeId: _classeId!,
         periodeId: _periodeIdClasse!,
       );
       setState(() {
-        _bulletinsClasse  = data;
+        _bulletinsClasse = data;
         _chargementClasse = false;
       });
     } catch (e) {
@@ -141,12 +141,12 @@ class _BulletinsScreenState extends State<BulletinsScreen>
     setState(() => _telechargementPdf = true);
 
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Génération du PDF...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Génération du PDF...')));
 
       final chemin = await BulletinService.telechargerPdf(
-        eleveId:   bulletin['eleve']['id'] as int,
+        eleveId: bulletin['eleve']['id'] as int,
         periodeId: _periodeIdEleve!,
       );
 
@@ -163,11 +163,12 @@ class _BulletinsScreenState extends State<BulletinsScreen>
     setState(() => _envoiNotification = true);
     try {
       await BulletinService.notifierBulletin(
-        eleveId:   bulletin['eleve']['id'] as int,
+        eleveId: bulletin['eleve']['id'] as int,
         periodeId: _periodeIdEleve!,
       );
       _afficherSucces(
-          'Notification ajoutée — à retrouver dans "Notifications à envoyer"');
+        'Notification ajoutée — à retrouver dans "Notifications à envoyer"',
+      );
     } catch (e) {
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     } finally {
@@ -177,10 +178,11 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
   // ── Dialog appréciations ────────────────────────────────
   Future<void> _afficherDialogAppreciation(
-      Map<String, dynamic> bulletin) async {
-    final eleveId   = bulletin['eleve']['id'] as int;
+    Map<String, dynamic> bulletin,
+  ) async {
+    final eleveId = bulletin['eleve']['id'] as int;
     final periodeId = _periodeIdEleve!;
-    final moyenne   = (bulletin['moyenne_generale'] as num).toDouble();
+    final moyenne = (bulletin['moyenne_generale'] as num).toDouble();
 
     final enseignantController = TextEditingController(
       text: bulletin['appreciation_enseignant'] as String? ?? '',
@@ -193,8 +195,9 @@ class _BulletinsScreenState extends State<BulletinsScreen>
     // Suggestion automatique si vide
     if (observationSelectionnee == null) {
       try {
-        observationSelectionnee =
-            await AppreciationService.suggererObservation(moyenne);
+        observationSelectionnee = await AppreciationService.suggererObservation(
+          moyenne,
+        );
       } catch (_) {}
     }
 
@@ -219,16 +222,17 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                         prefixIcon: Icon(Icons.star),
                         border: OutlineInputBorder(),
                       ),
-                      items: [
-                        'Félicitations',
-                        'Encouragements',
-                        'Tableau d\'honneur',
-                        'Travail satisfaisant',
-                        'Doit fournir davantage d\'efforts',
-                        'Avertissement - Travail insuffisant',
-                      ].map((o) {
-                        return DropdownMenuItem(value: o, child: Text(o));
-                      }).toList(),
+                      items:
+                          [
+                            'Félicitations',
+                            'Encouragements',
+                            'Tableau d\'honneur',
+                            'Travail satisfaisant',
+                            'Doit fournir davantage d\'efforts',
+                            'Avertissement - Travail insuffisant',
+                          ].map((o) {
+                            return DropdownMenuItem(value: o, child: Text(o));
+                          }).toList(),
                       onChanged: (v) =>
                           setStateDialog(() => observationSelectionnee = v),
                     ),
@@ -275,19 +279,18 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                 onPressed: () async {
                   try {
                     await AppreciationService.enregistrer(
-                      eleveId:                 eleveId,
-                      periodeId:               periodeId,
-                      appreciationEnseignant:  enseignantController.text,
-                      appreciationDirecteur:   directeurController.text,
-                      observation:             observationSelectionnee,
+                      eleveId: eleveId,
+                      periodeId: periodeId,
+                      appreciationEnseignant: enseignantController.text,
+                      appreciationDirecteur: directeurController.text,
+                      observation: observationSelectionnee,
                     );
                     Navigator.pop(context);
                     _afficherSucces('Appréciation enregistrée');
                     // Recharger le bulletin pour voir les changements
                     _genererBulletinEleve();
                   } catch (e) {
-                    _afficherErreur(
-                        e.toString().replaceAll('Exception: ', ''));
+                    _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                   }
                 },
                 child: const Text('Enregistrer'),
@@ -300,15 +303,15 @@ class _BulletinsScreenState extends State<BulletinsScreen>
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   Color _couleurMention(String mention) {
@@ -332,10 +335,17 @@ class _BulletinsScreenState extends State<BulletinsScreen>
       appBar: AppBar(
         title: Text(
           'Bulletins',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.sora(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
@@ -351,10 +361,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
           ? const Center(child: CircularProgressIndicator())
           : TabBarView(
               controller: _tabController,
-              children: [
-                _ongletEleve(),
-                _ongletClasse(),
-              ],
+              children: [_ongletEleve(), _ongletClasse()],
             ),
     );
   }
@@ -369,7 +376,8 @@ class _BulletinsScreenState extends State<BulletinsScreen>
           // Filtres
           Card(
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -433,8 +441,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                         child: Text(p['nom'] as String),
                       );
                     }).toList(),
-                    onChanged: (v) =>
-                        setState(() => _periodeIdEleve = v),
+                    onChanged: (v) => setState(() => _periodeIdEleve = v),
                   ),
                   const SizedBox(height: 12),
 
@@ -468,15 +475,15 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
   Widget _afficherBulletin(Map<String, dynamic> bulletin) {
     final moyenneGenerale = bulletin['moyenne_generale'] as num;
-    final mention         = bulletin['mention_generale'] as String;
-    final notes           = bulletin['notes'] as List;
-    final aAppreciation   = bulletin['appreciation_enseignant'] != null ||
+    final mention = bulletin['mention_generale'] as String;
+    final notes = bulletin['notes'] as List;
+    final aAppreciation =
+        bulletin['appreciation_enseignant'] != null ||
         bulletin['appreciation_directeur'] != null;
 
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -502,8 +509,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                   ),
                   Text(
                     'Code : ${bulletin['ecole']['code_ecole']}',
-                    style: const TextStyle(
-                        color: Colors.white70, fontSize: 12),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
                   ),
                 ],
               ),
@@ -511,8 +517,10 @@ class _BulletinsScreenState extends State<BulletinsScreen>
             const SizedBox(height: 12),
 
             // Infos élève
-            _ligneInfo('Élève',
-                '${bulletin['eleve']['nom']} ${bulletin['eleve']['prenom']}'),
+            _ligneInfo(
+              'Élève',
+              '${bulletin['eleve']['nom']} ${bulletin['eleve']['prenom']}',
+            ),
             _ligneInfo('Matricule', bulletin['eleve']['matricule']),
             _ligneInfo('Classe', bulletin['classe']),
             _ligneInfo('Période', bulletin['periode']['nom']),
@@ -522,17 +530,13 @@ class _BulletinsScreenState extends State<BulletinsScreen>
             // Tableau des notes
             const Text(
               'Relevé de notes',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 8),
 
             // En-tête tableau
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFF1E3A8A),
                 borderRadius: BorderRadius.circular(8),
@@ -541,34 +545,46 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                 children: [
                   Expanded(
                     flex: 3,
-                    child: Text('Matière',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Matière',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   SizedBox(
                     width: 40,
-                    child: Text('Coef',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      'Coef',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   SizedBox(
                     width: 50,
-                    child: Text('Note',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      'Note',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   SizedBox(
                     width: 80,
-                    child: Text('Mention',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      'Mention',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ],
               ),
@@ -577,11 +593,13 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
             // Lignes notes
             ...notes.asMap().entries.map((entry) {
-              final i    = entry.key;
+              final i = entry.key;
               final note = entry.value;
               return Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: i % 2 == 0
                       ? const Color(0xFF1E3A8A).withOpacity(0.05)
@@ -590,10 +608,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                 ),
                 child: Row(
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(note['matiere'] as String),
-                    ),
+                    Expanded(flex: 3, child: Text(note['matiere'] as String)),
                     SizedBox(
                       width: 40,
                       child: Text(
@@ -606,8 +621,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                       child: Text(
                         '${note['note']}/20',
                         textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                     ),
                     SizedBox(
@@ -633,17 +647,15 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                 color: _couleurMention(mention).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                    color: _couleurMention(mention).withOpacity(0.5)),
+                  color: _couleurMention(mention).withOpacity(0.5),
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
                     'Moyenne Générale',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -678,7 +690,8 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                   color: const Color(0xFF1E3A8A).withOpacity(0.05),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: const Color(0xFF1E3A8A).withOpacity(0.2)),
+                    color: const Color(0xFF1E3A8A).withOpacity(0.2),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -695,19 +708,19 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                       const SizedBox(height: 8),
                     ],
                     if (bulletin['appreciation_enseignant'] != null) ...[
-                      const Text('Enseignant :',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey)),
-                      Text(
-                          bulletin['appreciation_enseignant'] as String),
+                      const Text(
+                        'Enseignant :',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      Text(bulletin['appreciation_enseignant'] as String),
                       const SizedBox(height: 6),
                     ],
                     if (bulletin['appreciation_directeur'] != null) ...[
-                      const Text('Directeur :',
-                          style: TextStyle(
-                              fontSize: 11, color: Colors.grey)),
-                      Text(
-                          bulletin['appreciation_directeur'] as String),
+                      const Text(
+                        'Directeur :',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                      ),
+                      Text(bulletin['appreciation_directeur'] as String),
                     ],
                   ],
                 ),
@@ -759,9 +772,11 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                         ),
                       )
                     : const Icon(Icons.notifications_active),
-                label: Text(_envoiNotification
-                    ? 'Ajout en cours...'
-                    : 'Notifier le parent'),
+                label: Text(
+                  _envoiNotification
+                      ? 'Ajout en cours...'
+                      : 'Notifier le parent',
+                ),
               ),
             ),
 
@@ -789,9 +804,9 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                         ),
                       )
                     : const Icon(Icons.picture_as_pdf),
-                label: Text(_telechargementPdf
-                    ? 'Génération...'
-                    : 'Télécharger le PDF'),
+                label: Text(
+                  _telechargementPdf ? 'Génération...' : 'Télécharger le PDF',
+                ),
               ),
             ),
           ],
@@ -807,15 +822,9 @@ class _BulletinsScreenState extends State<BulletinsScreen>
         children: [
           SizedBox(
             width: 80,
-            child: Text(
-              '$label :',
-              style: const TextStyle(color: Colors.grey),
-            ),
+            child: Text('$label :', style: const TextStyle(color: Colors.grey)),
           ),
-          Text(
-            valeur,
-            style: const TextStyle(fontWeight: FontWeight.w500),
-          ),
+          Text(valeur, style: const TextStyle(fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -830,7 +839,8 @@ class _BulletinsScreenState extends State<BulletinsScreen>
           // Filtres
           Card(
             shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -894,8 +904,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                         child: Text(p['nom'] as String),
                       );
                     }).toList(),
-                    onChanged: (v) =>
-                        setState(() => _periodeIdClasse = v),
+                    onChanged: (v) => setState(() => _periodeIdClasse = v),
                   ),
                   const SizedBox(height: 12),
 
@@ -932,8 +941,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
     return Card(
       elevation: 4,
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -956,8 +964,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
 
             // En-tête
             Container(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFF1E3A8A),
                 borderRadius: BorderRadius.circular(8),
@@ -966,33 +973,45 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                 children: [
                   SizedBox(
                     width: 40,
-                    child: Text('Rang',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      'Rang',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   Expanded(
-                    child: Text('Élève',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold)),
+                    child: Text(
+                      'Élève',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                   SizedBox(
                     width: 70,
-                    child: Text('Moyenne',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      'Moyenne',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                   SizedBox(
                     width: 80,
-                    child: Text('Mention',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center),
+                    child: Text(
+                      'Mention',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
                 ],
               ),
@@ -1003,19 +1022,21 @@ class _BulletinsScreenState extends State<BulletinsScreen>
             ...bulletins.asMap().entries.map((entry) {
               final i = entry.key;
               final b = entry.value;
-              final rang    = b['rang'] as int;
+              final rang = b['rang'] as int;
               final moyenne = b['moyenne'] as num;
               final mention = b['mention'] as String;
 
               return Container(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 10),
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: rang <= 3
                       ? Colors.amber.withOpacity(0.1)
                       : i % 2 == 0
-                          ? const Color(0xFF1E3A8A).withOpacity(0.03)
-                          : Colors.white,
+                      ? const Color(0xFF1E3A8A).withOpacity(0.03)
+                      : Colors.white,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Row(
@@ -1042,8 +1063,7 @@ class _BulletinsScreenState extends State<BulletinsScreen>
                     Expanded(
                       child: Text(
                         '${b['nom']} ${b['prenom']}',
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w500),
+                        style: const TextStyle(fontWeight: FontWeight.w500),
                       ),
                     ),
                     SizedBox(

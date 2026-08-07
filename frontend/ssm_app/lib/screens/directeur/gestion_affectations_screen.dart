@@ -12,8 +12,7 @@ class GestionAffectationsScreen extends StatefulWidget {
       _GestionAffectationsScreenState();
 }
 
-class _GestionAffectationsScreenState
-    extends State<GestionAffectationsScreen> {
+class _GestionAffectationsScreenState extends State<GestionAffectationsScreen> {
   List<dynamic> _classes = [];
   Map<int, int> _totalMatieres = {};
   Map<int, int> _matieresAffectees = {};
@@ -46,13 +45,15 @@ class _GestionAffectationsScreenState
     setState(() => _chargementCompteurs = true);
 
     try {
-      final resultats = await Future.wait(_classes.map((classe) {
-        final classeId = classe['id'] as int;
-        return Future.wait([
-          ClasseMatiereService.listerParClasse(classeId),
-          AffectationService.listerParClasse(classeId),
-        ]);
-      }));
+      final resultats = await Future.wait(
+        _classes.map((classe) {
+          final classeId = classe['id'] as int;
+          return Future.wait([
+            ClasseMatiereService.listerParClasse(classeId),
+            AffectationService.listerParClasse(classeId),
+          ]);
+        }),
+      );
 
       final totaux = <int, int>{};
       final affectees = <int, int>{};
@@ -63,8 +64,10 @@ class _GestionAffectationsScreenState
         final affectations = resultats[i][1];
 
         totaux[classeId] = matieresClasse.length;
-        affectees[classeId] =
-            affectations.map((a) => a['matiere_id']).toSet().length;
+        affectees[classeId] = affectations
+            .map((a) => a['matiere_id'])
+            .toSet()
+            .length;
       }
 
       setState(() {
@@ -79,9 +82,9 @@ class _GestionAffectationsScreenState
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _ouvrirClasse(dynamic classe) {
@@ -104,6 +107,10 @@ class _GestionAffectationsScreenState
         title: const Text('Affectations enseignants'),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -114,89 +121,88 @@ class _GestionAffectationsScreenState
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
           : _classes.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.class_outlined, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text('Aucune classe pour l\'instant',
-                          style: TextStyle(color: Colors.grey)),
-                    ],
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.class_outlined, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Aucune classe pour l\'instant',
+                    style: TextStyle(color: Colors.grey),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _classes.length,
-                  itemBuilder: (context, index) {
-                    final classe = _classes[index];
-                    final classeId = classe['id'] as int;
-                    final total = _totalMatieres[classeId];
-                    final affectees = _matieresAffectees[classeId];
-                    final complet = total != null &&
-                        total > 0 &&
-                        affectees != null &&
-                        affectees >= total;
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _classes.length,
+              itemBuilder: (context, index) {
+                final classe = _classes[index];
+                final classeId = classe['id'] as int;
+                final total = _totalMatieres[classeId];
+                final affectees = _matieresAffectees[classeId];
+                final complet =
+                    total != null &&
+                    total > 0 &&
+                    affectees != null &&
+                    affectees >= total;
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(12),
+                    onTap: () => _ouvrirClasse(classe),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.indigo,
+                      child: Text(
+                        classe['niveau'].toString().substring(0, 1),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        onTap: () => _ouvrirClasse(classe),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.indigo,
-                          child: Text(
-                            classe['niveau'].toString().substring(0, 1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          classe['nom'] as String,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text('Niveau : ${classe['niveau']}'),
-                        trailing: _chargementCompteurs
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    complet
-                                        ? Icons.check_circle
-                                        : Icons.warning_amber,
-                                    size: 16,
-                                    color:
-                                        complet ? Colors.green : Colors.orange,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '${affectees ?? 0}/${total ?? 0} affectées',
-                                    style: TextStyle(
-                                      color: complet
-                                          ? Colors.green
-                                          : Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  const Icon(Icons.chevron_right),
-                                ],
+                    ),
+                    title: Text(
+                      classe['nom'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('Niveau : ${classe['niveau']}'),
+                    trailing: _chargementCompteurs
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                complet
+                                    ? Icons.check_circle
+                                    : Icons.warning_amber,
+                                size: 16,
+                                color: complet ? Colors.green : Colors.orange,
                               ),
-                      ),
-                    );
-                  },
-                ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${affectees ?? 0}/${total ?? 0} affectées',
+                                style: TextStyle(
+                                  color: complet ? Colors.green : Colors.orange,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.chevron_right),
+                            ],
+                          ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

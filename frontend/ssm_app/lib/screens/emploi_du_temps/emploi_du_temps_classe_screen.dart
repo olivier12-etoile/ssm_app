@@ -55,8 +55,7 @@ class EmploiDuTempsClasseScreen extends StatefulWidget {
       _EmploiDuTempsClasseScreenState();
 }
 
-class _EmploiDuTempsClasseScreenState
-    extends State<EmploiDuTempsClasseScreen> {
+class _EmploiDuTempsClasseScreenState extends State<EmploiDuTempsClasseScreen> {
   List<dynamic> _annees = [];
   int? _anneeId;
   Color _couleurPrimaire = Colors.indigo;
@@ -129,15 +128,15 @@ class _EmploiDuTempsClasseScreenState
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   dynamic _creneauPourCellule(String jour, String heureDebut) {
@@ -186,7 +185,12 @@ class _EmploiDuTempsClasseScreenState
 
     if (creneau != null) {
       await _afficherDialogCreneauOccupe(
-          jour, jourLabel, heureDebut, heureFin, creneau);
+        jour,
+        jourLabel,
+        heureDebut,
+        heureFin,
+        creneau,
+      );
     } else {
       await _afficherDialogAjout(jour, jourLabel, heureDebut, heureFin);
     }
@@ -207,8 +211,10 @@ class _EmploiDuTempsClasseScreenState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Matière : ${creneau['matiere_nom']}',
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              'Matière : ${creneau['matiere_nom']}',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Text('Enseignant : ${creneau['enseignant_nom']}'),
             if (creneau['salle'] != null) ...[
@@ -240,8 +246,13 @@ class _EmploiDuTempsClasseScreenState
             label: const Text('Modifier'),
             onPressed: () {
               Navigator.pop(context);
-              _afficherDialogAjout(jour, jourLabel, heureDebut, heureFin,
-                  creneauExistant: creneau);
+              _afficherDialogAjout(
+                jour,
+                jourLabel,
+                heureDebut,
+                heureFin,
+                creneauExistant: creneau,
+              );
             },
           ),
         ],
@@ -265,8 +276,10 @@ class _EmploiDuTempsClasseScreenState
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(context, true),
-            child:
-                const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Supprimer',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -297,8 +310,9 @@ class _EmploiDuTempsClasseScreenState
 
     int? matiereId = creneauExistant?['matiere_id'] as int?;
     int? enseignantId = creneauExistant?['enseignant_id'] as int?;
-    final salleController =
-        TextEditingController(text: creneauExistant?['salle'] as String? ?? '');
+    final salleController = TextEditingController(
+      text: creneauExistant?['salle'] as String? ?? '',
+    );
     bool verificationEnCours = false;
     bool? disponible;
     String? messageConflit;
@@ -362,10 +376,10 @@ class _EmploiDuTempsClasseScreenState
                       onChanged: enseignants.isEmpty
                           ? null
                           : (v) => setStateDialog(() {
-                                enseignantId = v;
-                                disponible = null;
-                                messageConflit = null;
-                              }),
+                              enseignantId = v;
+                              disponible = null;
+                              messageConflit = null;
+                            }),
                     ),
                     if (matiereId != null && enseignants.isEmpty)
                       const Padding(
@@ -396,7 +410,10 @@ class _EmploiDuTempsClasseScreenState
                         ),
                         child: Text(
                           messageConflit!,
-                          style: const TextStyle(color: Colors.red, fontSize: 12),
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -427,7 +444,8 @@ class _EmploiDuTempsClasseScreenState
               ),
               if (disponible != true)
                 OutlinedButton(
-                  onPressed: matiereId == null ||
+                  onPressed:
+                      matiereId == null ||
                           enseignantId == null ||
                           verificationEnCours
                       ? null
@@ -436,13 +454,13 @@ class _EmploiDuTempsClasseScreenState
                           try {
                             final resultat =
                                 await EmploiDuTempsService.verifierConflits(
-                              enseignantId: enseignantId!,
-                              anneeAcademiqueId: _anneeId!,
-                              jour: jour,
-                              heureDebut: heureDebut,
-                              heureFin: heureFin,
-                              excludeId: creneauExistant?['id'] as int?,
-                            );
+                                  enseignantId: enseignantId!,
+                                  anneeAcademiqueId: _anneeId!,
+                                  jour: jour,
+                                  heureDebut: heureDebut,
+                                  heureFin: heureFin,
+                                  excludeId: creneauExistant?['id'] as int?,
+                                );
                             setStateDialog(() {
                               verificationEnCours = false;
                               disponible = resultat['disponible'] as bool;
@@ -487,7 +505,8 @@ class _EmploiDuTempsClasseScreenState
                       _chargerGrille();
                     } catch (e) {
                       _afficherErreur(
-                          e.toString().replaceAll('Exception: ', ''));
+                        e.toString().replaceAll('Exception: ', ''),
+                      );
                     }
                   },
                   child: const Text('Enregistrer'),
@@ -505,8 +524,9 @@ class _EmploiDuTempsClasseScreenState
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          final jourLabel =
-              _jours.firstWhere((j) => j['cle'] == jour)['label']!;
+          final jourLabel = _jours.firstWhere(
+            (j) => j['cle'] == jour,
+          )['label']!;
           _afficherDialogCellule(jour, jourLabel, heureDebut, heureFin);
         },
         child: Container(
@@ -528,20 +548,28 @@ class _EmploiDuTempsClasseScreenState
                     Text(
                       creneau['matiere_nom'] as String,
                       style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 11),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 11,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       creneau['enseignant_nom'] as String,
-                      style: const TextStyle(fontSize: 9, color: Colors.black87),
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.black87,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (creneau['salle'] != null)
                       Text(
                         creneau['salle'] as String,
-                        style: const TextStyle(fontSize: 8, color: Colors.black54),
+                        style: const TextStyle(
+                          fontSize: 8,
+                          color: Colors.black54,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -583,14 +611,16 @@ class _EmploiDuTempsClasseScreenState
         Row(
           children: [
             const SizedBox(width: 80),
-            ..._jours.map((j) => Expanded(
-                  child: Center(
-                    child: Text(
-                      j['label']!,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+            ..._jours.map(
+              (j) => Expanded(
+                child: Center(
+                  child: Text(
+                    j['label']!,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                )),
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -630,14 +660,20 @@ class _EmploiDuTempsClasseScreenState
         title: Text('Emploi du temps — ${widget.classeNom}'),
         backgroundColor: _couleurPrimaire,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: _exportEnCours
                 ? const SizedBox(
                     width: 20,
                     height: 20,
-                    child:
-                        CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.picture_as_pdf),
             tooltip: 'Imprimer PDF',

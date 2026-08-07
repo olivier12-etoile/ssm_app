@@ -65,15 +65,15 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   Future<void> _changerPhoto(int eleveId) async {
@@ -88,9 +88,9 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
     if (image == null) return;
 
     try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Envoi de la photo...')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Envoi de la photo...')));
 
       await EleveService.uploaderPhoto(eleveId, File(image.path));
       _afficherSucces('Photo mise à jour');
@@ -176,27 +176,28 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
                 ),
                 onPressed:
                     nomController.text.isEmpty || prenomController.text.isEmpty
-                        ? null
-                        : () async {
-                            try {
-                              await EleveService.creerEleve(
-                                nom: nomController.text,
-                                prenom: prenomController.text,
-                                sexe: sexeSelectionne,
-                                classeId: widget.classeId,
-                                anneeAcademiqueId: widget.anneeId,
-                                telephoneParent: telParentController.text.isEmpty
-                                    ? null
-                                    : telParentController.text,
-                              );
-                              Navigator.pop(context);
-                              _afficherSucces('Élève inscrit avec succès');
-                              _chargerEleves();
-                            } catch (e) {
-                              _afficherErreur(
-                                  e.toString().replaceAll('Exception: ', ''));
-                            }
-                          },
+                    ? null
+                    : () async {
+                        try {
+                          await EleveService.creerEleve(
+                            nom: nomController.text,
+                            prenom: prenomController.text,
+                            sexe: sexeSelectionne,
+                            classeId: widget.classeId,
+                            anneeAcademiqueId: widget.anneeId,
+                            telephoneParent: telParentController.text.isEmpty
+                                ? null
+                                : telParentController.text,
+                          );
+                          Navigator.pop(context);
+                          _afficherSucces('Élève inscrit avec succès');
+                          _chargerEleves();
+                        } catch (e) {
+                          _afficherErreur(
+                            e.toString().replaceAll('Exception: ', ''),
+                          );
+                        }
+                      },
                 child: const Text('Inscrire'),
               ),
             ],
@@ -213,6 +214,10 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
         title: Text(_nomClasse ?? 'Élèves de la classe'),
         backgroundColor: Colors.deepOrange,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -229,90 +234,94 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
           : _eleves.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text('Aucun élève inscrit dans cette classe',
-                          style: TextStyle(color: Colors.grey)),
-                    ],
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.people_outline, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Aucun élève inscrit dans cette classe',
+                    style: TextStyle(color: Colors.grey),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _eleves.length,
-                  itemBuilder: (context, index) {
-                    final e = _eleves[index];
-                    final sexe = e['sexe'] as String;
-                    final eleveId = e['id'] as int;
-                    final photoUrl = e['photo_url'] as String?;
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _eleves.length,
+              itemBuilder: (context, index) {
+                final e = _eleves[index];
+                final sexe = e['sexe'] as String;
+                final eleveId = e['id'] as int;
+                final photoUrl = e['photo_url'] as String?;
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          '/eleve/fiche',
-                          arguments: {'eleveId': eleveId},
-                        ),
-                        leading: GestureDetector(
-                          onTap: () => _changerPhoto(eleveId),
-                          child: Stack(
-                            children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundColor:
-                                    sexe == 'M' ? Colors.blue : Colors.pink,
-                                backgroundImage: photoUrl != null
-                                    ? NetworkImage(photoUrl)
-                                    : null,
-                                child: photoUrl == null
-                                    ? Text(
-                                        e['prenom'].toString().substring(0, 1),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                              Positioned(
-                                bottom: -2,
-                                right: -2,
-                                child: Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.camera_alt,
-                                    size: 14,
-                                    color: Colors.deepOrange,
-                                  ),
-                                ),
-                              ),
-                            ],
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(12),
+                    onTap: () => Navigator.pushNamed(
+                      context,
+                      '/eleve/fiche',
+                      arguments: {'eleveId': eleveId},
+                    ),
+                    leading: GestureDetector(
+                      onTap: () => _changerPhoto(eleveId),
+                      child: Stack(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: sexe == 'M'
+                                ? Colors.blue
+                                : Colors.pink,
+                            backgroundImage: photoUrl != null
+                                ? NetworkImage(photoUrl)
+                                : null,
+                            child: photoUrl == null
+                                ? Text(
+                                    e['prenom'].toString().substring(0, 1),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : null,
                           ),
-                        ),
-                        title: Text(
-                          '${e['nom']} ${e['prenom']}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Text('Matricule : ${e['matricule']}'),
-                        trailing: Icon(
-                          sexe == 'M' ? Icons.boy : Icons.girl,
-                          color: sexe == 'M' ? Colors.blue : Colors.pink,
-                        ),
+                          Positioned(
+                            bottom: -2,
+                            right: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.camera_alt,
+                                size: 14,
+                                color: Colors.deepOrange,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    title: Text(
+                      '${e['nom']} ${e['prenom']}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text('Matricule : ${e['matricule']}'),
+                    trailing: Icon(
+                      sexe == 'M' ? Icons.boy : Icons.girl,
+                      color: sexe == 'M' ? Colors.blue : Colors.pink,
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

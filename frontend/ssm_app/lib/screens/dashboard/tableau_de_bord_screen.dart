@@ -687,6 +687,19 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
             ),
             const SizedBox(width: 10),
             OutlinedButton.icon(
+              onPressed: () =>
+                  Navigator.pushNamed(context, '/directeur/eleves-non-regle'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFDC2626),
+                side: const BorderSide(color: Color(0xFFDC2626), width: 1.5),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              ),
+              icon: const Icon(Icons.report_gmailerrorred, size: 18),
+              label: Text('Élèves non en règle', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(width: 10),
+            OutlinedButton.icon(
               onPressed: () => Navigator.pushNamed(context, '/sync'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF1E3A8A),

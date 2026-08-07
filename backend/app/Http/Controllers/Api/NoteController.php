@@ -95,6 +95,10 @@ class NoteController extends Controller
             'classe_id'  => 'required|integer',
         ]);
 
+        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
+            return $erreur;
+        }
+
         Note::where('periode_id', $request->periode_id)
             ->where('matiere_id', $request->matiere_id)
             ->where('statut', 'soumis')
@@ -113,6 +117,10 @@ class NoteController extends Controller
             'motif_rejet'  => 'required|string',
         ]);
 
+        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
+            return $erreur;
+        }
+
         Note::where('periode_id', $request->periode_id)
             ->where('matiere_id', $request->matiere_id)
             ->where('statut', 'soumis')
@@ -124,17 +132,42 @@ class NoteController extends Controller
         return response()->json(['message' => 'Notes rejetées']);
     }
 
-    // Une période 'ferme' passe en lecture seule pour les enseignants —
-    // directeur/censeur/super_admin gardent le droit d'écriture (ex :
-    // correction après clôture). Les périodes 'ouvert' et 'en_veille'
-    // restent modifiables par tous.
+    // Vérifie que la période autorise la saisie/validation de notes selon
+    // son statut :
+    // - preparation   → bloqué pour tout le monde (pas encore ouverte)
+    // - ouverte        → OK pour tout le monde
+    // - en_veille      → OK pour tout le monde (rattrapage de saisie)
+    // - en_validation  → bloqué sauf directeur/censeur/super_admin
+    // - cloturee       → bloqué sauf directeur/censeur/super_admin
+    // - archivee       → bloqué pour tout le monde
     private function verifierPeriodeOuverte(Request $request, $periodeId)
     {
         $periode = PeriodeAcademique::find($periodeId);
 
-        if ($periode && $periode->statut === 'ferme' && !in_array($request->user()->role, ['directeur', 'censeur', 'super_admin'])) {
+        if (!$periode) {
+            return null;
+        }
+
+        $role = $request->user()->role;
+        $estGestionnaire = in_array($role, ['directeur', 'censeur', 'super_admin']);
+
+        $messages = [
+            'preparation'   => "Cette période n'est pas encore ouverte.",
+            'en_validation' => "Cette période est en validation. Vous pouvez consulter vos données mais pas les modifier.",
+            'cloturee'      => "Cette période est clôturée. Vous pouvez consulter vos données mais pas les modifier.",
+            'archivee'      => "Cette période est archivée et n'est plus modifiable.",
+        ];
+
+        if ($periode->statut === 'archivee') {
             return response()->json([
-                'message'       => 'Cette période est fermée. Vous pouvez consulter vos données mais pas les modifier.',
+                'message'       => $messages['archivee'],
+                'lecture_seule' => true,
+            ], 403);
+        }
+
+        if (in_array($periode->statut, ['preparation']) || (in_array($periode->statut, ['en_validation', 'cloturee']) && !$estGestionnaire)) {
+            return response()->json([
+                'message'       => $messages[$periode->statut],
                 'lecture_seule' => true,
             ], 403);
         }

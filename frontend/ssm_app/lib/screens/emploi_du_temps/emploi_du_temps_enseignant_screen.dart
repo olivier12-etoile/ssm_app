@@ -120,9 +120,9 @@ class _EmploiDuTempsEnseignantScreenState
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   dynamic _creneauPourCellule(String jour, String heureDebut) {
@@ -140,7 +140,10 @@ class _EmploiDuTempsEnseignantScreenState
   double get _totalHeures {
     var total = 0.0;
     for (final c in _tousCreneaux) {
-      total += _dureeHeures(c['heure_debut'] as String, c['heure_fin'] as String);
+      total += _dureeHeures(
+        c['heure_debut'] as String,
+        c['heure_fin'] as String,
+      );
     }
     return total;
   }
@@ -149,14 +152,17 @@ class _EmploiDuTempsEnseignantScreenState
     final map = <String, double>{};
     for (final c in _tousCreneaux) {
       final nom = c['classe_nom'] as String;
-      map[nom] = (map[nom] ?? 0) +
+      map[nom] =
+          (map[nom] ?? 0) +
           _dureeHeures(c['heure_debut'] as String, c['heure_fin'] as String);
     }
     return map;
   }
 
   String _formatHeures(double h) {
-    return h == h.roundToDouble() ? '${h.toInt()}h' : '${h.toStringAsFixed(1)}h';
+    return h == h.roundToDouble()
+        ? '${h.toInt()}h'
+        : '${h.toStringAsFixed(1)}h';
   }
 
   Future<void> _exporterPdf() async {
@@ -197,14 +203,19 @@ class _EmploiDuTempsEnseignantScreenState
                   Text(
                     '${creneau['matiere_nom']} — ${creneau['classe_nom']}',
                     style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 10),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                   if (creneau['salle'] != null)
                     Text(
                       creneau['salle'] as String,
-                      style: const TextStyle(fontSize: 8, color: Colors.black54),
+                      style: const TextStyle(
+                        fontSize: 8,
+                        color: Colors.black54,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -242,14 +253,16 @@ class _EmploiDuTempsEnseignantScreenState
         Row(
           children: [
             const SizedBox(width: 80),
-            ..._jours.map((j) => Expanded(
-                  child: Center(
-                    child: Text(
-                      j['label']!,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
+            ..._jours.map(
+              (j) => Expanded(
+                child: Center(
+                  child: Text(
+                    j['label']!,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                )),
+                ),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 4),
@@ -305,8 +318,10 @@ class _EmploiDuTempsEnseignantScreenState
           ),
           const SizedBox(height: 10),
           if (heuresParClasse.isEmpty)
-            const Text('Aucun cours cette semaine',
-                style: TextStyle(color: Colors.grey))
+            const Text(
+              'Aucun cours cette semaine',
+              style: TextStyle(color: Colors.grey),
+            )
           else
             Wrap(
               spacing: 12,
@@ -330,6 +345,10 @@ class _EmploiDuTempsEnseignantScreenState
         title: const Text('Mon emploi du temps'),
         backgroundColor: _couleurPrimaire,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: _exportEnCours
@@ -337,7 +356,9 @@ class _EmploiDuTempsEnseignantScreenState
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
                   )
                 : const Icon(Icons.picture_as_pdf),
             tooltip: 'Mon emploi du temps PDF',

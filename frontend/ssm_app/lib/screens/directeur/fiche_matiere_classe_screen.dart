@@ -238,6 +238,10 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
         appBar: AppBar(
           backgroundColor: widget.couleurMatiere,
           foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
           title: Text(
             widget.matiereNom,
             style: GoogleFonts.sora(
@@ -278,13 +282,73 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
             ),
           ),
         ),
-        body: TabBarView(
+        body: Column(
           children: [
-            _tabCahierTexte(),
-            _tabNotesEtMoyennes(),
-            _tabEvaluations(),
+            _breadcrumb(context),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _tabCahierTexte(),
+                  _tabNotesEtMoyennes(),
+                  _tabEvaluations(),
+                ],
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _breadcrumb(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.white.withValues(alpha: 0.5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          TextButton(
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Classes',
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 14, color: Color(0xFF94A3B8)),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              widget.classeNom,
+              style: GoogleFonts.inter(
+                fontSize: 12,
+                color: const Color(0xFF94A3B8),
+              ),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 14, color: Color(0xFF94A3B8)),
+          Text(
+            widget.matiereNom,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: const Color(0xFF334155),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

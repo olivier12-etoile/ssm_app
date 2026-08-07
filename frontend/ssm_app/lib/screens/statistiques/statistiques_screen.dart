@@ -247,6 +247,16 @@ class _StatistiquesScreenState extends State<StatistiquesScreen>
             left: 140,
             child: _blob(size: 150, couleur: _ambre.withValues(alpha: 0.05)),
           ),
+          Positioned(
+            top: 44,
+            left: 8,
+            child: SafeArea(
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
           SafeArea(
             child: _chargement && _stats == null
                 ? const Center(child: CircularProgressIndicator())

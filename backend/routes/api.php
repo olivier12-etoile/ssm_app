@@ -118,6 +118,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/affectations/{id}',        [AffectationController::class, 'supprimer']);
 
     // Années académiques
+    Route::get('/annees/tableau-de-bord',     [AnneeAcademiqueController::class, 'tableauDeBord']);
+    Route::get('/annees/rangs',               [AnneeAcademiqueController::class, 'rangsClasse']);
+    Route::get('/annees/rangs/pdf',           [AnneeAcademiqueController::class, 'exporterRangsPdf']);
+    Route::get('/annees/eleves-non-en-regle',        [AnneeAcademiqueController::class, 'elevesNonEnRegle']);
+    Route::get('/annees/eleves-non-en-regle/pdf',    [AnneeAcademiqueController::class, 'exporterElevesNonEnReglePdf']);
+    Route::get('/annees/eleves-non-en-regle/excel',  [AnneeAcademiqueController::class, 'exporterElevesNonEnRegleExcel']);
+    Route::get('/annees/rapport/{periodeId}', [AnneeAcademiqueController::class, 'rapportPeriode']);
+    Route::get('/annees/journal',             [AnneeAcademiqueController::class, 'journalActions']);
     Route::get('/annees',                     [AnneeAcademiqueController::class, 'index']);
     Route::get('/annees/active',              [AnneeAcademiqueController::class, 'anneeActive']);
     Route::get('/annees/historique',          [AnneeAcademiqueController::class, 'historique']);
@@ -131,11 +139,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/annees/{id}/details',        [AnneeAcademiqueController::class, 'details']);
 
     // Périodes
-    Route::get('/periodes',                   [PeriodeAcademiqueController::class, 'index']);
-    Route::post('/periodes',                  [PeriodeAcademiqueController::class, 'store']);
-    Route::patch('/periodes/{id}/ouvrir',     [PeriodeAcademiqueController::class, 'ouvrir']);
-    Route::patch('/periodes/{id}/fermer',     [PeriodeAcademiqueController::class, 'fermer']);
-    Route::get('/periodes/alertes',           [PeriodeAcademiqueController::class, 'alertes']);
+    Route::get('/periodes',                          [PeriodeAcademiqueController::class, 'index']);
+    Route::post('/periodes',                         [PeriodeAcademiqueController::class, 'store']);
+    Route::patch('/periodes/{id}/ouvrir',             [PeriodeAcademiqueController::class, 'ouvrir']);
+    Route::patch('/periodes/{id}/en-validation',      [PeriodeAcademiqueController::class, 'mettreEnValidation']);
+    Route::patch('/periodes/{id}/fermer',             [PeriodeAcademiqueController::class, 'fermer']);
+    Route::patch('/periodes/{id}/reouvrir',           [PeriodeAcademiqueController::class, 'reouvrir']);
+    Route::get('/periodes/{id}/etat-enseignants',     [PeriodeAcademiqueController::class, 'etatEnseignants']);
+    Route::get('/periodes/{id}/verification',         [PeriodeAcademiqueController::class, 'verifierAvantCloture']);
+    Route::post('/periodes/{id}/generer-bulletins',   [PeriodeAcademiqueController::class, 'genererBulletinsEnMasse']);
+    Route::get('/periodes/alertes',                   [PeriodeAcademiqueController::class, 'alertes']);
 
     // Élèves
     Route::get('/eleves',                    [EleveController::class, 'index']);

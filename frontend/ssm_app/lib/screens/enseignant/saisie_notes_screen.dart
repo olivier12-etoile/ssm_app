@@ -38,6 +38,7 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
   bool _chargementTableau = false;
 
   final Map<String, TextEditingController> _controllers = {};
+  bool _modificationsNonSauvegardees = false;
 
   @override
   void initState() {
@@ -68,14 +69,14 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
         annees.map((a) => AnneeService.listerPeriodes(a['id'] as int)),
       );
 
-      // Seules les périodes 'ouvert' et 'en_veille' sont proposées pour la
+      // Seules les périodes 'ouverte' et 'en_veille' sont proposées pour la
       // saisie courante — sauf si une période précise (potentiellement
       // fermée) est préselectionnée pour une consultation en lecture seule.
       final periodes = <dynamic>[];
       for (var i = 0; i < annees.length; i++) {
         for (final periode in periodesParAnnee[i]) {
           final statut = periode['statut'] as String?;
-          final estActive = statut == 'ouvert' || statut == 'en_veille';
+          final estActive = statut == 'ouverte' || statut == 'en_veille';
           final estPreselectionnee =
               widget.periodeIdPreselectionnee != null &&
               periode['id'] == widget.periodeIdPreselectionnee;
@@ -150,7 +151,12 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     return periode?['statut'] as String?;
   }
 
-  bool get _periodeFermee => _statutPeriodeSelectionnee == 'ferme';
+  bool get _periodeEnVeille => _statutPeriodeSelectionnee == 'en_veille';
+
+  bool get _periodeFermee =>
+      _statutPeriodeSelectionnee == 'en_validation' ||
+      _statutPeriodeSelectionnee == 'cloturee' ||
+      _statutPeriodeSelectionnee == 'archivee';
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(
@@ -219,6 +225,7 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
         _evaluations = _trierEvaluations(resultats[1]);
         _reconstruireControleurs();
         _chargementTableau = false;
+        _modificationsNonSauvegardees = false;
       });
     } catch (e) {
       setState(() => _chargementTableau = false);
@@ -372,7 +379,7 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
         notes: notes,
       );
       _afficherSucces('Notes enregistrées');
-      _chargerTableau();
+      await _chargerTableau();
     } catch (e) {
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
@@ -479,371 +486,459 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
         matiereId: _matiereId!,
       );
 
+      setState(() => _modificationsNonSauvegardees = false);
       _afficherSucces('Notes soumises pour validation');
     } catch (e) {
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Saisie des notes'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
+  Future<bool> _confirmerAbandon() async {
+    final quitter = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Modifications non enregistrées'),
+        content: const Text(
+          'Vous avez des modifications non enregistrées.\n'
+          'Voulez-vous quitter sans enregistrer ?',
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _chargerFiltres,
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Rester'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Quitter sans enregistrer'),
           ),
         ],
       ),
-      body: _chargementFiltres
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // ── Niveau 1 : filtres ──────────────────────
-                Container(
-                  color: Colors.indigo.withOpacity(0.05),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      DropdownButtonFormField<int>(
-                        value: _classeId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Classe',
-                          border: OutlineInputBorder(),
-                          isDense: true,
+    );
+    return quitter ?? false;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: !_modificationsNonSauvegardees,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final quitter = await _confirmerAbandon();
+        if (quitter && context.mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Saisie des notes'),
+          backgroundColor: Colors.indigo,
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _chargerFiltres,
+            ),
+          ],
+        ),
+        body: _chargementFiltres
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // ── Niveau 1 : filtres ──────────────────────
+                  Container(
+                    color: Colors.indigo.withOpacity(0.05),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        DropdownButtonFormField<int>(
+                          value: _classeId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Classe',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          hint: const Text('Choisir une classe'),
+                          items: _classesDisponibles.map((c) {
+                            return DropdownMenuItem<int>(
+                              value: c['id'] as int,
+                              child: Text(c['nom'] as String),
+                            );
+                          }).toList(),
+                          onChanged: (v) {
+                            setState(() {
+                              _classeId = v;
+                              _matiereId = null;
+                              _eleves = [];
+                              _evaluations = [];
+                            });
+                          },
                         ),
-                        hint: const Text('Choisir une classe'),
-                        items: _classesDisponibles.map((c) {
-                          return DropdownMenuItem<int>(
-                            value: c['id'] as int,
-                            child: Text(c['nom'] as String),
-                          );
-                        }).toList(),
-                        onChanged: (v) {
-                          setState(() {
-                            _classeId = v;
-                            _matiereId = null;
-                            _eleves = [];
-                            _evaluations = [];
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        value: _matiereId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Matière',
-                          border: OutlineInputBorder(),
-                          isDense: true,
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          value: _matiereId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Matière',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          hint: const Text('Choisir une matière'),
+                          items: _matieresDisponibles.map((m) {
+                            return DropdownMenuItem<int>(
+                              value: m['id'] as int,
+                              child: Text(m['nom'] as String),
+                            );
+                          }).toList(),
+                          onChanged: (v) {
+                            setState(() {
+                              _matiereId = v;
+                              _eleves = [];
+                              _evaluations = [];
+                            });
+                          },
                         ),
-                        hint: const Text('Choisir une matière'),
-                        items: _matieresDisponibles.map((m) {
-                          return DropdownMenuItem<int>(
-                            value: m['id'] as int,
-                            child: Text(m['nom'] as String),
-                          );
-                        }).toList(),
-                        onChanged: (v) {
-                          setState(() {
-                            _matiereId = v;
-                            _eleves = [];
-                            _evaluations = [];
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      DropdownButtonFormField<int>(
-                        value: _periodeId,
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Période',
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        hint: const Text('Choisir une période'),
-                        items: _periodes.map((p) {
-                          final statut = p['statut'] as String?;
-                          final String label;
-                          final Color couleur;
-                          switch (statut) {
-                            case 'ouvert':
-                              label = 'en cours';
-                              couleur = Colors.green;
-                              break;
-                            case 'en_veille':
-                              label = 'en veille';
-                              couleur = Colors.orange;
-                              break;
-                            case 'ferme':
-                              label = 'fermée';
-                              couleur = Colors.red;
-                              break;
-                            default:
-                              label = statut ?? '';
-                              couleur = Colors.grey;
-                          }
-                          return DropdownMenuItem<int>(
-                            value: p['id'] as int,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    '${p['nom']} (${p['annee_libelle']})',
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: couleur.withValues(alpha: 0.15),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    label,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: couleur,
-                                      fontWeight: FontWeight.bold,
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          value: _periodeId,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Période',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                          ),
+                          hint: const Text('Choisir une période'),
+                          items: _periodes.map((p) {
+                            final statut = p['statut'] as String?;
+                            final String label;
+                            final Color couleur;
+                            switch (statut) {
+                              case 'ouverte':
+                                label = 'en cours';
+                                couleur = Colors.green;
+                                break;
+                              case 'en_veille':
+                                label = 'en veille';
+                                couleur = Colors.orange;
+                                break;
+                              case 'en_validation':
+                                label = 'en validation';
+                                couleur = Colors.orange;
+                                break;
+                              case 'cloturee':
+                                label = 'clôturée';
+                                couleur = Colors.red;
+                                break;
+                              case 'archivee':
+                                label = 'archivée';
+                                couleur = Colors.grey;
+                                break;
+                              default:
+                                label = statut ?? '';
+                                couleur = Colors.grey;
+                            }
+                            return DropdownMenuItem<int>(
+                              value: p['id'] as int,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      '${p['nom']} (${p['annee_libelle']})',
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (v) {
-                          setState(() {
-                            _periodeId = v;
-                            _eleves = [];
-                            _evaluations = [];
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed:
-                              _classeId == null ||
-                                  _matiereId == null ||
-                                  _periodeId == null
-                              ? null
-                              : _chargerTableau,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo,
-                            foregroundColor: Colors.white,
-                          ),
-                          icon: const Icon(Icons.search),
-                          label: const Text('Charger les notes'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // ── Niveau 2/3 : tableau ─────────────────────
-                if (_chargementTableau)
-                  const Expanded(
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_eleves.isEmpty)
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'Sélectionnez une classe, une matière et une période\npuis cliquez sur "Charger les notes"',
-                        style: TextStyle(color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  )
-                else ...[
-                  if (_periodeFermee)
-                    Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.lock, color: Colors.red),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Période fermée — Consultation uniquement',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.red,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  if (!_periodeFermee)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  _afficherDialogAjoutEvaluation('devoir'),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Ajouter un devoir'),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: () =>
-                                  _afficherDialogAjoutEvaluation('composition'),
-                              icon: const Icon(Icons.add),
-                              label: const Text('Ajouter une composition'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Expanded(
-                    child: _evaluations.isEmpty
-                        ? const Center(
-                            child: Text(
-                              'Aucune évaluation pour cette matière/période.\nAjoutez un devoir ou une composition.',
-                              style: TextStyle(color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        : SingleChildScrollView(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              padding: const EdgeInsets.all(16),
-                              child: DataTable(
-                                columns: [
-                                  const DataColumn(label: Text('Élève')),
-                                  ..._evaluations.map((evaluation) {
-                                    return DataColumn(
-                                      label: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(evaluation['libelle'] as String),
-                                          if (!_periodeFermee)
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.save,
-                                                size: 18,
-                                                color: Colors.indigo,
-                                              ),
-                                              tooltip: 'Enregistrer la colonne',
-                                              onPressed: () =>
-                                                  _enregistrerColonne(
-                                                    evaluation['id'] as int,
-                                                  ),
-                                            ),
-                                        ],
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: couleur.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(999),
+                                    ),
+                                    child: Text(
+                                      label,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: couleur,
+                                        fontWeight: FontWeight.bold,
                                       ),
-                                    );
-                                  }),
-                                  const DataColumn(label: Text('Moyenne')),
+                                    ),
+                                  ),
                                 ],
-                                rows: _eleves.map((eleve) {
-                                  final eleveId = eleve['id'] as int;
-                                  final resultat = _moyennePourEleve(eleveId);
-                                  final moyenneFinale =
-                                      resultat['moyenne_finale'];
-                                  final couleurMoyenne = _couleurMoyenne(
-                                    moyenneFinale,
-                                  );
-
-                                  return DataRow(
-                                    cells: [
-                                      DataCell(
-                                        Text(
-                                          '${eleve['nom']} ${eleve['prenom']}',
-                                        ),
-                                      ),
-                                      ..._evaluations.map((evaluation) {
-                                        final evaluationId =
-                                            evaluation['id'] as int;
-                                        return DataCell(
-                                          SizedBox(
-                                            width: 64,
-                                            child: TextField(
-                                              controller:
-                                                  _controllers[_cle(
-                                                    eleveId,
-                                                    evaluationId,
-                                                  )],
-                                              enabled: !_periodeFermee,
-                                              keyboardType:
-                                                  TextInputType.number,
-                                              textAlign: TextAlign.center,
-                                              decoration: const InputDecoration(
-                                                hintText: '/20',
-                                                isDense: true,
-                                                border: OutlineInputBorder(),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                      DataCell(
-                                        Text(
-                                          moyenneFinale != null
-                                              ? moyenneFinale.toStringAsFixed(2)
-                                              : '-',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: couleurMoyenne,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
                               ),
+                            );
+                          }).toList(),
+                          onChanged: (v) {
+                            setState(() {
+                              _periodeId = v;
+                              _eleves = [];
+                              _evaluations = [];
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                _classeId == null ||
+                                    _matiereId == null ||
+                                    _periodeId == null
+                                ? null
+                                : _chargerTableau,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.indigo,
+                              foregroundColor: Colors.white,
                             ),
+                            icon: const Icon(Icons.search),
+                            label: const Text('Charger les notes'),
                           ),
+                        ),
+                      ],
+                    ),
                   ),
-                  if (!_periodeFermee)
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: _evaluations.isEmpty
-                              ? null
-                              : _soumettrePourValidation,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          icon: const Icon(Icons.send),
-                          label: const Text('Soumettre pour validation'),
+
+                  // ── Niveau 2/3 : tableau ─────────────────────
+                  if (_chargementTableau)
+                    const Expanded(
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_eleves.isEmpty)
+                    const Expanded(
+                      child: Center(
+                        child: Text(
+                          'Sélectionnez une classe, une matière et une période\npuis cliquez sur "Charger les notes"',
+                          style: TextStyle(color: Colors.grey),
+                          textAlign: TextAlign.center,
                         ),
                       ),
+                    )
+                  else ...[
+                    if (_periodeEnVeille)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline, color: Colors.orange),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Cette période est en veille. Vous pouvez compléter vos saisies.',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.orange,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (_periodeFermee)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.lock, color: Colors.red),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Période fermée — Consultation uniquement',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    if (!_periodeFermee)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () =>
+                                    _afficherDialogAjoutEvaluation('devoir'),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Ajouter un devoir'),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () => _afficherDialogAjoutEvaluation(
+                                  'composition',
+                                ),
+                                icon: const Icon(Icons.add),
+                                label: const Text('Ajouter une composition'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Expanded(
+                      child: _evaluations.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'Aucune évaluation pour cette matière/période.\nAjoutez un devoir ou une composition.',
+                                style: TextStyle(color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                            )
+                          : SingleChildScrollView(
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.all(16),
+                                child: DataTable(
+                                  columns: [
+                                    const DataColumn(label: Text('Élève')),
+                                    ..._evaluations.map((evaluation) {
+                                      return DataColumn(
+                                        label: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              evaluation['libelle'] as String,
+                                            ),
+                                            if (!_periodeFermee)
+                                              IconButton(
+                                                icon: const Icon(
+                                                  Icons.save,
+                                                  size: 18,
+                                                  color: Colors.indigo,
+                                                ),
+                                                tooltip:
+                                                    'Enregistrer la colonne',
+                                                onPressed: () =>
+                                                    _enregistrerColonne(
+                                                      evaluation['id'] as int,
+                                                    ),
+                                              ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
+                                    const DataColumn(label: Text('Moyenne')),
+                                  ],
+                                  rows: _eleves.map((eleve) {
+                                    final eleveId = eleve['id'] as int;
+                                    final resultat = _moyennePourEleve(eleveId);
+                                    final moyenneFinale =
+                                        resultat['moyenne_finale'];
+                                    final couleurMoyenne = _couleurMoyenne(
+                                      moyenneFinale,
+                                    );
+
+                                    return DataRow(
+                                      cells: [
+                                        DataCell(
+                                          Text(
+                                            '${eleve['nom']} ${eleve['prenom']}',
+                                          ),
+                                        ),
+                                        ..._evaluations.map((evaluation) {
+                                          final evaluationId =
+                                              evaluation['id'] as int;
+                                          return DataCell(
+                                            SizedBox(
+                                              width: 64,
+                                              child: TextField(
+                                                controller:
+                                                    _controllers[_cle(
+                                                      eleveId,
+                                                      evaluationId,
+                                                    )],
+                                                enabled: !_periodeFermee,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                textAlign: TextAlign.center,
+                                                onChanged: (_) => setState(
+                                                  () =>
+                                                      _modificationsNonSauvegardees =
+                                                          true,
+                                                ),
+                                                decoration:
+                                                    const InputDecoration(
+                                                      hintText: '/20',
+                                                      isDense: true,
+                                                      border:
+                                                          OutlineInputBorder(),
+                                                    ),
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                        DataCell(
+                                          Text(
+                                            moyenneFinale != null
+                                                ? moyenneFinale.toStringAsFixed(
+                                                    2,
+                                                  )
+                                                : '-',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: couleurMoyenne,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
                     ),
+                    if (!_periodeFermee)
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _evaluations.isEmpty
+                                ? null
+                                : _soumettrePourValidation,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            icon: const Icon(Icons.send),
+                            label: const Text('Soumettre pour validation'),
+                          ),
+                        ),
+                      ),
+                  ],
                 ],
-              ],
-            ),
+              ),
+      ),
     );
   }
 }

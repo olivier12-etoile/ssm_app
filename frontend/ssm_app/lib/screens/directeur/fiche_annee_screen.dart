@@ -15,13 +15,15 @@ const Color _grisFonce = Color(0xFF475569);
 
 Color _couleurStatutPeriode(String statut) {
   switch (statut) {
-    case 'ouvert':
+    case 'ouverte':
       return _vert;
     case 'en_veille':
       return _orange;
-    case 'ferme':
+    case 'en_validation':
+      return _orange;
+    case 'cloturee':
       return _rouge;
-    case 'archive':
+    case 'archivee':
       return _grisFonce;
     default:
       return _gris;
@@ -112,6 +114,10 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
         appBar: AppBar(
           backgroundColor: couleurAppBar,
           foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
           title: Text(
             widget.libelle,
             style: GoogleFonts.sora(
@@ -164,14 +170,54 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
         ),
         body: _chargement
             ? const Center(child: CircularProgressIndicator())
-            : TabBarView(
+            : Column(
                 children: [
-                  _tabVueGenerale(),
-                  _tabEleves(),
-                  _tabEnseignants(),
-                  _tabFinances(),
+                  _breadcrumb(),
+                  Expanded(
+                    child: TabBarView(
+                      children: [
+                        _tabVueGenerale(),
+                        _tabEleves(),
+                        _tabEnseignants(),
+                        _tabFinances(),
+                      ],
+                    ),
+                  ),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _breadcrumb() {
+    return Container(
+      width: double.infinity,
+      color: Colors.white.withValues(alpha: 0.5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              'Années',
+              style: GoogleFonts.inter(fontSize: 12, color: _gris),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 14, color: _gris),
+          Text(
+            widget.libelle,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              color: _grisFonce,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

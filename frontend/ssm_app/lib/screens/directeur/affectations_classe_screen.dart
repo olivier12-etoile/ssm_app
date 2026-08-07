@@ -49,15 +49,15 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   dynamic _affectationPourMatiere(int matiereId) {
@@ -68,9 +68,14 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
   }
 
   Future<void> _afficherDialogAffectation(
-      int matiereId, String matiereNom, dynamic affectationActuelle) async {
+    int matiereId,
+    String matiereNom,
+    dynamic affectationActuelle,
+  ) async {
     if (_enseignants.isEmpty) {
-      _afficherErreur('Aucun enseignant disponible. Créez des enseignants d\'abord.');
+      _afficherErreur(
+        'Aucun enseignant disponible. Créez des enseignants d\'abord.',
+      );
       return;
     }
 
@@ -120,7 +125,8 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
                         try {
                           if (affectationActuelle != null) {
                             await AffectationService.supprimerAffectation(
-                                affectationActuelle['id'] as int);
+                              affectationActuelle['id'] as int,
+                            );
                           }
                           await AffectationService.ajouterAffectation(
                             enseignantId: enseignantSelectionne!,
@@ -133,7 +139,8 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
                         } catch (e) {
                           navigator.pop();
                           _afficherErreur(
-                              e.toString().replaceAll('Exception: ', ''));
+                            e.toString().replaceAll('Exception: ', ''),
+                          );
                         }
                       },
                 child: const Text('Affecter'),
@@ -188,6 +195,10 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
         title: Text(widget.classeNom),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -198,90 +209,97 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
           : _matieresClasse.isEmpty
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.book_outlined, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text('Aucune matière assignée à cette classe',
-                          style: TextStyle(color: Colors.grey)),
-                    ],
+          ? const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.book_outlined, size: 64, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Aucune matière assignée à cette classe',
+                    style: TextStyle(color: Colors.grey),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _matieresClasse.length,
-                  itemBuilder: (context, index) {
-                    final matiere = _matieresClasse[index];
-                    final matiereId = matiere['matiere_id'] as int;
-                    final matiereNom = matiere['matiere_nom'] as String;
-                    final coefficient = matiere['coefficient'];
-                    final affectation = _affectationPourMatiere(matiereId);
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _matieresClasse.length,
+              itemBuilder: (context, index) {
+                final matiere = _matieresClasse[index];
+                final matiereId = matiere['matiere_id'] as int;
+                final matiereNom = matiere['matiere_nom'] as String;
+                final coefficient = matiere['coefficient'];
+                final affectation = _affectationPourMatiere(matiereId);
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(12),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.indigo,
+                      child: Text(
+                        matiereNom.substring(0, 1),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.all(12),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.indigo,
-                          child: Text(
-                            matiereNom.substring(0, 1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    ),
+                    title: Text(
+                      matiereNom,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Row(
+                      children: [
+                        Text('Coef. $coefficient'),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: affectation != null
+                              ? Text(
+                                  affectation['enseignant_nom'] as String,
+                                  overflow: TextOverflow.ellipsis,
+                                )
+                              : const Text(
+                                  'Non affecté',
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          tooltip: 'Affecter / changer l\'enseignant',
+                          onPressed: () => _afficherDialogAffectation(
+                            matiereId,
+                            matiereNom,
+                            affectation,
                           ),
                         ),
-                        title: Text(
-                          matiereNom,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Row(
-                          children: [
-                            Text('Coef. $coefficient'),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: affectation != null
-                                  ? Text(
-                                      affectation['enseignant_nom'] as String,
-                                      overflow: TextOverflow.ellipsis,
-                                    )
-                                  : const Text(
-                                      'Non affecté',
-                                      style: TextStyle(
-                                        color: Colors.orange,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                        if (affectation != null)
+                          IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              color: Colors.red,
                             ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              tooltip: 'Affecter / changer l\'enseignant',
-                              onPressed: () => _afficherDialogAffectation(
-                                  matiereId, matiereNom, affectation),
-                            ),
-                            if (affectation != null)
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline,
-                                    color: Colors.red),
-                                tooltip: 'Retirer l\'affectation',
-                                onPressed: () => _confirmerRetrait(affectation),
-                              ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                            tooltip: 'Retirer l\'affectation',
+                            onPressed: () => _confirmerRetrait(affectation),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     );
   }
 }

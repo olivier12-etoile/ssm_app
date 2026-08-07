@@ -344,6 +344,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
         body: _chargement || _classe == null
             ? const Center(child: CircularProgressIndicator())
@@ -3578,9 +3582,58 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                 ),
               ),
             ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1E3A8A),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: _voirLeClassement,
+              icon: const Icon(Icons.emoji_events_outlined),
+              label: const Text('Voir le classement'),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _voirLeClassement() async {
+    if (_anneeId == null) return;
+    try {
+      final periodes = await AnneeService.listerPeriodes(_anneeId!);
+      final periode = periodes.cast<Map<String, dynamic>>().firstWhere(
+        (p) => p['statut'] == 'ouverte',
+        orElse: () => periodes.isNotEmpty
+            ? periodes.first as Map<String, dynamic>
+            : <String, dynamic>{},
+      );
+      if (periode.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Aucune période disponible pour cette classe')),
+        );
+        return;
+      }
+      if (!mounted) return;
+      Navigator.pushNamed(
+        context,
+        '/directeur/rangs',
+        arguments: {
+          'classeId': widget.classeId,
+          'classeNom': _classe?['nom'] as String? ?? '',
+          'periodeId': periode['id'] as int,
+          'periodeNom': periode['nom'] as String? ?? '',
+        },
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+      );
+    }
   }
 
   Widget _carteStatGrid(

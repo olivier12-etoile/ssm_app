@@ -11,10 +11,10 @@ class SyncScreen extends StatefulWidget {
 }
 
 class _SyncScreenState extends State<SyncScreen> {
-  List<dynamic> _queue      = [];
-  bool _chargement          = true;
-  bool _synchronisation     = false;
-  bool _estConnecte         = false;
+  List<dynamic> _queue = [];
+  bool _chargement = true;
+  bool _synchronisation = false;
+  bool _estConnecte = false;
 
   @override
   void initState() {
@@ -23,12 +23,12 @@ class _SyncScreenState extends State<SyncScreen> {
   }
 
   Future<void> _chargerDonnees() async {
-    final queue    = await SyncService.voirQueue();
+    final queue = await SyncService.voirQueue();
     final connecte = await SyncService.estConnecte();
     setState(() {
-      _queue       = queue;
+      _queue = queue;
       _estConnecte = connecte;
-      _chargement  = false;
+      _chargement = false;
     });
   }
 
@@ -66,7 +66,8 @@ class _SyncScreenState extends State<SyncScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626)),
+              backgroundColor: const Color(0xFFDC2626),
+            ),
             child: const Text('Oui', style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -86,10 +87,17 @@ class _SyncScreenState extends State<SyncScreen> {
       appBar: AppBar(
         title: Text(
           'Synchronisation',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.sora(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: const Color(0xFF334155),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -197,7 +205,9 @@ class _SyncScreenState extends State<SyncScreen> {
                             _synchronisation
                                 ? 'Synchronisation...'
                                 : 'Synchroniser',
-                            style: GoogleFonts.sora(fontWeight: FontWeight.w600),
+                            style: GoogleFonts.sora(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
@@ -209,7 +219,9 @@ class _SyncScreenState extends State<SyncScreen> {
                             backgroundColor: const Color(0xFFDC2626),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                                vertical: 12, horizontal: 16),
+                              vertical: 12,
+                              horizontal: 16,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -217,7 +229,9 @@ class _SyncScreenState extends State<SyncScreen> {
                           icon: const Icon(Icons.delete),
                           label: Text(
                             'Vider',
-                            style: GoogleFonts.sora(fontWeight: FontWeight.w600),
+                            style: GoogleFonts.sora(
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                     ],
@@ -229,12 +243,17 @@ class _SyncScreenState extends State<SyncScreen> {
                     Center(
                       child: Column(
                         children: [
-                          const Icon(Icons.check_circle_outline,
-                              size: 64, color: Color(0xFF16A34A)),
+                          const Icon(
+                            Icons.check_circle_outline,
+                            size: 64,
+                            color: Color(0xFF16A34A),
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             'Toutes les données sont synchronisées',
-                            style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF334155),
+                            ),
                           ),
                         ],
                       ),

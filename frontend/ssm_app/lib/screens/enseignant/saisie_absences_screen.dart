@@ -16,9 +16,9 @@ class SaisieAbsencesScreen extends StatefulWidget {
 }
 
 class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
-  List<dynamic> _classes  = [];
-  List<dynamic> _annees   = [];
-  List<dynamic> _eleves   = [];
+  List<dynamic> _classes = [];
+  List<dynamic> _annees = [];
+  List<dynamic> _eleves = [];
   List<dynamic> _absencesExistantes = [];
 
   int? _classeId;
@@ -32,9 +32,10 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
   // eleveId -> notifié
   final Map<int, bool> _notifies = {};
 
-  bool _chargement      = true;
+  bool _chargement = true;
   bool _chargementListe = false;
   String? _nomEcole;
+  bool _modificationsNonSauvegardees = false;
 
   @override
   void initState() {
@@ -50,9 +51,9 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
       ]);
       final utilisateur = await AuthService.getUtilisateur();
       setState(() {
-        _classes    = resultats[0] as List;
-        _annees     = resultats[1] as List;
-        _nomEcole   = utilisateur?.codeEcole;
+        _classes = resultats[0] as List;
+        _annees = resultats[1] as List;
+        _nomEcole = utilisateur?.codeEcole;
         _chargement = false;
       });
     } catch (e) {
@@ -67,14 +68,13 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
     setState(() => _chargementListe = true);
 
     try {
-      final eleves = await EleveService.elevesParClasse(
-          _classeId!, _anneeId!);
+      final eleves = await EleveService.elevesParClasse(_classeId!, _anneeId!);
 
       final dateStr =
           '${_date.year}-${_date.month.toString().padLeft(2, '0')}-${_date.day.toString().padLeft(2, '0')}';
 
       final absences = await AbsenceService.listerAbsences(
-        classeId:    _classeId!,
+        classeId: _classeId!,
         dateAbsence: dateStr,
       );
 
@@ -89,15 +89,16 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
 
       for (final a in absences) {
         final eleveId = a['eleve_id'] as int;
-        _absents[eleveId]    = true;
+        _absents[eleveId] = true;
         _absenceIds[eleveId] = a['id'] as int;
-        _notifies[eleveId]   = a['notifie'] as bool;
+        _notifies[eleveId] = a['notifie'] as bool;
       }
 
       setState(() {
-        _eleves              = eleves;
-        _absencesExistantes  = absences;
-        _chargementListe     = false;
+        _eleves = eleves;
+        _absencesExistantes = absences;
+        _chargementListe = false;
+        _modificationsNonSauvegardees = false;
       });
     } catch (e) {
       setState(() => _chargementListe = false);
@@ -116,9 +117,9 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
 
     try {
       final nouvelles = await AbsenceService.enregistrerAbsences(
-        classeId:     _classeId!,
-        dateAbsence:  dateStr,
-        absences:     absentsList,
+        classeId: _classeId!,
+        dateAbsence: dateStr,
+        absences: absentsList,
       );
 
       // Mettre à jour les IDs d'absence
@@ -127,6 +128,7 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
         _absenceIds[a['eleve_id'] as int] = a['id'] as int;
       }
 
+      setState(() => _modificationsNonSauvegardees = false);
       _afficherSucces('${absentsList.length} absence(s) enregistrée(s)');
       _chargerEleves();
     } catch (e) {
@@ -150,15 +152,15 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
 
     final message = WhatsAppService.messageAbsence(
       nomParent: 'Cher parent',
-      nomEleve:  '${eleve['nom']} ${eleve['prenom']}',
-      classe:    classe['nom'] as String,
-      heure:     '${TimeOfDay.now().format(context)}',
-      nomEcole:  'École (Code: $_nomEcole)',
+      nomEleve: '${eleve['nom']} ${eleve['prenom']}',
+      classe: classe['nom'] as String,
+      heure: '${TimeOfDay.now().format(context)}',
+      nomEcole: 'École (Code: $_nomEcole)',
     );
 
     final succes = await WhatsAppService.envoyerMessage(
       numeroTelephone: telephoneParent,
-      message:         message,
+      message: message,
     );
 
     if (succes) {
@@ -184,271 +186,315 @@ class _SaisieAbsencesScreenState extends State<SaisieAbsencesScreen> {
     );
   }
 
+  Future<bool> _confirmerAbandon() async {
+    final quitter = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Modifications non enregistrées'),
+        content: const Text(
+          'Vous avez des modifications non enregistrées.\n'
+          'Voulez-vous quitter sans enregistrer ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Rester'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Quitter sans enregistrer'),
+          ),
+        ],
+      ),
+    );
+    return quitter ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final nombreAbsents =
-        _absents.values.where((v) => v == true).length;
+    final nombreAbsents = _absents.values.where((v) => v == true).length;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          'Saisie des absences',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+    return PopScope(
+      canPop: !_modificationsNonSauvegardees,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final quitter = await _confirmerAbandon();
+        if (quitter && context.mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        appBar: AppBar(
+          title: Text(
+            'Saisie des absences',
+            style: GoogleFonts.sora(
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: const Color(0xFF0D9488),
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
         ),
-        backgroundColor: const Color(0xFF0D9488),
-        foregroundColor: Colors.white,
-      ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                // ── Filtres ──────────────────────────────
-                Container(
-                  color: const Color(0xFF0D9488).withValues(alpha: 0.05),
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              value: _classeId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Classe',
-                                border: OutlineInputBorder(),
-                                isDense: true,
+        body: _chargement
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // ── Filtres ──────────────────────────────
+                  Container(
+                    color: const Color(0xFF0D9488).withValues(alpha: 0.05),
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                value: _classeId,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Classe',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                ),
+                                hint: const Text('Classe'),
+                                items: _classes.map((c) {
+                                  return DropdownMenuItem<int>(
+                                    value: c['id'] as int,
+                                    child: Text(c['nom'] as String),
+                                  );
+                                }).toList(),
+                                onChanged: (v) => setState(() => _classeId = v),
                               ),
-                              hint: const Text('Classe'),
-                              items: _classes.map((c) {
-                                return DropdownMenuItem<int>(
-                                  value: c['id'] as int,
-                                  child: Text(c['nom'] as String),
-                                );
-                              }).toList(),
-                              onChanged: (v) =>
-                                  setState(() => _classeId = v),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DropdownButtonFormField<int>(
-                              value: _anneeId,
-                              isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Année',
-                                border: OutlineInputBorder(),
-                                isDense: true,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                value: _anneeId,
+                                isExpanded: true,
+                                decoration: const InputDecoration(
+                                  labelText: 'Année',
+                                  border: OutlineInputBorder(),
+                                  isDense: true,
+                                ),
+                                hint: const Text('Année'),
+                                items: _annees.map((a) {
+                                  return DropdownMenuItem<int>(
+                                    value: a['id'] as int,
+                                    child: Text(a['libelle'] as String),
+                                  );
+                                }).toList(),
+                                onChanged: (v) => setState(() => _anneeId = v),
                               ),
-                              hint: const Text('Année'),
-                              items: _annees.map((a) {
-                                return DropdownMenuItem<int>(
-                                  value: a['id'] as int,
-                                  child: Text(a['libelle'] as String),
-                                );
-                              }).toList(),
-                              onChanged: (v) =>
-                                  setState(() => _anneeId = v),
                             ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.calendar_today),
+                          title: Text(
+                            'Date : ${_date.day}/${_date.month}/${_date.year}',
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.calendar_today),
-                        title: Text(
-                          'Date : ${_date.day}/${_date.month}/${_date.year}',
+                          trailing: TextButton(
+                            onPressed: () async {
+                              final d = await showDatePicker(
+                                context: context,
+                                initialDate: _date,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (d != null) setState(() => _date = d);
+                            },
+                            child: const Text('Changer'),
+                          ),
                         ),
-                        trailing: TextButton(
-                          onPressed: () async {
-                            final d = await showDatePicker(
-                              context: context,
-                              initialDate: _date,
-                              firstDate: DateTime(2020),
-                              lastDate: DateTime(2030),
-                            );
-                            if (d != null) setState(() => _date = d);
-                          },
-                          child: const Text('Changer'),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _classeId == null || _anneeId == null
+                                ? null
+                                : _chargerEleves,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0D9488),
+                              foregroundColor: Colors.white,
+                            ),
+                            icon: const Icon(Icons.search),
+                            label: const Text('Charger les élèves'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // ── Compteur ─────────────────────────────
+                  if (_eleves.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      color:
+                          (nombreAbsents > 0
+                                  ? SSMBadge.avertissement
+                                  : SSMBadge.succes)
+                              .withValues(alpha: 0.12),
+                      child: Text(
+                        '$nombreAbsents absent(s) sur ${_eleves.length} élève(s)',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: nombreAbsents > 0
+                              ? SSMBadge.avertissement
+                              : SSMBadge.succes,
                         ),
                       ),
+                    ),
 
-                      SizedBox(
+                  // ── Liste élèves ─────────────────────────
+                  Expanded(
+                    child: _chargementListe
+                        ? const Center(child: CircularProgressIndicator())
+                        : _eleves.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Sélectionnez une classe et une date',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: _eleves.length,
+                            itemBuilder: (context, index) {
+                              final eleve = _eleves[index];
+                              final eleveId = eleve['id'] as int;
+                              final estAbsent = _absents[eleveId] ?? false;
+                              final estNotifie = _notifies[eleveId] ?? false;
+                              final aTelephone =
+                                  eleve['telephone_parent'] != null &&
+                                  (eleve['telephone_parent'] as String)
+                                      .isNotEmpty;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: estAbsent
+                                      ? const Color(
+                                          0xFFDC2626,
+                                        ).withValues(alpha: 0.05)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.05,
+                                      ),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8),
+                                  child: Row(
+                                    children: [
+                                      Checkbox(
+                                        value: estAbsent,
+                                        activeColor: const Color(0xFFDC2626),
+                                        onChanged: (v) {
+                                          setState(() {
+                                            _absents[eleveId] = v ?? false;
+                                            _modificationsNonSauvegardees =
+                                                true;
+                                          });
+                                        },
+                                      ),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${eleve['nom']} ${eleve['prenom']}',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF0F172A),
+                                              ),
+                                            ),
+                                            if (!aTelephone)
+                                              Text(
+                                                'Pas de numéro parent',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 11,
+                                                  color: SSMBadge.avertissement,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Statut de notification si absent
+                                      if (estAbsent && aTelephone)
+                                        estNotifie
+                                            ? const SSMBadge(
+                                                label: 'Notifié ✓',
+                                                couleur: SSMBadge.succes,
+                                              )
+                                            : Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const SSMBadge(
+                                                    label: 'Non notifié',
+                                                    couleur:
+                                                        SSMBadge.avertissement,
+                                                  ),
+                                                  IconButton(
+                                                    icon: const Icon(
+                                                      Icons.message,
+                                                      color: Color(0xFF16A34A),
+                                                    ),
+                                                    tooltip:
+                                                        'Notifier via WhatsApp',
+                                                    onPressed: () =>
+                                                        _notifierParent(eleve),
+                                                  ),
+                                                ],
+                                              ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+
+                  // ── Bouton enregistrer ───────────────────
+                  if (_eleves.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: _classeId == null || _anneeId == null
-                              ? null
-                              : _chargerEleves,
+                          onPressed: _enregistrer,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0D9488),
                             foregroundColor: Colors.white,
+                            padding: const EdgeInsets.all(14),
                           ),
-                          icon: const Icon(Icons.search),
-                          label: const Text('Charger les élèves'),
+                          icon: const Icon(Icons.save),
+                          label: const Text('Enregistrer les absences'),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                // ── Compteur ─────────────────────────────
-                if (_eleves.isNotEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(8),
-                    color: (nombreAbsents > 0
-                            ? SSMBadge.avertissement
-                            : SSMBadge.succes)
-                        .withValues(alpha: 0.12),
-                    child: Text(
-                      '$nombreAbsents absent(s) sur ${_eleves.length} élève(s)',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: nombreAbsents > 0
-                            ? SSMBadge.avertissement
-                            : SSMBadge.succes,
-                      ),
                     ),
-                  ),
-
-                // ── Liste élèves ─────────────────────────
-                Expanded(
-                  child: _chargementListe
-                      ? const Center(child: CircularProgressIndicator())
-                      : _eleves.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Sélectionnez une classe et une date',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _eleves.length,
-                              itemBuilder: (context, index) {
-                                final eleve  = _eleves[index];
-                                final eleveId = eleve['id'] as int;
-                                final estAbsent = _absents[eleveId] ?? false;
-                                final estNotifie = _notifies[eleveId] ?? false;
-                                final aTelephone =
-                                    eleve['telephone_parent'] != null &&
-                                    (eleve['telephone_parent'] as String)
-                                        .isNotEmpty;
-
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  decoration: BoxDecoration(
-                                    color: estAbsent
-                                        ? const Color(0xFFDC2626)
-                                            .withValues(alpha: 0.05)
-                                        : Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black
-                                            .withValues(alpha: 0.05),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(8),
-                                    child: Row(
-                                      children: [
-                                        Checkbox(
-                                          value: estAbsent,
-                                          activeColor: const Color(0xFFDC2626),
-                                          onChanged: (v) {
-                                            setState(() {
-                                              _absents[eleveId] = v ?? false;
-                                            });
-                                          },
-                                        ),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                '${eleve['nom']} ${eleve['prenom']}',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: const Color(0xFF0F172A),
-                                                ),
-                                              ),
-                                              if (!aTelephone)
-                                                Text(
-                                                  'Pas de numéro parent',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 11,
-                                                    color: SSMBadge.avertissement,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        // Statut de notification si absent
-                                        if (estAbsent && aTelephone)
-                                          estNotifie
-                                              ? const SSMBadge(
-                                                  label: 'Notifié ✓',
-                                                  couleur: SSMBadge.succes,
-                                                )
-                                              : Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const SSMBadge(
-                                                      label: 'Non notifié',
-                                                      couleur: SSMBadge
-                                                          .avertissement,
-                                                    ),
-                                                    IconButton(
-                                                      icon: const Icon(
-                                                        Icons.message,
-                                                        color: Color(0xFF16A34A),
-                                                      ),
-                                                      tooltip:
-                                                          'Notifier via WhatsApp',
-                                                      onPressed: () =>
-                                                          _notifierParent(eleve),
-                                                    ),
-                                                  ],
-                                                ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                ),
-
-                // ── Bouton enregistrer ───────────────────
-                if (_eleves.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _enregistrer,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D9488),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.all(14),
-                        ),
-                        icon: const Icon(Icons.save),
-                        label: const Text('Enregistrer les absences'),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }

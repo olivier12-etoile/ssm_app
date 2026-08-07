@@ -31,7 +31,7 @@ class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
         ClasseService.listerClasses(),
         AnneeService.listerAnnees(),
       ]);
-      final liste  = resultats[0];
+      final liste = resultats[0];
       final annees = resultats[1];
       final anneeEnCours = annees.firstWhere(
         (a) => a['statut'] == 'en_cours',
@@ -39,8 +39,8 @@ class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
       );
 
       setState(() {
-        _classes    = liste;
-        _anneeId    = anneeEnCours?['id'] as int?;
+        _classes = liste;
+        _anneeId = anneeEnCours?['id'] as int?;
         _chargement = false;
       });
 
@@ -54,9 +54,11 @@ class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
   Future<void> _chargerEffectifs() async {
     if (_anneeId == null || _classes.isEmpty) return;
     try {
-      final listes = await Future.wait(_classes.map((classe) {
-        return EleveService.elevesParClasse(classe['id'] as int, _anneeId!);
-      }));
+      final listes = await Future.wait(
+        _classes.map((classe) {
+          return EleveService.elevesParClasse(classe['id'] as int, _anneeId!);
+        }),
+      );
 
       final effectifs = <int, int>{};
       for (var i = 0; i < _classes.length; i++) {
@@ -85,10 +87,17 @@ class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
       appBar: AppBar(
         title: Text(
           'Emplois du temps',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.sora(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -99,41 +108,41 @@ class _SelectionClasseEdtScreenState extends State<SelectionClasseEdtScreen> {
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
           : _classes.isEmpty
-              ? Center(
-                  child: Text(
-                    'Aucune classe pour l\'instant',
-                    style: GoogleFonts.inter(color: const Color(0xFF334155)),
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    SSMSectionTitre(titre: 'Sélectionnez une classe'),
-                    ..._classes.map((classe) {
-                      final classeId   = classe['id'] as int;
-                      final classeNom  = classe['nom'] as String;
-                      final effectif   = _effectifs[classeId] ?? 0;
-                      final capaciteMax = (classe['capacite_max'] as int?) ?? 50;
+          ? Center(
+              child: Text(
+                'Aucune classe pour l\'instant',
+                style: GoogleFonts.inter(color: const Color(0xFF334155)),
+              ),
+            )
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                SSMSectionTitre(titre: 'Sélectionnez une classe'),
+                ..._classes.map((classe) {
+                  final classeId = classe['id'] as int;
+                  final classeNom = classe['nom'] as String;
+                  final effectif = _effectifs[classeId] ?? 0;
+                  final capaciteMax = (classe['capacite_max'] as int?) ?? 50;
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: SSMCarteClasse(
-                          nom: classeNom,
-                          nombreEleves: effectif,
-                          capaciteMax: capaciteMax,
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            '/emploi-du-temps/classe',
-                            arguments: {
-                              'classeId': classeId,
-                              'classeNom': classeNom,
-                            },
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                ),
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SSMCarteClasse(
+                      nom: classeNom,
+                      nombreEleves: effectif,
+                      capaciteMax: capaciteMax,
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        '/emploi-du-temps/classe',
+                        arguments: {
+                          'classeId': classeId,
+                          'classeNom': classeNom,
+                        },
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
     );
   }
 }

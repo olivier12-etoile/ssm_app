@@ -12,6 +12,8 @@ import 'screens/directeur/matieres_par_classe_screen.dart';
 import 'screens/directeur/fiche_matiere_classe_screen.dart';
 import 'screens/directeur/gestion_annees_screen.dart';
 import 'screens/directeur/fiche_annee_screen.dart';
+import 'screens/directeur/rangs_classe_screen.dart';
+import 'screens/directeur/eleves_non_en_regle_screen.dart';
 import 'screens/directeur/gestion_eleves_screen.dart';
 import 'screens/directeur/eleves_par_classe_screen.dart';
 import 'screens/directeur/fiche_eleve_screen.dart';
@@ -116,6 +118,19 @@ class SSMApp extends StatelessWidget {
             statut: args['statut'] as String,
           );
         },
+        '/directeur/rangs': (context) {
+          final args =
+              ModalRoute.of(context)!.settings.arguments
+                  as Map<String, dynamic>;
+          return RangsClasseScreen(
+            classeId: args['classeId'] as int,
+            classeNom: args['classeNom'] as String,
+            periodeId: args['periodeId'] as int,
+            periodeNom: args['periodeNom'] as String,
+          );
+        },
+        '/directeur/eleves-non-regle': (context) =>
+            const ElevesNonEnRegleScreen(),
         '/directeur/frais': (context) => const GestionFraisScreen(),
         '/directeur/eleves': (context) => const GestionElevesScreen(),
         '/directeur/eleves/classe': (context) {

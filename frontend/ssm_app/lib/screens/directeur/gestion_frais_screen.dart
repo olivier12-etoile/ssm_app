@@ -60,12 +60,14 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
     setState(() => _chargementFrais = true);
 
     try {
-      final listes = await Future.wait(_classes.map((c) {
-        return FraisScolaireService.listerFrais(
-          classeId: c['id'] as int,
-          anneeId: _anneeId!,
-        );
-      }));
+      final listes = await Future.wait(
+        _classes.map((c) {
+          return FraisScolaireService.listerFrais(
+            classeId: c['id'] as int,
+            anneeId: _anneeId!,
+          );
+        }),
+      );
 
       final fraisParClasse = <int, Map<String, dynamic>>{};
       for (var i = 0; i < _classes.length; i++) {
@@ -88,15 +90,15 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   Future<void> _afficherDialogFrais(int classeId, String classeNom) async {
@@ -112,8 +114,9 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
 
     void preremplir(String typeChoisi) {
       final frais = fraisExistants[typeChoisi];
-      montantTotalController.text =
-          frais != null ? frais['montant_total'].toString() : '';
+      montantTotalController.text = frais != null
+          ? frais['montant_total'].toString()
+          : '';
       montantT1Controller.text = frais?['montant_tranche_1']?.toString() ?? '';
       montantT2Controller.text = frais?['montant_tranche_2']?.toString() ?? '';
       montantT3Controller.text = frais?['montant_tranche_3']?.toString() ?? '';
@@ -142,9 +145,13 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
                       ),
                       items: const [
                         DropdownMenuItem(
-                            value: 'inscription', child: Text('Inscription')),
+                          value: 'inscription',
+                          child: Text('Inscription'),
+                        ),
                         DropdownMenuItem(
-                            value: 'scolarite', child: Text('Scolarité')),
+                          value: 'scolarite',
+                          child: Text('Scolarité'),
+                        ),
                       ],
                       onChanged: (v) => setStateDialog(() {
                         type = v!;
@@ -208,8 +215,9 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
                 onPressed: montantTotalController.text.isEmpty
                     ? null
                     : () async {
-                        final montantTotal =
-                            double.tryParse(montantTotalController.text);
+                        final montantTotal = double.tryParse(
+                          montantTotalController.text,
+                        );
                         if (montantTotal == null || montantTotal < 0) {
                           _afficherErreur('Montant total invalide');
                           return;
@@ -220,19 +228,23 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
                             anneeAcademiqueId: _anneeId!,
                             type: type,
                             montantTotal: montantTotal,
-                            montantTranche1:
-                                double.tryParse(montantT1Controller.text),
-                            montantTranche2:
-                                double.tryParse(montantT2Controller.text),
-                            montantTranche3:
-                                double.tryParse(montantT3Controller.text),
+                            montantTranche1: double.tryParse(
+                              montantT1Controller.text,
+                            ),
+                            montantTranche2: double.tryParse(
+                              montantT2Controller.text,
+                            ),
+                            montantTranche3: double.tryParse(
+                              montantT3Controller.text,
+                            ),
                           );
                           if (context.mounted) Navigator.pop(context);
                           _afficherSucces('Frais scolaires enregistrés');
                           _chargerFrais();
                         } catch (e) {
                           _afficherErreur(
-                              e.toString().replaceAll('Exception: ', ''));
+                            e.toString().replaceAll('Exception: ', ''),
+                          );
                         }
                       },
                 child: const Text('Enregistrer'),
@@ -274,6 +286,10 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
         title: const Text('Frais scolaires'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -311,57 +327,66 @@ class _GestionFraisScreenState extends State<GestionFraisScreen> {
                 Expanded(
                   child: _classes.isEmpty
                       ? const Center(
-                          child: Text('Aucune classe pour l\'instant',
-                              style: TextStyle(color: Colors.grey)),
+                          child: Text(
+                            'Aucune classe pour l\'instant',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         )
                       : _chargementFrais
-                          ? const Center(child: CircularProgressIndicator())
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                              itemCount: _classes.length,
-                              itemBuilder: (context, index) {
-                                final classe = _classes[index];
-                                final classeId = classe['id'] as int;
-                                final classeNom = classe['nom'] as String;
-                                final frais = _fraisParClasse[classeId] ?? {};
+                      ? const Center(child: CircularProgressIndicator())
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          itemCount: _classes.length,
+                          itemBuilder: (context, index) {
+                            final classe = _classes[index];
+                            final classeId = classe['id'] as int;
+                            final classeNom = classe['nom'] as String;
+                            final frais = _fraisParClasse[classeId] ?? {};
 
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 12),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(12),
+                                title: Text(
+                                  classeNom,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.all(12),
-                                    title: Text(
-                                      classeNom,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 6),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _ligneFrais(
-                                              'Inscription', frais['inscription']),
-                                          const SizedBox(height: 4),
-                                          _ligneFrais(
-                                              'Scolarité', frais['scolarite']),
-                                        ],
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 6),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      _ligneFrais(
+                                        'Inscription',
+                                        frais['inscription'],
                                       ),
-                                    ),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.edit,
-                                          color: Colors.green),
-                                      tooltip: 'Modifier les frais',
-                                      onPressed: () =>
-                                          _afficherDialogFrais(classeId, classeNom),
-                                    ),
+                                      const SizedBox(height: 4),
+                                      _ligneFrais(
+                                        'Scolarité',
+                                        frais['scolarite'],
+                                      ),
+                                    ],
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                                trailing: IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.green,
+                                  ),
+                                  tooltip: 'Modifier les frais',
+                                  onPressed: () =>
+                                      _afficherDialogFrais(classeId, classeNom),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),

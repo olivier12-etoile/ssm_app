@@ -42,7 +42,7 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       final utilisateur = await UtilisateurService.obtenir(widget.userId);
       setState(() {
         _utilisateur = utilisateur;
-        _chargement  = false;
+        _chargement = false;
       });
 
       if (utilisateur['role'] == 'enseignant') {
@@ -57,8 +57,9 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
   Future<void> _chargerStatsEnseignant() async {
     setState(() => _chargementStats = true);
     try {
-      final donneesAffectations =
-          await AffectationService.listerAffectations(widget.userId);
+      final donneesAffectations = await AffectationService.listerAffectations(
+        widget.userId,
+      );
       final affectations = (donneesAffectations['affectations'] as List?) ?? [];
 
       final classesUniques = <int>{};
@@ -91,9 +92,11 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
             }
           }
 
-          final listes = await Future.wait(classesUniques.map(
-            (classeId) => EleveService.elevesParClasse(classeId, anneeId),
-          ));
+          final listes = await Future.wait(
+            classesUniques.map(
+              (classeId) => EleveService.elevesParClasse(classeId, anneeId),
+            ),
+          );
           totalEleves = listes.fold<int>(0, (total, l) => total + l.length);
         }
       } catch (_) {
@@ -101,10 +104,10 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       }
 
       setState(() {
-        _affectations   = affectations;
-        _totalClasses   = classesUniques.length;
-        _totalHeures    = totalHeures;
-        _totalEleves    = totalEleves;
+        _affectations = affectations;
+        _totalClasses = classesUniques.length;
+        _totalHeures = totalHeures;
+        _totalEleves = totalEleves;
         _chargementStats = false;
       });
     } catch (e) {
@@ -120,33 +123,49 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFDC2626),
+      ),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF16A34A),
+      ),
     );
   }
 
   Color _couleurRole(String role) {
     switch (role) {
-      case 'enseignant':  return const Color(0xFF1E3A8A);
-      case 'censeur':     return const Color(0xFFD97706);
-      case 'secretaire':  return const Color(0xFF0D9488);
-      case 'directeur':   return const Color(0xFF7C3AED);
-      default:            return const Color(0xFF94A3B8);
+      case 'enseignant':
+        return const Color(0xFF1E3A8A);
+      case 'censeur':
+        return const Color(0xFFD97706);
+      case 'secretaire':
+        return const Color(0xFF0D9488);
+      case 'directeur':
+        return const Color(0xFF7C3AED);
+      default:
+        return const Color(0xFF94A3B8);
     }
   }
 
   String _labelRole(String role) {
     switch (role) {
-      case 'enseignant':  return 'Enseignant';
-      case 'censeur':     return 'Censeur';
-      case 'secretaire':  return 'Secrétaire';
-      case 'directeur':   return 'Directeur';
-      default:            return role;
+      case 'enseignant':
+        return 'Enseignant';
+      case 'censeur':
+        return 'Censeur';
+      case 'secretaire':
+        return 'Secrétaire';
+      case 'directeur':
+        return 'Directeur';
+      default:
+        return role;
     }
   }
 
@@ -170,7 +189,9 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
 
   Future<void> _reinitialiserMotDePasse() async {
     try {
-      final resultat = await UtilisateurService.reinitialiserMotDePasse(widget.userId);
+      final resultat = await UtilisateurService.reinitialiserMotDePasse(
+        widget.userId,
+      );
       if (!mounted) return;
       _afficherDialogMotDePasse(resultat['mot_de_passe'] as String);
     } catch (e) {
@@ -186,17 +207,29 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Nouveau mot de passe temporaire :',
-                style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
+            Text(
+              'Nouveau mot de passe temporaire :',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: const Color(0xFF334155),
+              ),
+            ),
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
               alignment: Alignment.center,
               child: Text(
                 motDePasse,
-                style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)),
+                style: GoogleFonts.jetBrainsMono(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1E3A8A),
+                ),
               ),
             ),
           ],
@@ -206,14 +239,19 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
           TextButton.icon(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: motDePasse));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mot de passe copié')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Mot de passe copié')),
+              );
             },
             icon: const Icon(Icons.copy, size: 16),
             label: const Text('Copier'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Fermer'),
           ),
         ],
@@ -222,7 +260,8 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
   }
 
   Future<void> _confirmerDesactivation() async {
-    final nom = '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'.trim();
+    final nom = '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'
+        .trim();
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -231,15 +270,29 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
           children: [
             const Icon(Icons.warning_amber, color: Color(0xFFD97706)),
             const SizedBox(width: 8),
-            Expanded(child: Text('Désactiver $nom ?', style: GoogleFonts.sora(fontWeight: FontWeight.w700))),
+            Expanded(
+              child: Text(
+                'Désactiver $nom ?',
+                style: GoogleFonts.sora(fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
         ),
-        content: Text('Cet utilisateur ne pourra plus se connecter.', style: GoogleFonts.inter()),
+        content: Text(
+          'Cet utilisateur ne pourra plus se connecter.',
+          style: GoogleFonts.inter(),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Désactiver'),
           ),
         ],
@@ -269,12 +322,24 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
 
   Future<void> _afficherDialogModifier() async {
     final u = _utilisateur!;
-    final nomController       = TextEditingController(text: u['name'] as String? ?? '');
-    final prenomController    = TextEditingController(text: u['prenom'] as String? ?? '');
-    final emailController     = TextEditingController(text: u['email'] as String? ?? '');
-    final telephoneController = TextEditingController(text: u['telephone'] as String? ?? '');
-    final adresseController   = TextEditingController(text: u['adresse'] as String? ?? '');
-    final fonctionController  = TextEditingController(text: u['fonction'] as String? ?? '');
+    final nomController = TextEditingController(
+      text: u['name'] as String? ?? '',
+    );
+    final prenomController = TextEditingController(
+      text: u['prenom'] as String? ?? '',
+    );
+    final emailController = TextEditingController(
+      text: u['email'] as String? ?? '',
+    );
+    final telephoneController = TextEditingController(
+      text: u['telephone'] as String? ?? '',
+    );
+    final adresseController = TextEditingController(
+      text: u['adresse'] as String? ?? '',
+    );
+    final fonctionController = TextEditingController(
+      text: u['fonction'] as String? ?? '',
+    );
     String role = u['role'] as String;
     File? photo;
     final photoUrlExistante = u['photo_url'] as String?;
@@ -284,7 +349,9 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
               child: Padding(
@@ -293,8 +360,14 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Modifier l'utilisateur",
-                        style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                    Text(
+                      "Modifier l'utilisateur",
+                      style: GoogleFonts.sora(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     Expanded(
                       child: SingleChildScrollView(
@@ -311,20 +384,34 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                                     maxHeight: 800,
                                     imageQuality: 80,
                                   );
-                                  if (image != null) setStateDialog(() => photo = File(image.path));
+                                  if (image != null)
+                                    setStateDialog(
+                                      () => photo = File(image.path),
+                                    );
                                 },
                                 child: Stack(
                                   children: [
                                     CircleAvatar(
                                       radius: 44,
-                                      backgroundColor: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
+                                      backgroundColor: const Color(
+                                        0xFF1E3A8A,
+                                      ).withValues(alpha: 0.15),
                                       backgroundImage: photo != null
                                           ? FileImage(photo!)
                                           : (photoUrlExistante != null
-                                              ? NetworkImage(photoUrlExistante) as ImageProvider
-                                              : null),
-                                      child: (photo == null && photoUrlExistante == null)
-                                          ? const Icon(Icons.person, size: 40, color: Color(0xFF1E3A8A))
+                                                ? NetworkImage(
+                                                        photoUrlExistante,
+                                                      )
+                                                      as ImageProvider
+                                                : null),
+                                      child:
+                                          (photo == null &&
+                                              photoUrlExistante == null)
+                                          ? const Icon(
+                                              Icons.person,
+                                              size: 40,
+                                              color: Color(0xFF1E3A8A),
+                                            )
                                           : null,
                                     ),
                                     Positioned(
@@ -332,8 +419,15 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                                       bottom: 0,
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
-                                        decoration: const BoxDecoration(color: Color(0xFFD97706), shape: BoxShape.circle),
-                                        child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFFD97706),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          size: 16,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -343,46 +437,77 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                             const SizedBox(height: 20),
                             TextField(
                               controller: nomController,
-                              decoration: const InputDecoration(labelText: 'Nom *', prefixIcon: Icon(Icons.person)),
+                              decoration: const InputDecoration(
+                                labelText: 'Nom *',
+                                prefixIcon: Icon(Icons.person),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: prenomController,
-                              decoration: const InputDecoration(labelText: 'Prénom', prefixIcon: Icon(Icons.person_outline)),
+                              decoration: const InputDecoration(
+                                labelText: 'Prénom',
+                                prefixIcon: Icon(Icons.person_outline),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: emailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(labelText: 'Email *', prefixIcon: Icon(Icons.email)),
+                              decoration: const InputDecoration(
+                                labelText: 'Email *',
+                                prefixIcon: Icon(Icons.email),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: telephoneController,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(labelText: 'Téléphone', prefixIcon: Icon(Icons.phone)),
+                              decoration: const InputDecoration(
+                                labelText: 'Téléphone',
+                                prefixIcon: Icon(Icons.phone),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: adresseController,
-                              decoration: const InputDecoration(labelText: 'Adresse', prefixIcon: Icon(Icons.location_on)),
+                              decoration: const InputDecoration(
+                                labelText: 'Adresse',
+                                prefixIcon: Icon(Icons.location_on),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: fonctionController,
-                              decoration: const InputDecoration(labelText: 'Fonction', prefixIcon: Icon(Icons.work)),
+                              decoration: const InputDecoration(
+                                labelText: 'Fonction',
+                                prefixIcon: Icon(Icons.work),
+                              ),
                             ),
                             const SizedBox(height: 12),
                             if (role != 'directeur')
                               DropdownButtonFormField<String>(
                                 value: role,
-                                decoration: const InputDecoration(labelText: 'Rôle *', prefixIcon: Icon(Icons.badge)),
+                                decoration: const InputDecoration(
+                                  labelText: 'Rôle *',
+                                  prefixIcon: Icon(Icons.badge),
+                                ),
                                 items: const [
-                                  DropdownMenuItem(value: 'enseignant', child: Text('Enseignant')),
-                                  DropdownMenuItem(value: 'censeur', child: Text('Censeur')),
-                                  DropdownMenuItem(value: 'secretaire', child: Text('Secrétaire')),
+                                  DropdownMenuItem(
+                                    value: 'enseignant',
+                                    child: Text('Enseignant'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'censeur',
+                                    child: Text('Censeur'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'secretaire',
+                                    child: Text('Secrétaire'),
+                                  ),
                                 ],
-                                onChanged: (v) => setStateDialog(() => role = v ?? role),
+                                onChanged: (v) =>
+                                    setStateDialog(() => role = v ?? role),
                               ),
                           ],
                         ),
@@ -392,7 +517,10 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annuler'),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -403,27 +531,42 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                               padding: const EdgeInsets.symmetric(vertical: 14),
                             ),
                             onPressed: () async {
-                              if (nomController.text.isEmpty || emailController.text.isEmpty) {
-                                _afficherErreur('Veuillez remplir les champs obligatoires');
+                              if (nomController.text.isEmpty ||
+                                  emailController.text.isEmpty) {
+                                _afficherErreur(
+                                  'Veuillez remplir les champs obligatoires',
+                                );
                                 return;
                               }
                               try {
                                 await UtilisateurService.modifier(
                                   widget.userId,
-                                  nom:       nomController.text,
-                                  prenom:    prenomController.text.isEmpty ? null : prenomController.text,
-                                  email:     emailController.text,
-                                  telephone: telephoneController.text.isEmpty ? null : telephoneController.text,
-                                  adresse:   adresseController.text.isEmpty ? null : adresseController.text,
-                                  fonction:  fonctionController.text.isEmpty ? null : fonctionController.text,
-                                  role:      role == 'directeur' ? null : role,
-                                  photo:     photo,
+                                  nom: nomController.text,
+                                  prenom: prenomController.text.isEmpty
+                                      ? null
+                                      : prenomController.text,
+                                  email: emailController.text,
+                                  telephone: telephoneController.text.isEmpty
+                                      ? null
+                                      : telephoneController.text,
+                                  adresse: adresseController.text.isEmpty
+                                      ? null
+                                      : adresseController.text,
+                                  fonction: fonctionController.text.isEmpty
+                                      ? null
+                                      : fonctionController.text,
+                                  role: role == 'directeur' ? null : role,
+                                  photo: photo,
                                 );
                                 if (context.mounted) Navigator.pop(context);
-                                _afficherSucces('Utilisateur modifié avec succès');
+                                _afficherSucces(
+                                  'Utilisateur modifié avec succès',
+                                );
                                 _chargerDonnees();
                               } catch (e) {
-                                _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+                                _afficherErreur(
+                                  e.toString().replaceAll('Exception: ', ''),
+                                );
                               }
                             },
                             child: const Text('Enregistrer'),
@@ -455,33 +598,86 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       appBar: AppBar(
         title: Text(
           'Fiche utilisateur',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+          style: GoogleFonts.sora(
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
         ),
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _chargerDonnees),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _chargerDonnees,
+          ),
         ],
       ),
       body: _chargement || _utilisateur == null
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _chargerDonnees,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _sectionIdentite(),
-                  const SizedBox(height: 20),
-                  _sectionActionsRapides(),
-                  if (_utilisateur!['role'] == 'enseignant') ...[
-                    const SizedBox(height: 24),
-                    _sectionAffectations(),
-                  ],
-                  const SizedBox(height: 24),
-                  _sectionHistorique(),
-                ],
-              ),
+          : Column(
+              children: [
+                _breadcrumb(),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _chargerDonnees,
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _sectionIdentite(),
+                        const SizedBox(height: 20),
+                        _sectionActionsRapides(),
+                        if (_utilisateur!['role'] == 'enseignant') ...[
+                          const SizedBox(height: 24),
+                          _sectionAffectations(),
+                        ],
+                        const SizedBox(height: 24),
+                        _sectionHistorique(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
+    );
+  }
+
+  Widget _breadcrumb() {
+    final u = _utilisateur!;
+    final nomComplet = '${u['name']} ${u['prenom'] ?? ''}'.trim();
+    return Container(
+      width: double.infinity,
+      color: Colors.white.withValues(alpha: 0.5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          TextButton(
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Utilisateurs',
+              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 14, color: Color(0xFF94A3B8)),
+          Text(
+            nomComplet,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Color(0xFF334155),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -490,10 +686,10 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _sectionIdentite() {
-    final u        = _utilisateur!;
-    final role     = u['role'] as String;
-    final couleur  = _couleurRole(role);
-    final actif    = u['actif'] == true;
+    final u = _utilisateur!;
+    final role = u['role'] as String;
+    final couleur = _couleurRole(role);
+    final actif = u['actif'] == true;
     final photoUrl = u['photo_url'] as String?;
     final nomComplet = '${u['name']} ${u['prenom'] ?? ''}'.trim();
 
@@ -509,7 +705,11 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
             boxShadow: [
-              BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8)),
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                blurRadius: 24,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
           child: Column(
@@ -519,28 +719,51 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                 height: 100,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [couleur, couleur.withValues(alpha: 0.7)]),
+                  gradient: LinearGradient(
+                    colors: [couleur, couleur.withValues(alpha: 0.7)],
+                  ),
                   image: photoUrl != null
-                      ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
+                      ? DecorationImage(
+                          image: NetworkImage(photoUrl),
+                          fit: BoxFit.cover,
+                        )
                       : null,
                 ),
                 alignment: Alignment.center,
                 child: photoUrl == null
                     ? Text(
-                        (u['name'] as String).isNotEmpty ? (u['name'] as String).substring(0, 1).toUpperCase() : '?',
-                        style: GoogleFonts.sora(fontSize: 36, fontWeight: FontWeight.w700, color: Colors.white),
+                        (u['name'] as String).isNotEmpty
+                            ? (u['name'] as String)
+                                  .substring(0, 1)
+                                  .toUpperCase()
+                            : '?',
+                        style: GoogleFonts.sora(
+                          fontSize: 36,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
                       )
                     : null,
               ),
               const SizedBox(height: 14),
               Text(
                 nomComplet,
-                style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                style: GoogleFonts.sora(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
+                ),
                 textAlign: TextAlign.center,
               ),
               if (u['fonction'] != null) ...[
                 const SizedBox(height: 2),
-                Text(u['fonction'] as String, style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF334155))),
+                Text(
+                  u['fonction'] as String,
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
               ],
               const SizedBox(height: 10),
               Wrap(
@@ -550,18 +773,25 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                   SSMBadge(label: _labelRole(role), couleur: couleur),
                   SSMBadge(
                     label: actif ? 'ACTIF' : 'INACTIF',
-                    couleur: actif ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                    couleur: actif
+                        ? const Color(0xFF16A34A)
+                        : const Color(0xFFDC2626),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
               _ligneInfo(Icons.email, u['email'] as String),
-              if (u['telephone'] != null) _ligneInfo(Icons.phone, u['telephone'] as String),
-              if (u['adresse'] != null) _ligneInfo(Icons.location_on, u['adresse'] as String),
+              if (u['telephone'] != null)
+                _ligneInfo(Icons.phone, u['telephone'] as String),
+              if (u['adresse'] != null)
+                _ligneInfo(Icons.location_on, u['adresse'] as String),
               const SizedBox(height: 8),
               Text(
                 'Dernière connexion : ${_tempsRelatif(u['derniere_connexion'] as String?)}',
-                style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: const Color(0xFF94A3B8),
+                ),
               ),
               if (role == 'enseignant') ...[
                 const SizedBox(height: 16),
@@ -572,9 +802,27 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                       )
                     : Row(
                         children: [
-                          Expanded(child: _statMini('$_totalClasses', 'Classes', Icons.class_)),
-                          Expanded(child: _statMini(_totalHeures.toStringAsFixed(1), 'H/semaine', Icons.schedule)),
-                          Expanded(child: _statMini('$_totalEleves', 'Élèves', Icons.people)),
+                          Expanded(
+                            child: _statMini(
+                              '$_totalClasses',
+                              'Classes',
+                              Icons.class_,
+                            ),
+                          ),
+                          Expanded(
+                            child: _statMini(
+                              _totalHeures.toStringAsFixed(1),
+                              'H/semaine',
+                              Icons.schedule,
+                            ),
+                          ),
+                          Expanded(
+                            child: _statMini(
+                              '$_totalEleves',
+                              'Élèves',
+                              Icons.people,
+                            ),
+                          ),
                         ],
                       ),
               ],
@@ -594,7 +842,13 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
           Icon(icone, size: 14, color: const Color(0xFF94A3B8)),
           const SizedBox(width: 6),
           Flexible(
-            child: Text(valeur, style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
+            child: Text(
+              valeur,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: const Color(0xFF334155),
+              ),
+            ),
           ),
         ],
       ),
@@ -606,8 +860,21 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       children: [
         Icon(icone, size: 18, color: const Color(0xFF1E3A8A)),
         const SizedBox(height: 4),
-        Text(valeur, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF334155))),
+        Text(
+          valeur,
+          style: GoogleFonts.sora(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF0F172A),
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            color: const Color(0xFF334155),
+          ),
+        ),
       ],
     );
   }
@@ -650,7 +917,9 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
           child: ElevatedButton.icon(
             onPressed: actif ? _confirmerDesactivation : _reactiver,
             style: ElevatedButton.styleFrom(
-              backgroundColor: actif ? const Color(0xFFDC2626) : const Color(0xFF16A34A),
+              backgroundColor: actif
+                  ? const Color(0xFFDC2626)
+                  : const Color(0xFF16A34A),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 12),
             ),
@@ -670,10 +939,10 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
     final parClasse = <int, Map<String, dynamic>>{};
     for (final a in _affectations) {
       final classeId = a['classe_id'] as int;
-      parClasse.putIfAbsent(classeId, () => {
-            'nom': a['classe_nom'],
-            'matieres': <dynamic>[],
-          });
+      parClasse.putIfAbsent(
+        classeId,
+        () => {'nom': a['classe_nom'], 'matieres': <dynamic>[]},
+      );
       (parClasse[classeId]!['matieres'] as List).add(a);
     }
 
@@ -689,12 +958,16 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                 context,
                 MaterialPageRoute(
                   builder: (_) => AffectationEnseignantScreen(
-                    userId:   widget.userId,
-                    userName: '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'.trim(),
+                    userId: widget.userId,
+                    userName:
+                        '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'
+                            .trim(),
                   ),
                 ),
               ).then((_) => _chargerDonnees()),
-              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF1E3A8A)),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1E3A8A),
+              ),
               icon: const Icon(Icons.edit, size: 16),
               label: const Text('Modifier les affectations'),
             ),
@@ -710,22 +983,33 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
             ),
             child: Column(
               children: [
-                const Icon(Icons.warning_amber, color: Color(0xFFD97706), size: 32),
+                const Icon(
+                  Icons.warning_amber,
+                  color: Color(0xFFD97706),
+                  size: 32,
+                ),
                 const SizedBox(height: 8),
-                Text('Aucune affectation enregistrée',
-                    style: GoogleFonts.inter(color: const Color(0xFF92400E))),
+                Text(
+                  'Aucune affectation enregistrée',
+                  style: GoogleFonts.inter(color: const Color(0xFF92400E)),
+                ),
                 const SizedBox(height: 12),
                 ElevatedButton(
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (_) => AffectationEnseignantScreen(
-                        userId:   widget.userId,
-                        userName: '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'.trim(),
+                        userId: widget.userId,
+                        userName:
+                            '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'
+                                .trim(),
                       ),
                     ),
                   ).then((_) => _chargerDonnees()),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706), foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFD97706),
+                    foregroundColor: Colors.white,
+                  ),
                   child: const Text('Affecter maintenant'),
                 ),
               ],
@@ -740,16 +1024,28 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: const Border(left: BorderSide(color: Color(0xFF1E3A8A), width: 4)),
+                border: const Border(
+                  left: BorderSide(color: Color(0xFF1E3A8A), width: 4),
+                ),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2)),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
                 ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(c['nom'] as String,
-                      style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                  Text(
+                    c['nom'] as String,
+                    style: GoogleFonts.sora(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -760,13 +1056,24 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                           ? '${m['matiere_nom']} (coef $coef)'
                           : '${m['matiere_nom']}';
                       return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF0D9488).withValues(alpha: 0.12),
+                          color: const Color(
+                            0xFF0D9488,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: Text(label,
-                            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0D9488))),
+                        child: Text(
+                          label,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0D9488),
+                          ),
+                        ),
                       );
                     }).toList(),
                   ),
@@ -794,7 +1101,11 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2)),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
             ],
           ),
           child: Column(

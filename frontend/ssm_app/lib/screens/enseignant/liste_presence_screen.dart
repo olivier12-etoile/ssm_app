@@ -122,12 +122,14 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
       (i) => DateTime.now().subtract(Duration(days: 29 - i)),
     );
 
-    final resultats = await Future.wait(dates.map((d) {
-      return AbsenceService.listerAbsences(
-        classeId: widget.classeId,
-        dateAbsence: _formatDate(d),
-      );
-    }));
+    final resultats = await Future.wait(
+      dates.map((d) {
+        return AbsenceService.listerAbsences(
+          classeId: widget.classeId,
+          dateAbsence: _formatDate(d),
+        );
+      }),
+    );
 
     final historique = <String, List<dynamic>>{};
     for (var i = 0; i < dates.length; i++) {
@@ -141,10 +143,15 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
       (e) => e['id'] == eleveId,
       orElse: () => null,
     );
-    return eleve != null ? '${eleve['nom']} ${eleve['prenom']}' : 'Élève #$eleveId';
+    return eleve != null
+        ? '${eleve['nom']} ${eleve['prenom']}'
+        : 'Élève #$eleveId';
   }
 
-  Future<void> _afficherAbsentsDuJour(DateTime date, List<dynamic> absences) async {
+  Future<void> _afficherAbsentsDuJour(
+    DateTime date,
+    List<dynamic> absences,
+  ) async {
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -215,7 +222,9 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
                     onTap: () => _afficherAbsentsDuJour(date, absencesJour),
                     child: Container(
                       decoration: BoxDecoration(
-                        color: aDesAbsences ? Colors.red[100] : Colors.grey[100],
+                        color: aDesAbsences
+                            ? Colors.red[100]
+                            : Colors.grey[100],
                         borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: aDesAbsences ? Colors.red : Colors.grey[300]!,
@@ -225,9 +234,12 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
                         child: Text(
                           '${date.day}',
                           style: TextStyle(
-                            fontWeight:
-                                aDesAbsences ? FontWeight.bold : FontWeight.normal,
-                            color: aDesAbsences ? Colors.red[900] : Colors.black87,
+                            fontWeight: aDesAbsences
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: aDesAbsences
+                                ? Colors.red[900]
+                                : Colors.black87,
                             fontSize: 12,
                           ),
                         ),
@@ -250,15 +262,15 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   @override
@@ -271,6 +283,10 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
         title: Text('Présence — ${widget.classeNom}'),
         backgroundColor: Colors.brown,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history),
@@ -309,7 +325,9 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
                           child: const Text('Changer'),
                         ),
                         ElevatedButton.icon(
-                          onPressed: _anneeId == null ? null : _chargerPresences,
+                          onPressed: _anneeId == null
+                              ? null
+                              : _chargerPresences,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.brown,
                             foregroundColor: Colors.white,
@@ -327,7 +345,9 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(10),
-                    color: nombreAbsents > 0 ? Colors.orange[100] : Colors.green[100],
+                    color: nombreAbsents > 0
+                        ? Colors.orange[100]
+                        : Colors.green[100],
                     child: Text(
                       '$nombrePresents présent(s) — $nombreAbsents absent(s) sur ${_eleves.length} élèves',
                       textAlign: TextAlign.center,
@@ -345,74 +365,85 @@ class _ListePresenceScreenState extends State<ListePresenceScreen> {
                   child: _chargementListe
                       ? const Center(child: CircularProgressIndicator())
                       : _eleves.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Aucun élève chargé pour cette date',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _eleves.length,
-                              itemBuilder: (context, index) {
-                                final eleve = _eleves[index];
-                                final eleveId = eleve['id'] as int;
-                                final sexe = eleve['sexe'] as String;
-                                final photoUrl = eleve['photo_url'] as String?;
-                                final estAbsent = _absents[eleveId] ?? false;
+                      ? const Center(
+                          child: Text(
+                            'Aucun élève chargé pour cette date',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _eleves.length,
+                          itemBuilder: (context, index) {
+                            final eleve = _eleves[index];
+                            final eleveId = eleve['id'] as int;
+                            final sexe = eleve['sexe'] as String;
+                            final photoUrl = eleve['photo_url'] as String?;
+                            final estAbsent = _absents[eleveId] ?? false;
 
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  color: estAbsent ? Colors.red[50] : null,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              color: estAbsent ? Colors.red[50] : null,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(8),
+                                leading: CircleAvatar(
+                                  backgroundColor: sexe == 'M'
+                                      ? Colors.blue
+                                      : Colors.pink,
+                                  backgroundImage: photoUrl != null
+                                      ? NetworkImage(photoUrl)
+                                      : null,
+                                  child: photoUrl == null
+                                      ? Text(
+                                          eleve['prenom'].toString().substring(
+                                            0,
+                                            1,
+                                          ),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : null,
+                                ),
+                                title: Text(
+                                  '${eleve['nom']} ${eleve['prenom']}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
                                   ),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.all(8),
-                                    leading: CircleAvatar(
-                                      backgroundColor:
-                                          sexe == 'M' ? Colors.blue : Colors.pink,
-                                      backgroundImage:
-                                          photoUrl != null ? NetworkImage(photoUrl) : null,
-                                      child: photoUrl == null
-                                          ? Text(
-                                              eleve['prenom'].toString().substring(0, 1),
-                                              style:
-                                                  const TextStyle(color: Colors.white),
-                                            )
-                                          : null,
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ChoiceChip(
+                                      label: const Text('✅ Présent'),
+                                      selected: !estAbsent,
+                                      selectedColor: Colors.green[200],
+                                      onSelected: (_) {
+                                        setState(
+                                          () => _absents[eleveId] = false,
+                                        );
+                                      },
                                     ),
-                                    title: Text(
-                                      '${eleve['nom']} ${eleve['prenom']}',
-                                      style:
-                                          const TextStyle(fontWeight: FontWeight.bold),
+                                    const SizedBox(width: 6),
+                                    ChoiceChip(
+                                      label: const Text('❌ Absent'),
+                                      selected: estAbsent,
+                                      selectedColor: Colors.red[200],
+                                      onSelected: (_) {
+                                        setState(
+                                          () => _absents[eleveId] = true,
+                                        );
+                                      },
                                     ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        ChoiceChip(
-                                          label: const Text('✅ Présent'),
-                                          selected: !estAbsent,
-                                          selectedColor: Colors.green[200],
-                                          onSelected: (_) {
-                                            setState(() => _absents[eleveId] = false);
-                                          },
-                                        ),
-                                        const SizedBox(width: 6),
-                                        ChoiceChip(
-                                          label: const Text('❌ Absent'),
-                                          selected: estAbsent,
-                                          selectedColor: Colors.red[200],
-                                          onSelected: (_) {
-                                            setState(() => _absents[eleveId] = true);
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
 
                 // ── Bouton enregistrer ───────────────────────

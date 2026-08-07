@@ -11,19 +11,27 @@ import '../../services/whatsapp_service.dart';
 
 Color _couleurStatut(String statut) {
   switch (statut) {
-    case 'en_regle': return Colors.green;
-    case 'partiel':  return Colors.orange;
-    case 'non_paye': return Colors.red;
-    default:         return Colors.grey;
+    case 'en_regle':
+      return Colors.green;
+    case 'partiel':
+      return Colors.orange;
+    case 'non_paye':
+      return Colors.red;
+    default:
+      return Colors.grey;
   }
 }
 
 String _libelleStatut(String statut) {
   switch (statut) {
-    case 'en_regle': return 'En règle ✅';
-    case 'partiel':  return 'Partiel ⚠️';
-    case 'non_paye': return 'Non payé ❌';
-    default:         return statut;
+    case 'en_regle':
+      return 'En règle ✅';
+    case 'partiel':
+      return 'Partiel ⚠️';
+    case 'non_paye':
+      return 'Non payé ❌';
+    default:
+      return statut;
   }
 }
 
@@ -113,12 +121,14 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
         periodes = resultatsAnnee[0] as List;
         situationFinanciere = resultatsAnnee[1] as Map<String, dynamic>;
 
-        final bulletinsListe = await Future.wait(periodes.map((p) {
-          return BulletinService.genererBulletin(
-            eleveId: widget.eleveId,
-            periodeId: p['id'] as int,
-          );
-        }));
+        final bulletinsListe = await Future.wait(
+          periodes.map((p) {
+            return BulletinService.genererBulletin(
+              eleveId: widget.eleveId,
+              periodeId: p['id'] as int,
+            );
+          }),
+        );
         for (var i = 0; i < periodes.length; i++) {
           bulletins[periodes[i]['id'] as int] = bulletinsListe[i];
         }
@@ -160,15 +170,15 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   Future<void> _changerPhoto() async {
@@ -243,7 +253,8 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Envoyer un reçu WhatsApp ?'),
         content: const Text(
-            'Envoyer une confirmation de paiement au parent par WhatsApp ?'),
+          'Envoyer une confirmation de paiement au parent par WhatsApp ?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -252,8 +263,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Oui, envoyer',
-                style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Oui, envoyer',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -362,18 +375,21 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
               CircleAvatar(
                 radius: 50,
                 backgroundColor: sexe == 'M' ? Colors.blue : Colors.pink,
-                backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
+                backgroundImage: photoUrl != null
+                    ? NetworkImage(photoUrl)
+                    : null,
                 child: _uploadPhotoEnCours
                     ? const CircularProgressIndicator(color: Colors.white)
                     : photoUrl == null
-                        ? Text(
-                            eleve['prenom'].toString().substring(0, 1),
-                            style: const TextStyle(
-                                fontSize: 36,
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold),
-                          )
-                        : null,
+                    ? Text(
+                        eleve['prenom'].toString().substring(0, 1),
+                        style: const TextStyle(
+                          fontSize: 36,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
               ),
               Positioned(
                 bottom: 0,
@@ -385,10 +401,15 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                     decoration: const BoxDecoration(
                       color: Colors.white,
                       shape: BoxShape.circle,
-                      boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 3)],
+                      boxShadow: [
+                        BoxShadow(color: Colors.black26, blurRadius: 3),
+                      ],
                     ),
-                    child: const Icon(Icons.camera_alt,
-                        size: 18, color: Colors.deepOrange),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 18,
+                      color: Colors.deepOrange,
+                    ),
                   ),
                 ),
               ),
@@ -400,11 +421,12 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
             style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
-          Text('Matricule : ${eleve['matricule']}',
-              style: const TextStyle(color: Colors.grey)),
-          Text('Classe : ${classe?['nom'] ?? 'Non définie'}'),
           Text(
-              'Né(e) le : ${eleve['date_naissance'] ?? 'Non renseignée'}'),
+            'Matricule : ${eleve['matricule']}',
+            style: const TextStyle(color: Colors.grey),
+          ),
+          Text('Classe : ${classe?['nom'] ?? 'Non définie'}'),
+          Text('Né(e) le : ${eleve['date_naissance'] ?? 'Non renseignée'}'),
           Text('Sexe : ${sexe == 'M' ? 'Masculin' : 'Féminin'}'),
           const SizedBox(height: 10),
           if (telephoneParent != null && telephoneParent.isNotEmpty)
@@ -423,8 +445,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
               ],
             )
           else
-            const Text('Aucun numéro de téléphone parent',
-                style: TextStyle(color: Colors.orange, fontSize: 12)),
+            const Text(
+              'Aucun numéro de téléphone parent',
+              style: TextStyle(color: Colors.orange, fontSize: 12),
+            ),
         ],
       ),
     );
@@ -437,8 +461,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
   Widget _sectionSituationFinanciere() {
     final s = _situationFinanciere;
     if (s == null) {
-      return const Text('Situation financière indisponible',
-          style: TextStyle(color: Colors.grey));
+      return const Text(
+        'Situation financière indisponible',
+        style: TextStyle(color: Colors.grey),
+      );
     }
 
     final statut = s['statut'] as String;
@@ -446,8 +472,9 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
     final montantPaye = double.tryParse(s['montant_paye'].toString()) ?? 0;
     final montantRestant =
         double.tryParse(s['montant_restant'].toString()) ?? 0;
-    final progression =
-        montantDu > 0 ? (montantPaye / montantDu).clamp(0.0, 1.0) : 1.0;
+    final progression = montantDu > 0
+        ? (montantPaye / montantDu).clamp(0.0, 1.0)
+        : 1.0;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -491,12 +518,16 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          const Text('Historique des paiements',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Historique des paiements',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 6),
           if (_paiements.isEmpty)
-            const Text('Aucun paiement enregistré',
-                style: TextStyle(color: Colors.grey))
+            const Text(
+              'Aucun paiement enregistré',
+              style: TextStyle(color: Colors.grey),
+            )
           else
             ..._paiements.map((p) {
               final enregistrePar = p['enregistre_par'];
@@ -511,14 +542,15 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                         children: [
                           Text(
                             '${p['montant']} FCFA — ${p['tranche']}',
-                            style:
-                                const TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                           Text(
                             '${p['date_paiement']}'
                             '${enregistrePar != null ? ' • Par ${enregistrePar['name']}' : ''}',
                             style: const TextStyle(
-                                fontSize: 11, color: Colors.grey),
+                              fontSize: 11,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -542,7 +574,11 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _envoyerRappelWhatsApp,
-                    icon: const Icon(Icons.message, size: 18, color: Colors.green),
+                    icon: const Icon(
+                      Icons.message,
+                      size: 18,
+                      color: Colors.green,
+                    ),
                     label: const Text('Rappel WhatsApp'),
                   ),
                 ),
@@ -560,8 +596,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
 
   Widget _sectionResultatsScolaires() {
     if (_periodes.isEmpty) {
-      return const Text('Aucune période académique disponible',
-          style: TextStyle(color: Colors.grey));
+      return const Text(
+        'Aucune période académique disponible',
+        style: TextStyle(color: Colors.grey),
+      );
     }
 
     return Column(
@@ -596,7 +634,9 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.blue,
                           borderRadius: BorderRadius.circular(10),
@@ -611,7 +651,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                 ),
                 const SizedBox(height: 6),
                 if (bulletin == null)
-                  const Text('Chargement...', style: TextStyle(color: Colors.grey))
+                  const Text(
+                    'Chargement...',
+                    style: TextStyle(color: Colors.grey),
+                  )
                 else ...[
                   Text(
                     'Moyenne générale : ${bulletin['moyenne_generale']}/20 — ${bulletin['mention_generale']}',
@@ -629,8 +672,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                         children: [
                           Expanded(
                             flex: 2,
-                            child: Text(n['matiere'] as String,
-                                style: const TextStyle(fontSize: 12)),
+                            child: Text(
+                              n['matiere'] as String,
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
                           Expanded(
                             child: Text(
@@ -641,8 +686,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
                             ),
                           ),
                           Expanded(
-                            child: Text('Coef ${n['coefficient']}',
-                                style: const TextStyle(fontSize: 12)),
+                            child: Text(
+                              'Coef ${n['coefficient']}',
+                              style: const TextStyle(fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
@@ -665,8 +712,9 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
     final total = (_absencesData?['total'] as int?) ?? 0;
     final nonJustifiees = (_absencesData?['non_justifiees'] as int?) ?? 0;
     final justifiees = total - nonJustifiees;
-    final dernieres =
-        ((_absencesData?['absences'] as List?) ?? []).take(5).toList();
+    final dernieres = ((_absencesData?['absences'] as List?) ?? [])
+        .take(5)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -681,8 +729,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
         ),
         const SizedBox(height: 12),
         if (dernieres.isEmpty)
-          const Text('Aucune absence enregistrée',
-              style: TextStyle(color: Colors.grey))
+          const Text(
+            'Aucune absence enregistrée',
+            style: TextStyle(color: Colors.grey),
+          )
         else
           ...dernieres.map((a) {
             final justifiee = a['justifiee'] == true;
@@ -713,7 +763,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
         Text(
           '$valeur',
           style: TextStyle(
-              fontSize: 20, fontWeight: FontWeight.bold, color: couleur),
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: couleur,
+          ),
         ),
         Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
       ],
@@ -734,38 +787,100 @@ class _FicheEleveScreenState extends State<FicheEleveScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_eleve != null
-            ? '${_eleve!['nom']} ${_eleve!['prenom']}'
-            : 'Fiche élève'),
+        title: Text(
+          _eleve != null
+              ? '${_eleve!['nom']} ${_eleve!['prenom']}'
+              : 'Fiche élève',
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         backgroundColor: Colors.deepOrange,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _chargerTout,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _chargerTout),
         ],
       ),
       body: _chargement || _eleve == null
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _chargerTout,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _sectionInfosPersonnelles(),
-                  const Divider(height: 32),
-                  _titreSection('Situation financière'),
-                  _sectionSituationFinanciere(),
-                  const Divider(height: 32),
-                  _titreSection('Résultats scolaires'),
-                  _sectionResultatsScolaires(),
-                  const Divider(height: 32),
-                  _titreSection('Absences'),
-                  _sectionAbsences(),
-                ],
-              ),
+          : Column(
+              children: [
+                _breadcrumb(),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _chargerTout,
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _sectionInfosPersonnelles(),
+                        const Divider(height: 32),
+                        _titreSection('Situation financière'),
+                        _sectionSituationFinanciere(),
+                        const Divider(height: 32),
+                        _titreSection('Résultats scolaires'),
+                        _sectionResultatsScolaires(),
+                        const Divider(height: 32),
+                        _titreSection('Absences'),
+                        _sectionAbsences(),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
+    );
+  }
+
+  Widget _breadcrumb() {
+    final classe = _classeActuelle;
+    final classeNom = classe?['nom'] as String? ?? '—';
+    final nomEleve = _eleve != null
+        ? '${_eleve!['nom']} ${_eleve!['prenom']}'
+        : '';
+    return Container(
+      width: double.infinity,
+      color: Colors.white.withOpacity(0.5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        children: [
+          TextButton(
+            onPressed: () =>
+                Navigator.popUntil(context, (route) => route.isFirst),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: const Text(
+              'Élèves',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            child: Text(
+              classeNom,
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ),
+          const Icon(Icons.chevron_right, size: 14, color: Colors.grey),
+          Text(
+            nomEleve,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black87,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -852,7 +967,9 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
     if (montant == null || montant <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Montant invalide'), backgroundColor: Colors.red),
+          content: Text('Montant invalide'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -910,9 +1027,13 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
                 ),
                 items: const [
                   DropdownMenuItem(
-                      value: 'inscription', child: Text('Inscription')),
+                    value: 'inscription',
+                    child: Text('Inscription'),
+                  ),
                   DropdownMenuItem(
-                      value: 'scolarite', child: Text('Scolarité')),
+                    value: 'scolarite',
+                    child: Text('Scolarité'),
+                  ),
                 ],
                 onChanged: (v) => setState(() {
                   _type = v!;
@@ -928,11 +1049,22 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'Tranche 1', child: Text('Tranche 1')),
-                  DropdownMenuItem(value: 'Tranche 2', child: Text('Tranche 2')),
-                  DropdownMenuItem(value: 'Tranche 3', child: Text('Tranche 3')),
                   DropdownMenuItem(
-                      value: 'Paiement complet', child: Text('Paiement complet')),
+                    value: 'Tranche 1',
+                    child: Text('Tranche 1'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Tranche 2',
+                    child: Text('Tranche 2'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Tranche 3',
+                    child: Text('Tranche 3'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'Paiement complet',
+                    child: Text('Paiement complet'),
+                  ),
                 ],
                 onChanged: (v) => setState(() {
                   _tranche = v!;
@@ -997,7 +1129,9 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
                   width: 16,
                   height: 16,
                   child: CircularProgressIndicator(
-                      strokeWidth: 2, color: Colors.white),
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
                 )
               : const Text('Enregistrer'),
         ),

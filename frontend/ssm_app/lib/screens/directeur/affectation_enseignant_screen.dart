@@ -25,8 +25,10 @@ class _AffectationEnseignantScreenState
     extends State<AffectationEnseignantScreen> {
   List<dynamic> _classes = [];
   Map<int, List<dynamic>> _matieresParClasse = {};
-  Map<int, Map<int, int>> _affectationsParClasse = {}; // classeId -> {matiereId: affectationId}
-  Map<int, Set<int>> _selections = {}; // classeId -> matiereIds cochées dans l'UI
+  Map<int, Map<int, int>> _affectationsParClasse =
+      {}; // classeId -> {matiereId: affectationId}
+  Map<int, Set<int>> _selections =
+      {}; // classeId -> matiereIds cochées dans l'UI
 
   bool _chargement = true;
   int? _classeEnEnregistrement;
@@ -43,16 +45,18 @@ class _AffectationEnseignantScreenState
       final classes = await ClasseService.listerClasses();
 
       final matieresParClasse = <int, List<dynamic>>{};
-      await Future.wait(classes.map((c) async {
-        final classeId = c['id'] as int;
-        matieresParClasse[classeId] =
-            await ClasseMatiereService.listerParClasse(classeId);
-      }));
+      await Future.wait(
+        classes.map((c) async {
+          final classeId = c['id'] as int;
+          matieresParClasse[classeId] =
+              await ClasseMatiereService.listerParClasse(classeId);
+        }),
+      );
 
-      final donneesAffectations =
-          await AffectationService.listerAffectations(widget.userId);
-      final affectations =
-          (donneesAffectations['affectations'] as List?) ?? [];
+      final donneesAffectations = await AffectationService.listerAffectations(
+        widget.userId,
+      );
+      final affectations = (donneesAffectations['affectations'] as List?) ?? [];
 
       final affectationsParClasse = <int, Map<int, int>>{};
       final selections = <int, Set<int>>{};
@@ -71,11 +75,11 @@ class _AffectationEnseignantScreenState
       }
 
       setState(() {
-        _classes                = classes;
-        _matieresParClasse      = matieresParClasse;
-        _affectationsParClasse  = affectationsParClasse;
-        _selections             = selections;
-        _chargement             = false;
+        _classes = classes;
+        _matieresParClasse = matieresParClasse;
+        _affectationsParClasse = affectationsParClasse;
+        _selections = selections;
+        _chargement = false;
       });
     } catch (e) {
       setState(() => _chargement = false);
@@ -85,13 +89,19 @@ class _AffectationEnseignantScreenState
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFFDC2626),
+      ),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF16A34A),
+      ),
     );
   }
 
@@ -99,7 +109,7 @@ class _AffectationEnseignantScreenState
     setState(() => _classeEnEnregistrement = classeId);
 
     final affecteesInitiales = _affectationsParClasse[classeId] ?? {};
-    final selectionActuelle  = _selections[classeId] ?? {};
+    final selectionActuelle = _selections[classeId] ?? {};
 
     try {
       // Nouvelles cases cochées → créer l'affectation
@@ -107,8 +117,8 @@ class _AffectationEnseignantScreenState
         if (!affecteesInitiales.containsKey(matiereId)) {
           await AffectationService.ajouterAffectation(
             enseignantId: widget.userId,
-            classeId:     classeId,
-            matiereId:    matiereId,
+            classeId: classeId,
+            matiereId: matiereId,
           );
         }
       }
@@ -137,12 +147,18 @@ class _AffectationEnseignantScreenState
           Positioned(
             top: -80,
             right: -60,
-            child: _blob(size: 260, couleur: const Color(0xFF1E3A8A).withValues(alpha: 0.06)),
+            child: _blob(
+              size: 260,
+              couleur: const Color(0xFF1E3A8A).withValues(alpha: 0.06),
+            ),
           ),
           Positioned(
             bottom: -60,
             left: -60,
-            child: _blob(size: 200, couleur: const Color(0xFF0D9488).withValues(alpha: 0.08)),
+            child: _blob(
+              size: 200,
+              couleur: const Color(0xFF0D9488).withValues(alpha: 0.08),
+            ),
           ),
           SafeArea(
             child: Column(
@@ -156,7 +172,9 @@ class _AffectationEnseignantScreenState
                           child: ListView(
                             padding: const EdgeInsets.all(16),
                             children: [
-                              SSMSectionTitre(titre: 'Classes et matières affectées'),
+                              SSMSectionTitre(
+                                titre: 'Classes et matières affectées',
+                              ),
                               if (_classes.isEmpty)
                                 Container(
                                   padding: const EdgeInsets.all(16),
@@ -204,15 +222,23 @@ class _AffectationEnseignantScreenState
           padding: const EdgeInsets.fromLTRB(4, 8, 16, 8),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.6),
-            border: Border(bottom: BorderSide(color: Colors.white.withValues(alpha: 0.7))),
+            border: Border(
+              bottom: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
+            ),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 16),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 16,
+              ),
             ],
           ),
           child: Row(
             children: [
               IconButton(
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: Color(0xFF0F172A),
+                ),
                 onPressed: () => Navigator.pop(context),
               ),
               Expanded(
@@ -238,9 +264,9 @@ class _AffectationEnseignantScreenState
   }
 
   Widget _carteClasse(dynamic classe) {
-    final classeId  = classe['id'] as int;
+    final classeId = classe['id'] as int;
     final classeNom = classe['nom'] as String;
-    final matieres  = _matieresParClasse[classeId] ?? [];
+    final matieres = _matieresParClasse[classeId] ?? [];
     final selection = _selections[classeId] ?? {};
     final enregistrementEnCours = _classeEnEnregistrement == classeId;
 
@@ -281,18 +307,24 @@ class _AffectationEnseignantScreenState
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Text(
                       'Aucune matière configurée pour cette classe',
-                      style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF94A3B8)),
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: const Color(0xFF94A3B8),
+                      ),
                     ),
                   )
                 else
                   ...matieres.map((m) {
-                    final matiereId  = m['matiere_id'] as int;
+                    final matiereId = m['matiere_id'] as int;
                     final matiereNom = m['matiere_nom'] as String;
                     return CheckboxListTile(
                       value: selection.contains(matiereId),
                       onChanged: (v) {
                         setState(() {
-                          final ensemble = _selections.putIfAbsent(classeId, () => {});
+                          final ensemble = _selections.putIfAbsent(
+                            classeId,
+                            () => {},
+                          );
                           if (v == true) {
                             ensemble.add(matiereId);
                           } else {
@@ -306,7 +338,10 @@ class _AffectationEnseignantScreenState
                       dense: true,
                       title: Text(
                         matiereNom,
-                        style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF334155)),
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: const Color(0xFF334155),
+                        ),
                       ),
                     );
                   }),
@@ -314,19 +349,31 @@ class _AffectationEnseignantScreenState
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: enregistrementEnCours ? null : () => _enregistrerClasse(classeId),
+                    onPressed: enregistrementEnCours
+                        ? null
+                        : () => _enregistrerClasse(classeId),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E3A8A),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
                     child: enregistrementEnCours
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
-                        : Text('Enregistrer', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                        : Text(
+                            'Enregistrer',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                   ),
                 ),
               ],

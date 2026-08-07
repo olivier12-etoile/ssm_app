@@ -11,14 +11,14 @@ class ListeRenvoiScreen extends StatefulWidget {
 }
 
 class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
-  List<dynamic> _classes          = [];
-  List<dynamic> _annees           = [];
-  List<dynamic> _nonAJour         = [];
-  bool _chargement                = true;
-  bool _chargementListe           = false;
+  List<dynamic> _classes = [];
+  List<dynamic> _annees = [];
+  List<dynamic> _nonAJour = [];
+  bool _chargement = true;
+  bool _chargementListe = false;
   int? _classeId;
   int? _anneeId;
-  final _montantController        = TextEditingController();
+  final _montantController = TextEditingController();
 
   @override
   void initState() {
@@ -39,8 +39,8 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
         AnneeService.listerAnnees(),
       ]);
       setState(() {
-        _classes    = resultats[0] as List;
-        _annees     = resultats[1] as List;
+        _classes = resultats[0] as List;
+        _annees = resultats[1] as List;
         _chargement = false;
       });
     } catch (e) {
@@ -50,7 +50,8 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
   }
 
   Future<void> _genererListe() async {
-    if (_classeId == null || _anneeId == null ||
+    if (_classeId == null ||
+        _anneeId == null ||
         _montantController.text.isEmpty) {
       _afficherErreur('Remplissez tous les champs');
       return;
@@ -66,12 +67,12 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
 
     try {
       final data = await PaiementService.listeRenvoi(
-        classeId:           _classeId!,
-        anneeAcademiqueId:  _anneeId!,
-        montantExige:       montant,
+        classeId: _classeId!,
+        anneeAcademiqueId: _anneeId!,
+        montantExige: montant,
       );
       setState(() {
-        _nonAJour        = data['non_a_jour'] as List;
+        _nonAJour = data['non_a_jour'] as List;
         _chargementListe = false;
       });
     } catch (e) {
@@ -81,9 +82,9 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   @override
@@ -93,6 +94,10 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
         title: const Text('Liste de renvoi'),
         backgroundColor: Colors.red[700],
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: _chargement
           ? const Center(child: CircularProgressIndicator())
@@ -195,82 +200,80 @@ class _ListeRenvoiScreenState extends State<ListeRenvoiScreen> {
                   child: _chargementListe
                       ? const Center(child: CircularProgressIndicator())
                       : _nonAJour.isEmpty
-                          ? const Center(
-                              child: Column(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.check_circle_outline,
-                                      size: 64, color: Colors.green),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Tous les élèves sont à jour\nou remplissez les filtres',
-                                    style:
-                                        TextStyle(color: Colors.grey),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_circle_outline,
+                                size: 64,
+                                color: Colors.green,
                               ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _nonAJour.length,
-                              itemBuilder: (context, index) {
-                                final e = _nonAJour[index];
-                                return Card(
-                                  margin: const EdgeInsets.only(
-                                      bottom: 8),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius:
-                                        BorderRadius.circular(10),
-                                    side: BorderSide(
-                                        color: Colors.red.shade200),
+                              SizedBox(height: 16),
+                              Text(
+                                'Tous les élèves sont à jour\nou remplissez les filtres',
+                                style: TextStyle(color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _nonAJour.length,
+                          itemBuilder: (context, index) {
+                            final e = _nonAJour[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                side: BorderSide(color: Colors.red.shade200),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(12),
+                                leading: CircleAvatar(
+                                  backgroundColor: Colors.red[700],
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
-                                  child: ListTile(
-                                    contentPadding:
-                                        const EdgeInsets.all(12),
-                                    leading: CircleAvatar(
-                                      backgroundColor: Colors.red[700],
-                                      child: Text(
-                                        '${index + 1}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                ),
+                                title: Text(
+                                  '${e['nom']} ${e['prenom']}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  'Matricule : ${e['matricule']}\nPayé : ${e['total_paye']} FCFA',
+                                ),
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Text(
+                                      'Doit',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey,
                                       ),
                                     ),
-                                    title: Text(
-                                      '${e['nom']} ${e['prenom']}',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold),
+                                    Text(
+                                      '${e['montant_du']} FCFA',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red[700],
+                                        fontSize: 14,
+                                      ),
                                     ),
-                                    subtitle: Text(
-                                      'Matricule : ${e['matricule']}\nPayé : ${e['total_paye']} FCFA',
-                                    ),
-                                    trailing: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        const Text(
-                                          'Doit',
-                                          style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey),
-                                        ),
-                                        Text(
-                                          '${e['montant_du']} FCFA',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.red[700],
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),

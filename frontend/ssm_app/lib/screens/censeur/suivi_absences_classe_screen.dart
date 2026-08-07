@@ -18,8 +18,7 @@ class SuiviAbsencesClasseScreen extends StatefulWidget {
       _SuiviAbsencesClasseScreenState();
 }
 
-class _SuiviAbsencesClasseScreenState
-    extends State<SuiviAbsencesClasseScreen> {
+class _SuiviAbsencesClasseScreenState extends State<SuiviAbsencesClasseScreen> {
   List<dynamic> _eleves = [];
   int? _anneeId;
 
@@ -110,12 +109,14 @@ class _SuiviAbsencesClasseScreenState
         (i) => DateTime(aujourdhui.year, aujourdhui.month, i + 1),
       );
 
-      final resultats = await Future.wait(dates.map((d) {
-        return AbsenceService.listerAbsences(
-          classeId: widget.classeId,
-          dateAbsence: _formatDate(d),
-        );
-      }));
+      final resultats = await Future.wait(
+        dates.map((d) {
+          return AbsenceService.listerAbsences(
+            classeId: widget.classeId,
+            dateAbsence: _formatDate(d),
+          );
+        }),
+      );
 
       final absencesDuMois = <String, List<dynamic>>{};
       for (var i = 0; i < dates.length; i++) {
@@ -152,8 +153,10 @@ class _SuiviAbsencesClasseScreenState
 
   List<dynamic> get _cinqDernieresAbsences {
     final liste = List<dynamic>.from(_toutesAbsencesMois);
-    liste.sort((a, b) =>
-        b['date_absence'].toString().compareTo(a['date_absence'].toString()));
+    liste.sort(
+      (a, b) =>
+          b['date_absence'].toString().compareTo(a['date_absence'].toString()),
+    );
     return liste.take(5).toList();
   }
 
@@ -176,7 +179,9 @@ class _SuiviAbsencesClasseScreenState
       (e) => e['id'] == eleveId,
       orElse: () => null,
     );
-    return eleve != null ? '${eleve['nom']} ${eleve['prenom']}' : 'Élève #$eleveId';
+    return eleve != null
+        ? '${eleve['nom']} ${eleve['prenom']}'
+        : 'Élève #$eleveId';
   }
 
   Future<void> _justifierAbsence(dynamic absence) async {
@@ -185,7 +190,9 @@ class _SuiviAbsencesClasseScreenState
     await showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Justifier l\'absence — ${_nomEleve(absence['eleve_id'] as int)}'),
+        title: Text(
+          'Justifier l\'absence — ${_nomEleve(absence['eleve_id'] as int)}',
+        ),
         content: TextField(
           controller: motifController,
           maxLines: 3,
@@ -216,7 +223,10 @@ class _SuiviAbsencesClasseScreenState
                 _afficherErreur(e.toString().replaceAll('Exception: ', ''));
               }
             },
-            child: const Text('Justifier', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Justifier',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -224,15 +234,15 @@ class _SuiviAbsencesClasseScreenState
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.red),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: Colors.green),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
   }
 
   @override
@@ -242,6 +252,10 @@ class _SuiviAbsencesClasseScreenState
         title: Text('Suivi absences — ${widget.classeNom}'),
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -261,7 +275,9 @@ class _SuiviAbsencesClasseScreenState
                   child: ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(Icons.calendar_today),
-                    title: Text('Date : ${_date.day}/${_date.month}/${_date.year}'),
+                    title: Text(
+                      'Date : ${_date.day}/${_date.month}/${_date.year}',
+                    ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -309,32 +325,43 @@ class _SuiviAbsencesClasseScreenState
                           return Card(
                             margin: const EdgeInsets.only(bottom: 6),
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10)),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
                             child: ListTile(
                               dense: true,
                               leading: CircleAvatar(
-                                backgroundColor:
-                                    eleve['sexe'] == 'M' ? Colors.blue : Colors.pink,
+                                backgroundColor: eleve['sexe'] == 'M'
+                                    ? Colors.blue
+                                    : Colors.pink,
                                 backgroundImage: eleve['photo_url'] != null
                                     ? NetworkImage(eleve['photo_url'] as String)
                                     : null,
                                 child: eleve['photo_url'] == null
                                     ? Text(
-                                        eleve['prenom'].toString().substring(0, 1),
-                                        style: const TextStyle(color: Colors.white),
+                                        eleve['prenom'].toString().substring(
+                                          0,
+                                          1,
+                                        ),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
                                       )
                                     : null,
                               ),
                               title: Text('${eleve['nom']} ${eleve['prenom']}'),
                               trailing: estAbsent
                                   ? const Chip(
-                                      label: Text('❌ Absent',
-                                          style: TextStyle(color: Colors.white)),
+                                      label: Text(
+                                        '❌ Absent',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
                                       backgroundColor: Colors.red,
                                     )
                                   : const Chip(
-                                      label: Text('✅ Présent',
-                                          style: TextStyle(color: Colors.white)),
+                                      label: Text(
+                                        '✅ Présent',
+                                        style: TextStyle(color: Colors.white),
+                                      ),
                                       backgroundColor: Colors.green,
                                     ),
                             ),
@@ -357,12 +384,19 @@ class _SuiviAbsencesClasseScreenState
                     : Row(
                         children: [
                           Expanded(
-                            child: _carteStat('Cette semaine', _totalSemaine,
-                                Colors.orange),
+                            child: _carteStat(
+                              'Cette semaine',
+                              _totalSemaine,
+                              Colors.orange,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
-                            child: _carteStat('Ce mois', _totalMois, Colors.brown),
+                            child: _carteStat(
+                              'Ce mois',
+                              _totalMois,
+                              Colors.brown,
+                            ),
                           ),
                         ],
                       ),
@@ -375,23 +409,32 @@ class _SuiviAbsencesClasseScreenState
                 ),
                 const SizedBox(height: 8),
                 if (!_chargementStats && _cinqDernieresAbsences.isEmpty)
-                  const Text('Aucune absence ce mois-ci',
-                      style: TextStyle(color: Colors.grey))
+                  const Text(
+                    'Aucune absence ce mois-ci',
+                    style: TextStyle(color: Colors.grey),
+                  )
                 else if (!_chargementStats)
                   ..._cinqDernieresAbsences.map((a) {
                     final justifiee = a['justifiee'] == true;
                     return Card(
                       margin: const EdgeInsets.only(bottom: 6),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: ListTile(
                         dense: true,
-                        leading: const Icon(Icons.event_busy, color: Colors.red),
+                        leading: const Icon(
+                          Icons.event_busy,
+                          color: Colors.red,
+                        ),
                         title: Text(_nomEleve(a['eleve_id'] as int)),
                         subtitle: Text('${a['date_absence']}'),
                         trailing: justifiee
                             ? const Chip(
-                                label: Text('Justifiée', style: TextStyle(fontSize: 11)),
+                                label: Text(
+                                  'Justifiée',
+                                  style: TextStyle(fontSize: 11),
+                                ),
                                 backgroundColor: Colors.green,
                                 labelStyle: TextStyle(color: Colors.white),
                               )
@@ -411,8 +454,10 @@ class _SuiviAbsencesClasseScreenState
                 ),
                 const SizedBox(height: 8),
                 if (!_chargementStats && _topAbsences.isEmpty)
-                  const Text('Aucune absence ce mois-ci',
-                      style: TextStyle(color: Colors.grey))
+                  const Text(
+                    'Aucune absence ce mois-ci',
+                    style: TextStyle(color: Colors.grey),
+                  )
                 else if (!_chargementStats)
                   ..._topAbsences.asMap().entries.map((entry) {
                     final i = entry.key;
@@ -420,11 +465,14 @@ class _SuiviAbsencesClasseScreenState
                     return Card(
                       margin: const EdgeInsets.only(bottom: 6),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: ListTile(
                         dense: true,
                         leading: CircleAvatar(
-                          backgroundColor: i == 0 ? Colors.amber : Colors.grey[300],
+                          backgroundColor: i == 0
+                              ? Colors.amber
+                              : Colors.grey[300],
                           child: Text('${i + 1}'),
                         ),
                         title: Text(_nomEleve(t['eleve_id'] as int)),
@@ -456,7 +504,10 @@ class _SuiviAbsencesClasseScreenState
                 color: couleur,
               ),
             ),
-            Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
           ],
         ),
       ),
