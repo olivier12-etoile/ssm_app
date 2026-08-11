@@ -21,7 +21,12 @@ use App\Http\Controllers\Api\AbsenceController;
 use App\Http\Controllers\Api\NotificationAttenteController;
 use App\Http\Controllers\Api\AppreciationController;
 use App\Http\Controllers\Api\DashboardController;
-use App\Http\Controllers\Api\EvaluationController;
+use App\Http\Controllers\Api\SaisieNoteController;
+use App\Http\Controllers\Api\SoumissionController;
+use App\Http\Controllers\Api\ValidationNoteController;
+use App\Http\Controllers\Api\DeverrouillageController;
+use App\Http\Controllers\Api\AnalysePerformanceController;
+use App\Http\Controllers\Api\ExportNoteController;
 use App\Http\Controllers\Api\FraisScolaireController;
 use App\Http\Controllers\Api\DashboardFraisController;
 use App\Http\Controllers\Api\SituationFinanciereController;
@@ -90,13 +95,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/classe-matieres',         [ClasseMatiereController::class, 'index']);
     Route::post('/classe-matieres',        [ClasseMatiereController::class, 'enregistrer']);
     Route::delete('/classe-matieres/{id}', [ClasseMatiereController::class, 'supprimer']);
-
-    // Évaluations (devoirs & compositions)
-    Route::get('/evaluations',                [EvaluationController::class, 'index']);
-    Route::post('/evaluations',               [EvaluationController::class, 'creer']);
-    Route::post('/evaluations/{id}/notes',    [EvaluationController::class, 'saisirNotes']);
-    Route::get('/evaluations/moyenne',        [EvaluationController::class, 'calculerMoyenne']);
-    Route::get('/evaluations/moyennes-classe', [EvaluationController::class, 'moyennesClasse']);
 
     // Frais scolaires
     Route::prefix('frais-scolaires')->group(function () {
@@ -207,12 +205,40 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/eleves/{eleveId}/documents/{docId}', [EleveController::class, 'supprimerDocument']);
     Route::get('/eleves/{id}/chronologie',      [EleveController::class, 'chronologie']);
 
-    // Notes
-    Route::get('/notes',              [NoteController::class, 'index']);
-    Route::post('/notes',             [NoteController::class, 'sauvegarder']);
-    Route::post('/notes/soumettre',   [NoteController::class, 'soumettre']);
-    Route::post('/notes/valider',     [NoteController::class, 'valider']);
-    Route::post('/notes/rejeter',     [NoteController::class, 'rejeter']);
+    // Notes & Évaluations — saisie
+    Route::prefix('notes')->group(function () {
+        Route::post('/saisie/demarrer',       [SaisieNoteController::class, 'demarrer']);
+        Route::get('/saisie/{id}/eleves',     [SaisieNoteController::class, 'eleves']);
+        Route::get('/saisie/progression',     [SaisieNoteController::class, 'progression']);
+        Route::post('/saisie/{id}/soumettre', [SoumissionController::class, 'soumettre']);
+
+        Route::post('/bulk',        [NoteController::class, 'storeBulk']);
+        Route::get('/statistiques', [NoteController::class, 'statistiques']);
+        Route::post('/',            [NoteController::class, 'store']);
+        Route::put('/{id}',         [NoteController::class, 'update']);
+        Route::delete('/{id}',      [NoteController::class, 'destroy']);
+
+        // Notes & Évaluations — validation
+        Route::get('/validation/en-attente',           [ValidationNoteController::class, 'enAttente']);
+        Route::get('/validation/historique',           [ValidationNoteController::class, 'historique']);
+        Route::get('/validation/{saisieId}',           [ValidationNoteController::class, 'detail']);
+        Route::post('/validation/{saisieId}/valider',  [ValidationNoteController::class, 'valider']);
+        Route::post('/validation/{saisieId}/rejeter',  [ValidationNoteController::class, 'rejeter']);
+        Route::post('/deverrouillage',                 [DeverrouillageController::class, 'deverrouiller']);
+
+        // Notes & Évaluations — analyse de performance
+        Route::get('/analyse/resume',                [AnalysePerformanceController::class, 'resume']);
+        Route::get('/analyse/classes-incompletes',   [AnalysePerformanceController::class, 'classesIncompletes']);
+        Route::get('/analyse/matieres-non-validees', [AnalysePerformanceController::class, 'matieresNonValidees']);
+        Route::get('/analyse/enseignants-en-retard', [AnalysePerformanceController::class, 'enseignantsEnRetard']);
+        Route::get('/analyse/eleves-faibles',        [AnalysePerformanceController::class, 'elevesFaibles']);
+        Route::get('/analyse/eleves-excellents',     [AnalysePerformanceController::class, 'elevesExcellents']);
+        Route::get('/analyse/classement-classes',    [AnalysePerformanceController::class, 'classementClasses']);
+
+        // Notes & Évaluations — exports
+        Route::get('/export/releve/{classeId}/{matiereId}/{periodeId}', [ExportNoteController::class, 'releveClasse']);
+        Route::get('/export/analyse-performance',                       [ExportNoteController::class, 'analysePerformance']);
+    });
 
 
 

@@ -3,172 +3,238 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClasseMatiere;
+use App\Models\Eleve;
 use App\Models\Note;
 use App\Models\PeriodeAcademique;
+use App\Models\SaisieNote;
+use App\Services\NoteCalculService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 
 class NoteController extends Controller
 {
-    // Notes d'une classe pour une période
-    public function index(Request $request)
+    public function __construct(private NoteCalculService $noteCalcul)
     {
-        $request->validate([
-            'classe_id'  => 'required|integer',
-            'periode_id' => 'required|integer',
-            'matiere_id' => 'required|integer',
-        ]);
-
-        $notes = Note::where('periode_id', $request->periode_id)
-            ->where('matiere_id', $request->matiere_id)
-            ->whereHas('eleve', function ($q) use ($request) {
-                $q->whereHas('inscriptions', function ($q2) use ($request) {
-                    $q2->where('classe_id', $request->classe_id);
-                });
-            })
-            ->with('eleve')
-            ->get();
-
-        return response()->json($notes);
     }
 
-    // Sauvegarder une note (brouillon)
-    public function sauvegarder(Request $request)
+    // POST /notes
+    // Enregistre ou met à jour (upsert sur élève/matière/période/type) une
+    // note en brouillon, pendant la saisie.
+    public function store(Request $request)
     {
-        $request->validate([
-            'eleve_id'   => 'required|integer',
+        $data = $request->validate([
+            'eleve_id' => 'required|integer',
             'matiere_id' => 'required|integer',
+            'classe_id' => 'required|integer',
             'periode_id' => 'required|integer',
-            'valeur'     => 'required|numeric|min:0|max:20',
+            'type_evaluation' => 'required|in:devoir,composition',
+            'valeur' => 'required|numeric|min:0|max:20',
         ]);
 
-        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
+        $ecoleId = $request->user()->ecole_id;
+        $enseignantId = $request->user()->id;
+
+        Eleve::where('id', $data['eleve_id'])->where('ecole_id', $ecoleId)->firstOrFail();
+
+        $classeMatiere = ClasseMatiere::where('classe_id', $data['classe_id'])
+            ->where('matiere_id', $data['matiere_id'])
+            ->first();
+
+        if (!$classeMatiere) {
+            return response()->json(['message' => "Cette matière n'est pas rattachée à cette classe."], 422);
+        }
+
+        if ($erreur = $this->verifierSaisieModifiable($ecoleId, $enseignantId, $data['classe_id'], $data['matiere_id'], $data['periode_id'])) {
             return $erreur;
         }
+
+        $anneeScolaireId = PeriodeAcademique::findOrFail($data['periode_id'])->annee_academique_id;
 
         $note = Note::updateOrCreate(
             [
-                'eleve_id'    => $request->eleve_id,
-                'matiere_id'  => $request->matiere_id,
-                'periode_id'  => $request->periode_id,
+                'eleve_id' => $data['eleve_id'],
+                'matiere_id' => $data['matiere_id'],
+                'periode_id' => $data['periode_id'],
+                'type_evaluation' => $data['type_evaluation'],
             ],
             [
-                'enseignant_id' => $request->user()->id,
-                'valeur'        => $request->valeur,
-                'statut'        => 'brouillon',
+                'ecole_id' => $ecoleId,
+                'classe_id' => $data['classe_id'],
+                'annee_scolaire_id' => $anneeScolaireId,
+                'valeur' => $data['valeur'],
+                'coefficient' => $classeMatiere->coefficient,
+                'saisi_par' => $enseignantId,
+                'statut' => 'brouillon',
+                'motif_rejet' => null,
             ]
         );
 
+        return response()->json(['message' => 'Note enregistrée', 'note' => $note], 201);
+    }
+
+    // POST /notes/bulk
+    // Enregistrement en masse : toutes les notes d'une classe pour une
+    // matière/période, en un seul appel.
+    public function storeBulk(Request $request)
+    {
+        $data = $request->validate([
+            'classe_id' => 'required|integer',
+            'matiere_id' => 'required|integer',
+            'periode_id' => 'required|integer',
+            'notes' => 'required|array|min:1',
+            'notes.*.eleve_id' => 'required|integer',
+            'notes.*.type_evaluation' => 'required|in:devoir,composition',
+            'notes.*.valeur' => 'required|numeric|min:0|max:20',
+        ]);
+
+        $ecoleId = $request->user()->ecole_id;
+        $enseignantId = $request->user()->id;
+
+        $classeMatiere = ClasseMatiere::where('classe_id', $data['classe_id'])
+            ->where('matiere_id', $data['matiere_id'])
+            ->first();
+
+        if (!$classeMatiere) {
+            return response()->json(['message' => "Cette matière n'est pas rattachée à cette classe."], 422);
+        }
+
+        if ($erreur = $this->verifierSaisieModifiable($ecoleId, $enseignantId, $data['classe_id'], $data['matiere_id'], $data['periode_id'])) {
+            return $erreur;
+        }
+
+        $idsEleves = collect($data['notes'])->pluck('eleve_id')->unique();
+        $idsValides = Eleve::where('ecole_id', $ecoleId)->whereIn('id', $idsEleves)->pluck('id');
+
+        if ($idsEleves->diff($idsValides)->isNotEmpty()) {
+            return response()->json(['message' => "Certains élèves n'appartiennent pas à votre école."], 422);
+        }
+
+        $anneeScolaireId = PeriodeAcademique::findOrFail($data['periode_id'])->annee_academique_id;
+
+        $notesEnregistrees = DB::transaction(function () use ($data, $ecoleId, $enseignantId, $anneeScolaireId, $classeMatiere) {
+            $resultat = [];
+
+            foreach ($data['notes'] as $ligne) {
+                $resultat[] = Note::updateOrCreate(
+                    [
+                        'eleve_id' => $ligne['eleve_id'],
+                        'matiere_id' => $data['matiere_id'],
+                        'periode_id' => $data['periode_id'],
+                        'type_evaluation' => $ligne['type_evaluation'],
+                    ],
+                    [
+                        'ecole_id' => $ecoleId,
+                        'classe_id' => $data['classe_id'],
+                        'annee_scolaire_id' => $anneeScolaireId,
+                        'valeur' => $ligne['valeur'],
+                        'coefficient' => $classeMatiere->coefficient,
+                        'saisi_par' => $enseignantId,
+                        'statut' => 'brouillon',
+                        'motif_rejet' => null,
+                    ]
+                );
+            }
+
+            return $resultat;
+        });
+
         return response()->json([
-            'message' => 'Note sauvegardée',
-            'note'    => $note,
-        ]);
+            'message' => count($notesEnregistrees) . ' note(s) enregistrée(s)',
+            'notes' => $notesEnregistrees,
+        ], 201);
     }
 
-    // Soumettre les notes (enseignant verrouille)
-    public function soumettre(Request $request)
+    // PUT /notes/{id}
+    // Corrige la valeur d'une note déjà enregistrée (uniquement si encore
+    // modifiable : brouillon et saisie non verrouillée).
+    public function update(Request $request, $id)
     {
-        $request->validate([
-            'periode_id' => 'required|integer',
+        $note = Note::findOrFail($id);
+
+        if (!$note->modifiable) {
+            return response()->json(['message' => "Cette note n'est plus modifiable."], 403);
+        }
+
+        $data = $request->validate([
+            'valeur' => 'required|numeric|min:0|max:20',
+        ]);
+
+        $note->update(['valeur' => $data['valeur']]);
+
+        return response()->json(['message' => 'Note modifiée', 'note' => $note->fresh()]);
+    }
+
+    // DELETE /notes/{id}
+    // Supprime une note en brouillon (jamais une note validée).
+    public function destroy($id)
+    {
+        $note = Note::findOrFail($id);
+
+        if ($note->statut !== 'brouillon') {
+            return response()->json(['message' => 'Seule une note en brouillon peut être supprimée.'], 403);
+        }
+
+        if (!$note->modifiable) {
+            return response()->json(['message' => "Cette note n'est plus modifiable (saisie verrouillée)."], 403);
+        }
+
+        $note->delete();
+
+        return response()->json(['message' => 'Note supprimée']);
+    }
+
+    // GET /notes/statistiques
+    public function statistiques(Request $request)
+    {
+        $data = $request->validate([
+            'classe_id' => 'required|integer',
             'matiere_id' => 'required|integer',
-            'classe_id'  => 'required|integer',
-        ]);
-
-        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
-            return $erreur;
-        }
-
-        Note::where('periode_id', $request->periode_id)
-            ->where('matiere_id', $request->matiere_id)
-            ->where('enseignant_id', $request->user()->id)
-            ->where('statut', 'brouillon')
-            ->update(['statut' => 'soumis']);
-
-        return response()->json(['message' => 'Notes soumises pour validation']);
-    }
-
-    // Valider les notes (directeur/censeur)
-    public function valider(Request $request)
-    {
-        $request->validate([
             'periode_id' => 'required|integer',
-            'matiere_id' => 'required|integer',
-            'classe_id'  => 'required|integer',
         ]);
 
-        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
-            return $erreur;
-        }
-
-        Note::where('periode_id', $request->periode_id)
-            ->where('matiere_id', $request->matiere_id)
-            ->where('statut', 'soumis')
-            ->update(['statut' => 'valide']);
-
-        return response()->json(['message' => 'Notes validées']);
-    }
-
-    // Rejeter les notes (directeur/censeur)
-    public function rejeter(Request $request)
-    {
-        $request->validate([
-            'periode_id'   => 'required|integer',
-            'matiere_id'   => 'required|integer',
-            'classe_id'    => 'required|integer',
-            'motif_rejet'  => 'required|string',
+        return response()->json([
+            'moyenne_classe' => $this->noteCalcul->moyenneMatiere($data['classe_id'], $data['matiere_id'], $data['periode_id']),
+            'meilleure_note' => $this->noteCalcul->meilleureNote($data['classe_id'], $data['matiere_id'], $data['periode_id']),
+            'plus_faible_note' => $this->noteCalcul->plusFaibleNote($data['classe_id'], $data['matiere_id'], $data['periode_id']),
+            'taux_reussite' => $this->noteCalcul->tauxReussite($data['classe_id'], $data['matiere_id'], $data['periode_id']),
+            'anomalies' => $this->noteCalcul->detecterAnomalies($data['classe_id'], $data['matiere_id'], $data['periode_id']),
         ]);
-
-        if ($erreur = $this->verifierPeriodeOuverte($request, $request->periode_id)) {
-            return $erreur;
-        }
-
-        Note::where('periode_id', $request->periode_id)
-            ->where('matiere_id', $request->matiere_id)
-            ->where('statut', 'soumis')
-            ->update([
-                'statut'       => 'rejete',
-                'motif_rejet'  => $request->motif_rejet,
-            ]);
-
-        return response()->json(['message' => 'Notes rejetées']);
     }
 
-    // Vérifie que la période autorise la saisie/validation de notes selon
-    // son statut :
-    // - preparation   → bloqué pour tout le monde (pas encore ouverte)
-    // - ouverte        → OK pour tout le monde
-    // - en_veille      → OK pour tout le monde (rattrapage de saisie)
-    // - en_validation  → bloqué sauf directeur/censeur/super_admin
-    // - cloturee       → bloqué sauf directeur/censeur/super_admin
-    // - archivee       → bloqué pour tout le monde
-    private function verifierPeriodeOuverte(Request $request, $periodeId)
-    {
-        $periode = PeriodeAcademique::find($periodeId);
+    // Une note ne peut être créée/modifiée que si sa saisie existe déjà
+    // (l'enseignant a démarré la session via SaisieNoteController::demarrer),
+    // a pour statut "en_cours" ou "rejetee", et n'est pas verrouillée.
+    private function verifierSaisieModifiable(
+        int $ecoleId,
+        int $enseignantId,
+        int $classeId,
+        int $matiereId,
+        int $periodeId
+    ): ?JsonResponse {
+        $saisie = SaisieNote::where('ecole_id', $ecoleId)
+            ->where('enseignant_id', $enseignantId)
+            ->where('classe_id', $classeId)
+            ->where('matiere_id', $matiereId)
+            ->where('periode_id', $periodeId)
+            ->first();
 
-        if (!$periode) {
-            return null;
-        }
-
-        $role = $request->user()->role;
-        $estGestionnaire = in_array($role, ['directeur', 'censeur', 'super_admin']);
-
-        $messages = [
-            'preparation'   => "Cette période n'est pas encore ouverte.",
-            'en_validation' => "Cette période est en validation. Vous pouvez consulter vos données mais pas les modifier.",
-            'cloturee'      => "Cette période est clôturée. Vous pouvez consulter vos données mais pas les modifier.",
-            'archivee'      => "Cette période est archivée et n'est plus modifiable.",
-        ];
-
-        if ($periode->statut === 'archivee') {
+        if (!$saisie) {
             return response()->json([
-                'message'       => $messages['archivee'],
-                'lecture_seule' => true,
+                'message' => "Veuillez d'abord démarrer la saisie pour cette classe, cette matière et cette période.",
+            ], 422);
+        }
+
+        if (!in_array($saisie->statut, ['en_cours', 'rejetee'])) {
+            return response()->json([
+                'message' => "Cette saisie n'est plus modifiable (statut actuel : {$saisie->statut}).",
             ], 403);
         }
 
-        if (in_array($periode->statut, ['preparation']) || (in_array($periode->statut, ['en_validation', 'cloturee']) && !$estGestionnaire)) {
+        if ($saisie->estVerrouillee()) {
             return response()->json([
-                'message'       => $messages[$periode->statut],
-                'lecture_seule' => true,
+                'message' => 'Cette saisie est verrouillée. Contactez la direction pour la faire déverrouiller.',
             ], 403);
         }
 
