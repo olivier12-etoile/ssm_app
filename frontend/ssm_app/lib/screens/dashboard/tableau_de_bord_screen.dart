@@ -274,8 +274,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
                       _menuItemGlass(context, icone: Icons.price_change, titre: 'Frais scolaires', route: '/directeur/frais', routeActuelle: routeActuelle),
 
                       _separateurGlass('Pédagogie'),
-                      _menuItemGlass(context, icone: Icons.edit_note, titre: 'Saisie des notes', route: '/enseignant/notes', routeActuelle: routeActuelle),
-                      _menuItemGlass(context, icone: Icons.grade, titre: 'Validation des notes', route: '/notes/validation', routeActuelle: routeActuelle),
+                      _menuItemGlass(context, icone: Icons.grade, titre: 'Notes & Évaluations', route: '/notes', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.description, titre: 'Bulletins', route: '/bulletins', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.event_busy, titre: 'Absences', route: '/enseignant/absences', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.calendar_view_week, titre: 'Emplois du temps', route: '/emploi-du-temps', routeActuelle: routeActuelle),

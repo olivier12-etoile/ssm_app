@@ -12,6 +12,7 @@ class ClasseMatiere extends Model
         'classe_id',
         'matiere_id',
         'coefficient',
+        'volume_horaire_hebdomadaire',
     ];
 
     public function classe()

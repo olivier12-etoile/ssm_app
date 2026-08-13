@@ -33,6 +33,17 @@ use App\Http\Controllers\Api\SituationFinanciereController;
 use App\Http\Controllers\Api\RemiseController;
 use App\Http\Controllers\Api\ExonerationController;
 use App\Http\Controllers\Api\EmploiDuTempsController;
+use App\Http\Controllers\Api\CreneauHoraireController;
+use App\Http\Controllers\Api\JourTravailleController;
+use App\Http\Controllers\Api\SeanceController;
+use App\Http\Controllers\Api\ConsultationEmploiDuTempsController;
+use App\Http\Controllers\Api\DuplicationEmploiDuTempsController;
+use App\Http\Controllers\Api\RemplacementController;
+use App\Http\Controllers\Api\DisponibiliteEnseignantController;
+use App\Http\Controllers\Api\DashboardEmploiDuTempsController;
+use App\Http\Controllers\Api\StatistiqueEmploiDuTempsController;
+use App\Http\Controllers\Api\CalendrierController;
+use App\Http\Controllers\Api\ExportEmploiDuTempsController;
 use App\Http\Controllers\Api\CahierTexteController;
 use App\Http\Controllers\Api\DisciplineController;
 
@@ -139,13 +150,60 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/exonerations/{id}', [ExonerationController::class, 'destroy']);
 
     // Emploi du temps
-    Route::get('/emploi-du-temps/classe',              [EmploiDuTempsController::class, 'parClasse']);
-    Route::get('/emploi-du-temps/pdf-classe',           [EmploiDuTempsController::class, 'genererPdfClasse']);
-    Route::get('/emploi-du-temps/enseignant',           [EmploiDuTempsController::class, 'parEnseignant']);
-    Route::get('/emploi-du-temps/pdf-enseignant',       [EmploiDuTempsController::class, 'genererPdfEnseignant']);
-    Route::post('/emploi-du-temps',                     [EmploiDuTempsController::class, 'enregistrer']);
-    Route::delete('/emploi-du-temps/{id}',              [EmploiDuTempsController::class, 'supprimer']);
-    Route::post('/emploi-du-temps/verifier-conflits',   [EmploiDuTempsController::class, 'verifierConflits']);
+    Route::prefix('emploi-du-temps')->group(function () {
+        Route::get('/creneaux-horaires',        [CreneauHoraireController::class, 'index']);
+        Route::post('/creneaux-horaires',       [CreneauHoraireController::class, 'store']);
+        Route::put('/creneaux-horaires/{id}',   [CreneauHoraireController::class, 'update']);
+        Route::delete('/creneaux-horaires/{id}', [CreneauHoraireController::class, 'destroy']);
+
+        Route::get('/jours-travailles',        [JourTravailleController::class, 'index']);
+        Route::post('/jours-travailles',       [JourTravailleController::class, 'store']);
+        Route::put('/jours-travailles/{id}',   [JourTravailleController::class, 'update']);
+        Route::delete('/jours-travailles/{id}', [JourTravailleController::class, 'destroy']);
+
+        Route::get('/emplois-du-temps',              [EmploiDuTempsController::class, 'index']);
+        Route::post('/emplois-du-temps',             [EmploiDuTempsController::class, 'store']);
+        Route::get('/emplois-du-temps/{id}',         [EmploiDuTempsController::class, 'show']);
+        Route::post('/emplois-du-temps/{id}/valider', [EmploiDuTempsController::class, 'valider']);
+        Route::delete('/emplois-du-temps/{id}',      [EmploiDuTempsController::class, 'destroy']);
+
+        Route::post('/seances',        [SeanceController::class, 'store']);
+        Route::post('/seances/bulk',   [SeanceController::class, 'storeBulk']);
+        Route::put('/seances/{id}',    [SeanceController::class, 'update']);
+        Route::delete('/seances/{id}', [SeanceController::class, 'destroy']);
+
+        Route::get('/consultation/classe/{classeId}', [ConsultationEmploiDuTempsController::class, 'parClasse']);
+        Route::get('/consultation/mon-emploi-du-temps', [ConsultationEmploiDuTempsController::class, 'monEmploiDuTemps']);
+        Route::get('/consultation/toutes-classes',    [ConsultationEmploiDuTempsController::class, 'toutesLesClasses']);
+
+        Route::post('/duplication', [DuplicationEmploiDuTempsController::class, 'dupliquer']);
+
+        Route::get('/remplacements',        [RemplacementController::class, 'index']);
+        Route::post('/remplacements',       [RemplacementController::class, 'store']);
+        Route::delete('/remplacements/{id}', [RemplacementController::class, 'destroy']);
+
+        // La route "creneau" doit être déclarée avant "{enseignantId}" pour ne pas être capturée comme un id.
+        Route::get('/disponibilite/creneau',        [DisponibiliteEnseignantController::class, 'tousLesEnseignants']);
+        Route::get('/disponibilite/{enseignantId}', [DisponibiliteEnseignantController::class, 'index']);
+
+        Route::get('/dashboard/resume', [DashboardEmploiDuTempsController::class, 'resume']);
+
+        Route::get('/statistiques/heures-enseignant', [StatistiqueEmploiDuTempsController::class, 'heuresParEnseignant']);
+        Route::get('/statistiques/heures-matiere',    [StatistiqueEmploiDuTempsController::class, 'heuresParMatiere']);
+        Route::get('/statistiques/heures-classe',     [StatistiqueEmploiDuTempsController::class, 'heuresParClasse']);
+        Route::get('/statistiques/taux-completion',   [StatistiqueEmploiDuTempsController::class, 'tauxCompletionGlobal']);
+
+        // "verifier-date" doit être déclarée avant les routes {id} pour ne pas être capturée comme un id.
+        Route::get('/calendrier/verifier-date', [CalendrierController::class, 'verifierDateLibre']);
+        Route::get('/calendrier',        [CalendrierController::class, 'index']);
+        Route::post('/calendrier',       [CalendrierController::class, 'store']);
+        Route::put('/calendrier/{id}',   [CalendrierController::class, 'update']);
+        Route::delete('/calendrier/{id}', [CalendrierController::class, 'destroy']);
+
+        Route::get('/export/classe/{classeId}/pdf',        [ExportEmploiDuTempsController::class, 'exportClassePdf']);
+        Route::get('/export/classe/{classeId}/excel',      [ExportEmploiDuTempsController::class, 'exportClasseExcel']);
+        Route::get('/export/enseignant/{enseignantId}/pdf', [ExportEmploiDuTempsController::class, 'exportEnseignantPdf']);
+    });
 
     // Affectations
     Route::get('/affectations',                [AffectationController::class, 'parClasse']);

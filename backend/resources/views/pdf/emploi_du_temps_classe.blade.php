@@ -102,7 +102,7 @@
                     <td class="horaire">{{ $row['debut'] }} - {{ $row['fin'] }}</td>
                     @foreach($jours as $j)
                         @php $cellule = $tableau[$j][$row['debut']] ?? null; @endphp
-                        <td>
+                        <td @if($cellule['couleur'] ?? null) style="border-left: 4px solid {{ $cellule['couleur'] }};" @endif>
                             @if($cellule)
                                 <strong>{{ $cellule['matiere_nom'] }}</strong><br>
                                 <span style="font-size:9px;">{{ $cellule['enseignant_nom'] }}</span>

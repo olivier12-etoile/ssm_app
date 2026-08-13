@@ -8,9 +8,9 @@ import '../../models/utilisateur.dart';
 import '../../services/auth_service.dart';
 import '../../screens/dashboard/menu_lateral.dart';
 import '../../widgets/ssm_widgets.dart';
-import '../enseignant/saisie_notes_screen.dart';
+import '../notes/selection_saisie_screen.dart';
 import '../enseignant/liste_presence_screen.dart';
-import '../emploi_du_temps/emploi_du_temps_enseignant_screen.dart';
+import '../emploi_du_temps/emploi_du_temps_module_screen.dart';
 
 Color _couleurDepuisHex(String? hex) {
   if (hex == null || hex.isEmpty) return const Color(0xFF1E3A8A);
@@ -185,8 +185,7 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) =>
-                    SaisieNotesScreen(periodeIdPreselectionnee: p['id'] as int),
+                builder: (_) => const SelectionSaisieScreen(),
               ),
             ),
             child: const Text('Consulter'),
@@ -271,10 +270,8 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          settings: const RouteSettings(
-                            name: '/emploi-du-temps/enseignant',
-                          ),
-                          builder: (_) => const EmploiDuTempsEnseignantScreen(),
+                          settings: const RouteSettings(name: '/emploi-du-temps'),
+                          builder: (_) => const EmploiDuTempsModuleScreen(),
                         ),
                       ),
                       icon: const Icon(Icons.calendar_view_week),
@@ -334,7 +331,7 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
                               onPressed: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const SaisieNotesScreen(),
+                                  builder: (_) => const SelectionSaisieScreen(),
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
@@ -535,9 +532,8 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
                                         onTap: () => Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (_) => SaisieNotesScreen(
-                                              classeIdPreselectionne: classeId,
-                                            ),
+                                            builder: (_) =>
+                                                const SelectionSaisieScreen(),
                                           ),
                                         ),
                                       ),

@@ -20,17 +20,17 @@ import 'screens/directeur/eleves_par_classe_screen.dart';
 import 'screens/directeur/fiche_eleve_screen.dart';
 import 'screens/directeur/gestion_affectations_screen.dart';
 import 'screens/directeur/affectations_classe_screen.dart';
-import 'screens/directeur/validation_notes_screen.dart';
+import 'screens/notes/validation_notes_screen.dart';
+import 'screens/notes/selection_saisie_screen.dart';
+import 'screens/notes/notes_module_screen.dart';
 import 'screens/parametres/frais_scolaires_screen.dart';
 import 'screens/directeur/dashboard_censeur_screen.dart';
 import 'screens/censeur/suivi_absences_classe_screen.dart';
-import 'screens/enseignant/saisie_notes_screen.dart';
 import 'screens/enseignant/saisie_absences_screen.dart';
 import 'screens/enseignant/liste_presence_screen.dart';
 import 'screens/enseignant/dashboard_enseignant_screen.dart';
-import 'screens/emploi_du_temps/emploi_du_temps_classe_screen.dart';
-import 'screens/emploi_du_temps/emploi_du_temps_enseignant_screen.dart';
-import 'screens/emploi_du_temps/selection_classe_edt_screen.dart';
+import 'screens/emploi_du_temps/emploi_du_temps_module_screen.dart';
+import 'screens/emploi_du_temps/parametrage_creneaux_screen.dart';
 import 'screens/secretaire/gestion_paiements_screen.dart';
 import 'screens/secretaire/liste_renvoi_screen.dart';
 import 'screens/secretaire/dashboard_secretaire_screen.dart';
@@ -169,21 +169,12 @@ class SSMApp extends StatelessWidget {
             classeNom: args['classeNom'] as String,
           );
         },
+        '/notes': (context) => const NotesModuleScreen(),
         '/notes/validation': (context) => const ValidationNotesScreen(),
-        '/enseignant/notes': (context) => const SaisieNotesScreen(),
+        '/enseignant/notes': (context) => const SelectionSaisieScreen(),
         '/enseignant/absences': (context) => const SaisieAbsencesScreen(),
-        '/emploi-du-temps': (context) => const SelectionClasseEdtScreen(),
-        '/emploi-du-temps/classe': (context) {
-          final args =
-              ModalRoute.of(context)!.settings.arguments
-                  as Map<String, dynamic>;
-          return EmploiDuTempsClasseScreen(
-            classeId: args['classeId'] as int,
-            classeNom: args['classeNom'] as String,
-          );
-        },
-        '/emploi-du-temps/enseignant': (context) =>
-            const EmploiDuTempsEnseignantScreen(),
+        '/emploi-du-temps': (context) => const EmploiDuTempsModuleScreen(),
+        '/emploi-du-temps/parametrage': (context) => const ParametrageCreneauxScreen(),
         '/enseignant/presence': (context) {
           final args =
               ModalRoute.of(context)!.settings.arguments

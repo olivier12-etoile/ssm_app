@@ -8,7 +8,7 @@ import '../../models/utilisateur.dart';
 import '../../services/auth_service.dart';
 import '../dashboard/menu_lateral.dart';
 import '../../widgets/ssm_widgets.dart';
-import '../directeur/validation_notes_screen.dart';
+import '../notes/validation_notes_screen.dart';
 import '../directeur/eleves_par_classe_screen.dart';
 import '../censeur/suivi_absences_classe_screen.dart';
 

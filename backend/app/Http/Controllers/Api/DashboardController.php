@@ -48,8 +48,10 @@ class DashboardController extends Controller
             )
             ->get();
 
-        // Mes notes par statut
-        $notesParStatut = Note::where('enseignant_id', $enseignantId)
+        // Mes notes par statut (notes.statut : brouillon | en_attente_validation |
+        // validee | rejetee — on remappe vers les clés brouillon/soumis/valide/rejete
+        // déjà attendues côté Flutter, pour ne pas devoir changer cet écran)
+        $notesParStatut = Note::where('saisi_par', $enseignantId)
             ->select('statut', DB::raw('count(*) as total'))
             ->groupBy('statut')
             ->pluck('total', 'statut');
@@ -61,8 +63,8 @@ class DashboardController extends Controller
             ->get();
 
         // Notes rejetées récentes (à corriger)
-        $notesRejetees = Note::where('enseignant_id', $enseignantId)
-            ->where('statut', 'rejete')
+        $notesRejetees = Note::where('saisi_par', $enseignantId)
+            ->where('statut', 'rejetee')
             ->with(['eleve', 'matiere', 'periode'])
             ->orderBy('updated_at', 'desc')
             ->take(5)
@@ -73,9 +75,9 @@ class DashboardController extends Controller
             'affectations' => $affectations,
             'notes'        => [
                 'brouillon' => $notesParStatut['brouillon'] ?? 0,
-                'soumis'    => $notesParStatut['soumis']    ?? 0,
-                'valide'    => $notesParStatut['valide']    ?? 0,
-                'rejete'    => $notesParStatut['rejete']    ?? 0,
+                'soumis'    => $notesParStatut['en_attente_validation'] ?? 0,
+                'valide'    => $notesParStatut['validee'] ?? 0,
+                'rejete'    => $notesParStatut['rejetee'] ?? 0,
             ],
             'absences_aujourdhui' => $absencesAujourdhui,
             'notes_rejetees'      => $notesRejetees,
@@ -85,20 +87,29 @@ class DashboardController extends Controller
     // ── Dashboard Censeur ─────────────────────────────────
     private function dashboardCenseur($ecoleId)
     {
-        // Notes en attente de validation
+        // Notes en attente de validation (relation saisiPar renommée en
+        // "enseignant" dans la réponse pour ne pas changer l'écran Flutter)
         $notesASoumettre = Note::whereHas('eleve', function ($q) use ($ecoleId) {
                 $q->where('ecole_id', $ecoleId);
             })
-            ->where('statut', 'soumis')
-            ->with(['eleve', 'matiere', 'enseignant'])
+            ->where('statut', 'en_attente_validation')
+            ->with(['eleve', 'matiere', 'saisiPar'])
             ->orderBy('updated_at', 'desc')
             ->take(10)
-            ->get();
+            ->get()
+            ->map(fn (Note $n) => [
+                'id'         => $n->id,
+                'valeur'     => $n->valeur,
+                'eleve'      => $n->eleve,
+                'matiere'    => $n->matiere,
+                'enseignant' => $n->saisiPar,
+                'updated_at' => $n->updated_at,
+            ]);
 
         $totalNotesASoumettre = Note::whereHas('eleve', function ($q) use ($ecoleId) {
                 $q->where('ecole_id', $ecoleId);
             })
-            ->where('statut', 'soumis')
+            ->where('statut', 'en_attente_validation')
             ->count();
 
         // Absences du jour
@@ -129,7 +140,7 @@ class DashboardController extends Controller
             ->join('classes', 'inscriptions.classe_id', '=', 'classes.id')
             ->join('eleves', 'notes.eleve_id', '=', 'eleves.id')
             ->where('eleves.ecole_id', $ecoleId)
-            ->where('notes.statut', 'valide')
+            ->where('notes.statut', 'validee')
             ->select('classes.nom', DB::raw('ROUND(AVG(notes.valeur), 2) as moyenne'))
             ->groupBy('classes.id', 'classes.nom')
             ->orderBy('moyenne', 'desc')
@@ -141,7 +152,7 @@ class DashboardController extends Controller
             ->join('classes', 'inscriptions.classe_id', '=', 'classes.id')
             ->join('eleves', 'notes.eleve_id', '=', 'eleves.id')
             ->where('eleves.ecole_id', $ecoleId)
-            ->where('notes.statut', 'soumis')
+            ->where('notes.statut', 'en_attente_validation')
             ->select('classes.id as classe_id', DB::raw('count(*) as total'))
             ->groupBy('classes.id')
             ->pluck('total', 'classe_id');

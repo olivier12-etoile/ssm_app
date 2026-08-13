@@ -10,12 +10,10 @@ import '../../services/eleve_service.dart';
 import '../../services/absence_service.dart';
 import '../../services/classe_matiere_service.dart';
 import '../../services/affectation_service.dart';
-import '../../services/emploi_du_temps_service.dart';
 import '../../services/matiere_service.dart';
 import '../../services/utilisateur_service.dart';
 import '../../widgets/ssm_widgets.dart';
 import 'fiche_utilisateur_screen.dart';
-import '../emploi_du_temps/emploi_du_temps_classe_screen.dart';
 
 const List<Map<String, dynamic>> _grilleHoraire = [
   {'debut': '07:00', 'fin': '08:00', 'recreation': false},
@@ -150,17 +148,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       }
 
       List<dynamic> eleves = [];
-      Map<String, dynamic> emploi = {};
+      // L'emploi du temps est désormais géré par le nouveau module
+      // (lib/screens/emploi_du_temps/) — cette fiche n'affiche plus la
+      // mini-grille intégrée, qui reposait sur l'ancienne API.
+      const Map<String, dynamic> emploi = {};
       if (anneeId != null) {
-        final resultats = await Future.wait([
-          EleveService.elevesParClasse(widget.classeId, anneeId),
-          EmploiDuTempsService.parClasse(
-            classeId: widget.classeId,
-            anneeId: anneeId,
-          ),
-        ]);
-        eleves = resultats[0] as List;
-        emploi = resultats[1] as Map<String, dynamic>;
+        eleves = await EleveService.elevesParClasse(widget.classeId, anneeId);
       }
 
       setState(() {
@@ -3309,27 +3302,23 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Align(
-          alignment: Alignment.centerRight,
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              if (_anneeId == null) return;
-              try {
-                final chemin = await EmploiDuTempsService.telechargerPdf(
-                  classeId: widget.classeId,
-                  anneeId: _anneeId!,
-                );
-                await OpenFile.open(chemin);
-              } catch (e) {
-                _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              foregroundColor: Colors.white,
-            ),
-            icon: const Icon(Icons.picture_as_pdf, size: 16),
-            label: const Text('Exporter EDT PDF'),
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF1F5F9),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline, size: 18, color: Color(0xFF64748B)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Utilisez le module Emploi du Temps pour créer, modifier et exporter la grille de cette classe.',
+                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
@@ -3415,15 +3404,11 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               final c = _creneauPourCellule(j['cle']!, debut);
                               return Expanded(
                                 child: GestureDetector(
-                                  onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => EmploiDuTempsClasseScreen(
-                                        classeId: widget.classeId,
-                                        classeNom: _classe!['nom'] as String,
-                                      ),
+                                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Utilisez le module Emploi du Temps pour modifier cette grille.'),
                                     ),
-                                  ).then((_) => _chargerTout()),
+                                  ),
                                   child: Container(
                                     height: 60,
                                     margin: const EdgeInsets.all(2),

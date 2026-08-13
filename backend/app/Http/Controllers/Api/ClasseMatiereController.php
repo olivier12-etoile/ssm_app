@@ -30,7 +30,9 @@ class ClasseMatiereController extends Controller
                 'matieres.id as matiere_id',
                 'matieres.nom as matiere_nom',
                 'matieres.code as matiere_code',
+                'matieres.couleur as matiere_couleur',
                 'classe_matiere.coefficient',
+                'classe_matiere.volume_horaire_hebdomadaire',
             )
             ->orderBy('matieres.nom')
             ->get();

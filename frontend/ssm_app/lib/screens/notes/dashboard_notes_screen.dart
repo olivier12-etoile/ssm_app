@@ -89,22 +89,21 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
   Future<void> _chargerPeriodes() async {
     setState(() => _chargementPeriodes = true);
     try {
-      final anneeActive = await AnneeService.anneeActive();
-      final anneeId = anneeActive['id'] as int?;
+      // La réponse de /annees/active est enveloppée : {annee, periode_active,
+      // jours_restants_periode, alertes} — pas directement l'année elle-même.
+      final anneeActiveData = await AnneeService.anneeActive();
+      final anneeId = (anneeActiveData['annee'] as Map<String, dynamic>?)?['id'] as int?;
       if (anneeId == null) {
         setState(() => _chargementPeriodes = false);
         return;
       }
 
       final periodes = await AnneeService.listerPeriodes(anneeId);
-      final periodeActive = periodes.firstWhere(
-        (p) => p['statut'] == 'ouverte' || p['statut'] == 'active',
-        orElse: () => periodes.isNotEmpty ? periodes.first : null,
-      );
+      final periodeActiveId = (anneeActiveData['periode_active'] as Map<String, dynamic>?)?['id'] as int?;
 
       setState(() {
         _periodes = periodes;
-        _periodeId = periodeActive?['id'] as int?;
+        _periodeId = periodeActiveId ?? (periodes.isNotEmpty ? periodes.first['id'] as int : null);
         _chargementPeriodes = false;
       });
 

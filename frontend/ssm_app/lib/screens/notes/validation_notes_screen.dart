@@ -18,7 +18,17 @@ String _formatDateCourt(DateTime? d) =>
     d == null ? '—' : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
 class ValidationNotesScreen extends StatefulWidget {
-  const ValidationNotesScreen({super.key});
+  final int? classeIdPreselectionne;
+  // À false quand cet écran est embarqué dans notes_module_screen.dart : son
+  // bouton retour interne, câblé sur Navigator.pop, fermerait sinon l'écran
+  // parent au lieu de n'avoir aucun effet utile.
+  final bool afficherBoutonRetour;
+
+  const ValidationNotesScreen({
+    super.key,
+    this.classeIdPreselectionne,
+    this.afficherBoutonRetour = true,
+  });
 
   @override
   State<ValidationNotesScreen> createState() => _ValidationNotesScreenState();
@@ -43,7 +53,9 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
     try {
       final saisies = await ValidationNoteService.getEnAttente();
       setState(() {
-        _saisies = saisies;
+        _saisies = widget.classeIdPreselectionne == null
+            ? saisies
+            : saisies.where((s) => s.classeId == widget.classeIdPreselectionne).toList();
         _chargement = false;
       });
     } catch (e) {
@@ -136,10 +148,11 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
+          if (widget.afficherBoutonRetour)
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

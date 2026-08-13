@@ -8,7 +8,6 @@ import '../../services/utilisateur_service.dart';
 import '../../services/affectation_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/eleve_service.dart';
-import '../../services/emploi_du_temps_service.dart';
 import '../../widgets/ssm_widgets.dart';
 import 'affectation_enseignant_screen.dart';
 
@@ -78,20 +77,10 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
         );
         final anneeId = anneeEnCours?['id'] as int?;
 
+        // Le volume horaire hebdomadaire de l'enseignant est désormais
+        // calculable via le module Emploi du Temps (statistiques par
+        // enseignant) plutôt que via cette ancienne API par année.
         if (anneeId != null) {
-          final emploi = await EmploiDuTempsService.parEnseignant(
-            enseignantId: widget.userId,
-            anneeId: anneeId,
-          );
-          for (final creneaux in emploi.values) {
-            for (final c in (creneaux as List)) {
-              totalHeures += _dureeEnHeures(
-                c['heure_debut'] as String,
-                c['heure_fin'] as String,
-              );
-            }
-          }
-
           final listes = await Future.wait(
             classesUniques.map(
               (classeId) => EleveService.elevesParClasse(classeId, anneeId),
@@ -113,12 +102,6 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
     } catch (e) {
       setState(() => _chargementStats = false);
     }
-  }
-
-  double _dureeEnHeures(String debut, String fin) {
-    final d = debut.split(':').map(int.parse).toList();
-    final f = fin.split(':').map(int.parse).toList();
-    return ((f[0] * 60 + f[1]) - (d[0] * 60 + d[1])) / 60;
   }
 
   void _afficherErreur(String message) {
