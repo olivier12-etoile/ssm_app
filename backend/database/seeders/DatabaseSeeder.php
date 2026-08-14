@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             AnneeSeeder::class,
             EleveSeeder::class,
             AffectationSeeder::class,
+            ModeleMessageSeeder::class,
         ]);
     }
 }

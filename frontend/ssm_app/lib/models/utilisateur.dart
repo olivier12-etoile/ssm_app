@@ -35,8 +35,10 @@ class Utilisateur {
     );
   }
 
-  bool get estDirecteur  => role == 'directeur';
-  bool get estCenseur    => role == 'censeur';
-  bool get estSecretaire => role == 'secretaire';
-  bool get estEnseignant => role == 'enseignant';
+  bool get estDirecteur   => role == 'directeur';
+  bool get estCenseur     => role == 'censeur';
+  bool get estSecretaire  => role == 'secretaire';
+  bool get estEnseignant  => role == 'enseignant';
+  bool get estComptable   => role == 'comptable';
+  bool get estSuperAdmin  => role == 'super_admin';
 }

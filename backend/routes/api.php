@@ -56,6 +56,10 @@ use App\Http\Controllers\Api\CalendrierController;
 use App\Http\Controllers\Api\ExportEmploiDuTempsController;
 use App\Http\Controllers\Api\CahierTexteController;
 use App\Http\Controllers\Api\DisciplineController;
+use App\Http\Controllers\Api\ModeleMessageController;
+use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\ParametreNotificationController;
+use App\Http\Controllers\Api\StatistiqueNotificationController;
 
 
 
@@ -435,5 +439,30 @@ Route::post('/sanctions',                 [DisciplineController::class, 'store']
 Route::get('/sanctions/eleve/{eleveId}',  [DisciplineController::class, 'historiqueEleve']);
 Route::get('/sanctions/statistiques',     [DisciplineController::class, 'statistiques']);
 Route::patch('/sanctions/{id}/notifier',  [DisciplineController::class, 'notifier']);
+
+// Notifications (notifications manuelles + modèles de messages)
+Route::prefix('notifications')->group(function () {
+    Route::get('/modeles',         [ModeleMessageController::class, 'index']);
+    Route::post('/modeles',        [ModeleMessageController::class, 'store']);
+    Route::put('/modeles/{id}',    [ModeleMessageController::class, 'update']);
+    Route::delete('/modeles/{id}', [ModeleMessageController::class, 'destroy']);
+
+    Route::post('/apercu-destinataires', [NotificationController::class, 'apercu']);
+    Route::post('/apercu-message',       [NotificationController::class, 'apercuMessage']);
+
+    Route::get('/parametres-declencheurs', [ParametreNotificationController::class, 'index']);
+    Route::put('/parametres-declencheurs', [ParametreNotificationController::class, 'update']);
+
+    Route::get('/statistiques',               [StatistiqueNotificationController::class, 'resume']);
+    Route::get('/statistiques/par-canal',      [StatistiqueNotificationController::class, 'parCanal']);
+    Route::get('/statistiques/par-categorie',  [StatistiqueNotificationController::class, 'parCategorie']);
+
+    Route::get('/export-excel',  [NotificationController::class, 'exporterExcel']);
+
+    Route::get('/',              [NotificationController::class, 'index']);
+    Route::post('/',             [NotificationController::class, 'store']);
+    Route::get('/{id}',          [NotificationController::class, 'show']);
+    Route::post('/{id}/annuler', [NotificationController::class, 'annulerProgrammee']);
+});
 
 });

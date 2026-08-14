@@ -11,6 +11,7 @@ class NotificationAttente extends Model
     protected $fillable = [
         'ecole_id',
         'eleve_id',
+        'user_id',
         'type',
         'telephone_parent',
         'message',
@@ -25,5 +26,15 @@ class NotificationAttente extends Model
     public function eleve()
     {
         return $this->belongsTo(Eleve::class, 'eleve_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function destinataire()
+    {
+        return $this->hasOne(NotificationDestinataire::class, 'notification_attente_id');
     }
 }
