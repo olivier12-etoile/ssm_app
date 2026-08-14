@@ -70,4 +70,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Note::class, 'saisi_par');
     }
+
+    public function connexions()
+    {
+        return $this->hasMany(ConnexionUtilisateur::class, 'user_id');
+    }
 }

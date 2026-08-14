@@ -23,6 +23,8 @@ class DatabaseSeeder extends Seeder
             EleveSeeder::class,
             AffectationSeeder::class,
             ModeleMessageSeeder::class,
+            ParametresNotificationsEcoleSeeder::class,
+            PermissionsRolesSeeder::class,
         ]);
     }
 }

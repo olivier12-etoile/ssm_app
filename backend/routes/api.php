@@ -60,6 +60,20 @@ use App\Http\Controllers\Api\ModeleMessageController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ParametreNotificationController;
 use App\Http\Controllers\Api\StatistiqueNotificationController;
+use App\Http\Controllers\Api\InformationsEtablissementController;
+use App\Http\Controllers\Api\IdentiteVisuelleController;
+use App\Http\Controllers\Api\DirectionController;
+use App\Http\Controllers\Api\ParametreAcademiqueController;
+use App\Http\Controllers\Api\ParametreBulletinController;
+use App\Http\Controllers\Api\ParametreValidationNoteController;
+use App\Http\Controllers\Api\ParametreClasseController;
+use App\Http\Controllers\Api\ParametreMatiereController;
+use App\Http\Controllers\Api\ParametreFraisController;
+use App\Http\Controllers\Api\ParametreNotificationEcoleController;
+use App\Http\Controllers\Api\PermissionRoleController;
+use App\Http\Controllers\Api\SecuriteController;
+use App\Http\Controllers\Api\SystemeController;
+use App\Http\Controllers\Api\ActionAvanceeController;
 
 
 
@@ -463,6 +477,64 @@ Route::prefix('notifications')->group(function () {
     Route::post('/',             [NotificationController::class, 'store']);
     Route::get('/{id}',          [NotificationController::class, 'show']);
     Route::post('/{id}/annuler', [NotificationController::class, 'annulerProgrammee']);
+});
+
+// Paramètres de l'école — section Établissement
+Route::prefix('parametres')->group(function () {
+    Route::get('/etablissement', [InformationsEtablissementController::class, 'show']);
+    Route::put('/etablissement', [InformationsEtablissementController::class, 'update']);
+
+    Route::get('/identite-visuelle',            [IdentiteVisuelleController::class, 'show']);
+    Route::post('/identite-visuelle/logo',      [IdentiteVisuelleController::class, 'uploadLogo']);
+    Route::post('/identite-visuelle/cachet',    [IdentiteVisuelleController::class, 'uploadCachet']);
+    Route::post('/identite-visuelle/signature', [IdentiteVisuelleController::class, 'uploadSignature']);
+    Route::put('/identite-visuelle/couleurs',   [IdentiteVisuelleController::class, 'updateCouleurs']);
+    Route::delete('/identite-visuelle/logo/{type}', [IdentiteVisuelleController::class, 'supprimerLogo']);
+
+    Route::get('/direction', [DirectionController::class, 'show']);
+    Route::put('/direction', [DirectionController::class, 'update']);
+
+    // Paramètres de l'école — sections Scolarité, Finance, Notifications
+    Route::get('/academique',  [ParametreAcademiqueController::class, 'show']);
+    Route::put('/academique',  [ParametreAcademiqueController::class, 'update']);
+
+    Route::get('/bulletins',   [ParametreBulletinController::class, 'show']);
+    Route::put('/bulletins',   [ParametreBulletinController::class, 'update']);
+
+    Route::get('/validation-notes', [ParametreValidationNoteController::class, 'show']);
+    Route::put('/validation-notes', [ParametreValidationNoteController::class, 'update']);
+
+    Route::get('/classes',     [ParametreClasseController::class, 'show']);
+    Route::put('/classes',     [ParametreClasseController::class, 'update']);
+
+    Route::get('/matieres',    [ParametreMatiereController::class, 'show']);
+    Route::put('/matieres',    [ParametreMatiereController::class, 'update']);
+
+    Route::get('/frais',       [ParametreFraisController::class, 'show']);
+    Route::put('/frais',       [ParametreFraisController::class, 'update']);
+
+    Route::get('/notifications-ecole', [ParametreNotificationEcoleController::class, 'show']);
+    Route::put('/notifications-ecole', [ParametreNotificationEcoleController::class, 'update']);
+
+    // Paramètres de l'école — sections Utilisateurs & Permissions, Sécurité,
+    // Système, Actions avancées
+    Route::get('/permissions',              [PermissionRoleController::class, 'index']);
+    Route::put('/permissions',              [PermissionRoleController::class, 'update']);
+    Route::post('/permissions/reinitialiser', [PermissionRoleController::class, 'reinitialiserDefauts']);
+
+    Route::post('/securite/changer-mot-de-passe', [SecuriteController::class, 'changerMotDePasse']);
+    Route::get('/securite/sessions',              [SecuriteController::class, 'sessionsActives']);
+    Route::delete('/securite/sessions/{tokenId}', [SecuriteController::class, 'revoquerSession']);
+    Route::get('/securite/deconnexion-auto',      [SecuriteController::class, 'afficherDeconnexionAuto']);
+    Route::put('/securite/deconnexion-auto',      [SecuriteController::class, 'modifierDeconnexionAuto']);
+    Route::get('/securite/historique-connexions', [SecuriteController::class, 'historiqueConnexions']);
+    Route::get('/securite/journal-actions',       [SecuriteController::class, 'journalActions']);
+
+    Route::get('/systeme/statut',    [SystemeController::class, 'statut']);
+    Route::get('/systeme/sauvegarde', [SystemeController::class, 'sauvegardeInfo']);
+
+    Route::post('/actions-avancees/archiver-annee',          [ActionAvanceeController::class, 'archiverAnnee']);
+    Route::post('/actions-avancees/reinitialiser-parametres', [ActionAvanceeController::class, 'reinitialiserParametres']);
 });
 
 });

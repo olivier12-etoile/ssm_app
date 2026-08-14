@@ -13,7 +13,12 @@ class ParametreNotificationController extends Controller
     {
         $ecoleId = $request->user()->ecole_id;
 
-        $valeurs = ParametreNotification::where('ecole_id', $ecoleId)->pluck('valeur', 'cle');
+        // Les déclencheurs automatiques sont tous orientés parents : on
+        // filtre sur cible pour ne jamais lire une valeur enregistrée sous
+        // la même clé côté "enseignants" par ParametreNotificationEcoleController.
+        $valeurs = ParametreNotification::where('ecole_id', $ecoleId)
+            ->where('cible', 'parents')
+            ->pluck('valeur', 'cle');
 
         $declencheurs = collect(ParametreNotification::DECLENCHEURS)
             ->map(fn($libelle, $cle) => [
@@ -42,7 +47,7 @@ class ParametreNotificationController extends Controller
         ]);
 
         $parametre = ParametreNotification::updateOrCreate(
-            ['ecole_id' => $request->user()->ecole_id, 'cle' => $data['cle']],
+            ['ecole_id' => $request->user()->ecole_id, 'cible' => 'parents', 'cle' => $data['cle']],
             ['valeur' => $data['valeur']]
         );
 
