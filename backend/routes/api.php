@@ -16,6 +16,12 @@ use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\PaiementController;
 use App\Http\Controllers\Api\ProfilController;
 use App\Http\Controllers\Api\StatistiqueController;
+use App\Http\Controllers\Api\DashboardStatistiqueController;
+use App\Http\Controllers\Api\StatistiqueInscriptionController;
+use App\Http\Controllers\Api\StatistiquePaiementController;
+use App\Http\Controllers\Api\StatistiquePedagogiqueController;
+use App\Http\Controllers\Api\CentreDecisionController;
+use App\Http\Controllers\Api\RapportStatistiqueController;
 use App\Http\Controllers\Api\BulletinController;
 use App\Http\Controllers\Api\AbsenceController;
 use App\Http\Controllers\Api\NotificationAttenteController;
@@ -307,6 +313,40 @@ Route::post('/profil/mot-de-passe',     [ProfilController::class, 'changerMotDeP
 
 // Dans le groupe auth:sanctum
 Route::get('/statistiques', [StatistiqueController::class, 'index']);
+
+// Module Statistiques — tableau de bord général (agrège élèves, frais, notes)
+Route::prefix('statistiques')->group(function () {
+    Route::get('/dashboard/general',    [DashboardStatistiqueController::class, 'general']);
+    Route::post('/dashboard/snapshot',  [DashboardStatistiqueController::class, 'snapshot']);
+    Route::get('/dashboard/comparaison', [DashboardStatistiqueController::class, 'comparaison']);
+
+    Route::get('/inscriptions/par-annee',  [StatistiqueInscriptionController::class, 'parAnnee']);
+    Route::get('/inscriptions/par-niveau', [StatistiqueInscriptionController::class, 'parNiveau']);
+    Route::get('/inscriptions/par-classe', [StatistiqueInscriptionController::class, 'parClasse']);
+    Route::get('/inscriptions/par-sexe',   [StatistiqueInscriptionController::class, 'parSexe']);
+    Route::get('/inscriptions/evolution',  [StatistiqueInscriptionController::class, 'evolution']);
+
+    Route::get('/paiements/par-classe',         [StatistiquePaiementController::class, 'parClasse']);
+    Route::get('/paiements/par-niveau',         [StatistiquePaiementController::class, 'parNiveau']);
+    Route::get('/paiements/par-mois',           [StatistiquePaiementController::class, 'parMois']);
+    Route::get('/paiements/eleves-non-en-regle', [StatistiquePaiementController::class, 'elevesNonEnRegle']);
+
+    Route::get('/pedagogique/par-matiere',        [StatistiquePedagogiqueController::class, 'parMatiere']);
+    Route::get('/pedagogique/par-enseignant',     [StatistiquePedagogiqueController::class, 'parEnseignant']);
+    Route::get('/pedagogique/par-classe',         [StatistiquePedagogiqueController::class, 'parClasse']);
+    Route::get('/pedagogique/meilleures-classes', [StatistiquePedagogiqueController::class, 'meilleuresClasses']);
+    Route::get('/pedagogique/meilleurs-eleves',   [StatistiquePedagogiqueController::class, 'meilleursEleves']);
+    Route::get('/pedagogique/eleves-en-difficulte', [StatistiquePedagogiqueController::class, 'elevesEnDifficulte']);
+
+    Route::get('/centre-decision/alertes', [CentreDecisionController::class, 'alertes']);
+
+    Route::get('/rapports/inscriptions',        [RapportStatistiqueController::class, 'inscriptions']);
+    Route::get('/rapports/financier',           [RapportStatistiqueController::class, 'financier']);
+    Route::get('/rapports/paiements',           [RapportStatistiqueController::class, 'paiements']);
+    Route::get('/rapports/resultats',           [RapportStatistiqueController::class, 'resultats']);
+    Route::get('/rapports/meilleurs-eleves',    [RapportStatistiqueController::class, 'meilleursEleves']);
+    Route::get('/rapports/eleves-en-difficulte', [RapportStatistiqueController::class, 'elevesEnDifficulte']);
+});
 
 
 

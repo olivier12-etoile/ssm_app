@@ -186,7 +186,9 @@ class AnalysePerformanceController extends Controller
             ->values();
     }
 
-    private function calculerEnseignantsEnRetard(Request $request, PeriodeAcademique $periode): Collection
+    // Rendue publique (comme calculerElevesParSeuil/calculerClassementClasses
+    // ci-dessous) pour être réutilisée par CentreDecisionService.
+    public function calculerEnseignantsEnRetard(Request $request, PeriodeAcademique $periode): Collection
     {
         if (!$periode->date_fin || now()->lessThanOrEqualTo($periode->date_fin)) {
             return collect();
