@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/paiement_model.dart';
 import '../../models/utilisateur.dart';
+import '../../models/caisse_model.dart';
 import '../../services/paiement_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/caisse_service.dart';
 import '../../widgets/ssm_widgets.dart';
 import '../../widgets/recu_pdf_viewer.dart';
+import '../../widgets/statut_financier_badge.dart';
+import '../../widgets/correction_paiement_dialog.dart';
 import 'nouveau_paiement_screen.dart';
 
 const Color _indigo = Color(0xFF1E3A8A);
@@ -82,6 +86,7 @@ class SituationFinanciereScreen extends StatefulWidget {
 
 class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
   SituationFinanciere? _situation;
+  StatutFinancierEleve? _statutFinancier;
   bool _chargement = true;
   bool _estDirecteur = false;
   String? _erreur;
@@ -109,11 +114,24 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
         _estDirecteur = utilisateur?.estDirecteur == true;
         _chargement = false;
       });
+      _chargerStatutFinancier();
     } catch (e) {
       setState(() {
         _chargement = false;
         _erreur = e.toString().replaceAll('Exception: ', '');
       });
+    }
+  }
+
+  // Chargé séparément du reste : un échec ici (ex. année scolaire non
+  // active) ne doit pas empêcher l'affichage du reste de la situation.
+  Future<void> _chargerStatutFinancier() async {
+    try {
+      final statut = await CaisseService.getStatutFinancier(widget.eleveId);
+      if (!mounted) return;
+      setState(() => _statutFinancier = statut);
+    } catch (_) {
+      // Le badge reste simplement masqué si l'appel échoue.
     }
   }
 
@@ -207,6 +225,14 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
     }
   }
 
+  Future<void> _corrigerPaiement(Paiement paiement) async {
+    final resultat = await CorrectionPaiementDialog.afficher(context, paiement);
+    if (resultat == true) {
+      _afficherSucces('Paiement corrigé avec succès');
+      _charger();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -234,6 +260,15 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                       children: [
                         _enTete(),
+                        if (_statutFinancier != null) ...[
+                          const SizedBox(height: 12),
+                          Center(
+                            child: StatutFinancierBadge(
+                              statut: _statutFinancier!.statut,
+                              taille: TailleBadgeStatut.large,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         _cartesResume(),
                         const SizedBox(height: 20),
@@ -518,12 +553,18 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
                   numeroRecu: paiement.numeroRecu,
                   compact: true,
                 ),
-                if (_estDirecteur && !estAnnule)
+                if (_estDirecteur && !estAnnule) ...[
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, color: _indigo),
+                    tooltip: 'Corriger ce paiement',
+                    onPressed: () => _corrigerPaiement(paiement),
+                  ),
                   IconButton(
                     icon: const Icon(Icons.cancel_outlined, color: _rouge),
                     tooltip: 'Annuler ce paiement',
                     onPressed: () => _confirmerAnnulation(paiement),
                   ),
+                ],
               ],
             ),
             if (estAnnule && paiement.motifAnnulation != null) ...[

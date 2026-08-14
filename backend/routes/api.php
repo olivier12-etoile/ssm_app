@@ -36,6 +36,10 @@ use App\Http\Controllers\Api\ExportNoteController;
 use App\Http\Controllers\Api\FraisScolaireController;
 use App\Http\Controllers\Api\DashboardFraisController;
 use App\Http\Controllers\Api\SituationFinanciereController;
+use App\Http\Controllers\Api\CaisseController;
+use App\Http\Controllers\Api\CorrectionPaiementController;
+use App\Http\Controllers\Api\SituationFinanciereClasseController;
+use App\Http\Controllers\Api\RapportPaiementController;
 use App\Http\Controllers\Api\RemiseController;
 use App\Http\Controllers\Api\ExonerationController;
 use App\Http\Controllers\Api\EmploiDuTempsController;
@@ -142,6 +146,41 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Situation financière
     Route::get('/eleves/{id}/situation-financiere', [SituationFinanciereController::class, 'show']);
+
+    // Paiements — caisses, corrections, statut financier
+    Route::prefix('paiements')->group(function () {
+        Route::get('/caisses',                    [CaisseController::class, 'index']);
+        Route::post('/caisses',                   [CaisseController::class, 'store']);
+        Route::post('/caisses/ouvrir',             [CaisseController::class, 'ouvrir']);
+        Route::post('/caisses/fermer',             [CaisseController::class, 'fermer']);
+        Route::get('/caisses/{id}/session-active', [CaisseController::class, 'sessionActive']);
+        Route::get('/caisses/{id}/historique',     [CaisseController::class, 'historique']);
+
+        Route::post('/corrections',                     [CorrectionPaiementController::class, 'store']);
+        Route::get('/corrections/{paiementId}/historique', [CorrectionPaiementController::class, 'historique']);
+
+        Route::get('/eleves/{id}/statut-financier', [SituationFinanciereController::class, 'statutFinancier']);
+
+        // Situation financière par classe — les routes littérales
+        // ("export-pdf", "export-excel") doivent être déclarées avant
+        // '/situation-classe/{classeId}' pour ne pas être capturées par le
+        // paramètre dynamique.
+        Route::get('/situation-classe/export-pdf',              [SituationFinanciereClasseController::class, 'exportToutesClassesPdf']);
+        Route::get('/situation-classe/export-excel',            [SituationFinanciereClasseController::class, 'exportToutesClassesExcel']);
+        Route::get('/situation-classe',                         [SituationFinanciereClasseController::class, 'toutesLesClasses']);
+        Route::get('/situation-classe/{classeId}/impayes',      [SituationFinanciereClasseController::class, 'impayes']);
+        Route::get('/situation-classe/{classeId}/export-pdf',   [SituationFinanciereClasseController::class, 'exportClassePdf']);
+        Route::get('/situation-classe/{classeId}/export-excel', [SituationFinanciereClasseController::class, 'exportClasseExcel']);
+        Route::get('/situation-classe/{classeId}',               [SituationFinanciereClasseController::class, 'parClasse']);
+
+        // Rapports de paiements
+        Route::get('/rapports/journalier',    [RapportPaiementController::class, 'journalier']);
+        Route::get('/rapports/hebdomadaire',  [RapportPaiementController::class, 'hebdomadaire']);
+        Route::get('/rapports/mensuel',       [RapportPaiementController::class, 'mensuel']);
+        Route::get('/rapports/annuel',        [RapportPaiementController::class, 'annuel']);
+        Route::get('/rapports/personnalise',  [RapportPaiementController::class, 'personnalise']);
+        Route::get('/rapports/export',        [RapportPaiementController::class, 'export']);
+    });
 
     // Remises
     Route::get('/remises',        [RemiseController::class, 'index']);

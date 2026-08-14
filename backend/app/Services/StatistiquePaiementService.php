@@ -97,20 +97,39 @@ class StatistiquePaiementService
             return [];
         }
 
-        $eleves = Eleve::where('ecole_id', $ecoleId)
-            ->whereHas('inscriptions', function ($q) use ($annee, $request) {
+        $resultat = collect($this->elevesNonEnRegleListe(
+            $annee,
+            $request->filled('classe_id') ? (int) $request->classe_id : null,
+            $request->input('niveau')
+        ));
+
+        if ($request->filled('montant_min')) {
+            $seuil = (float) $request->montant_min;
+            $resultat = $resultat->filter(fn ($e) => $e['reste_a_payer'] >= $seuil);
+        }
+
+        return $resultat->sortByDesc('reste_a_payer')->values()->all();
+    }
+
+    // Cœur de elevesNonEnRegle(), réutilisable sans Request (ex. rapport par
+    // classe) : élèves de l'année donnée (filtrables par classe/niveau) dont
+    // le reste à payer est strictement positif.
+    public function elevesNonEnRegleListe(AnneeAcademique $annee, ?int $classeId = null, ?string $niveau = null): array
+    {
+        $eleves = Eleve::where('ecole_id', $annee->ecole_id)
+            ->whereHas('inscriptions', function ($q) use ($annee, $classeId, $niveau) {
                 $q->where('annee_academique_id', $annee->id);
-                if ($request->filled('classe_id')) {
-                    $q->where('classe_id', (int) $request->classe_id);
+                if ($classeId) {
+                    $q->where('classe_id', $classeId);
                 }
-                if ($request->filled('niveau')) {
-                    $q->whereHas('classe', fn ($q2) => $q2->where('niveau', $request->niveau));
+                if ($niveau) {
+                    $q->whereHas('classe', fn ($q2) => $q2->where('niveau', $niveau));
                 }
             })
             ->with(['inscriptions' => fn ($q) => $q->where('annee_academique_id', $annee->id)->with('classe')])
             ->get();
 
-        $resultat = $eleves
+        return $eleves
             ->map(function (Eleve $eleve) use ($annee) {
                 $classe = $eleve->inscriptions->first()?->classe;
                 $situation = $this->fraisCalcul->situationEleve($eleve, $annee->id);
@@ -128,14 +147,10 @@ class StatistiquePaiementService
                     'reste_a_payer'    => $situation['reste_a_payer'],
                 ];
             })
-            ->filter(fn ($e) => $e['reste_a_payer'] > 0);
-
-        if ($request->filled('montant_min')) {
-            $seuil = (float) $request->montant_min;
-            $resultat = $resultat->filter(fn ($e) => $e['reste_a_payer'] >= $seuil);
-        }
-
-        return $resultat->sortByDesc('reste_a_payer')->values()->all();
+            ->filter(fn ($e) => $e['reste_a_payer'] > 0)
+            ->sortByDesc('reste_a_payer')
+            ->values()
+            ->all();
     }
 
     // ── Aides internes ────────────────────────────────────────────

@@ -8,6 +8,7 @@ use App\Models\FraisScolaire;
 use App\Models\JournalOperationFrais;
 use App\Models\Paiement;
 use App\Models\NotificationAttente;
+use App\Services\CaisseService;
 use App\Services\FraisCalculService;
 use App\Services\MessageTemplateService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -15,8 +16,10 @@ use Illuminate\Http\Request;
 
 class PaiementController extends Controller
 {
-    public function __construct(private FraisCalculService $fraisCalcul)
-    {
+    public function __construct(
+        private FraisCalculService $fraisCalcul,
+        private CaisseService $caisseService
+    ) {
     }
 
     // GET /paiements
@@ -64,12 +67,21 @@ class PaiementController extends Controller
             ], 422);
         }
 
+        // Un paiement en espèces se rattache à la session de caisse ouverte
+        // au moment du paiement, si elle existe — sans jamais bloquer
+        // l'enregistrement du paiement quand aucune session n'est ouverte.
+        $sessionCaisseId = null;
+        if ($data['mode_paiement'] === 'especes') {
+            $sessionCaisseId = $this->caisseService->sessionActivePourEcole($ecoleId)?->id;
+        }
+
         $paiement = Paiement::create([
             'eleve_id'          => $eleve->id,
             'frais_scolaire_id' => $frais->id,
             'echeance_id'       => $data['echeance_id'] ?? null,
             'montant'           => $data['montant'],
             'mode_paiement'     => $data['mode_paiement'],
+            'session_caisse_id' => $sessionCaisseId,
             'reference'         => $data['reference'] ?? null,
             'date_paiement'     => $data['date_paiement'],
             'observation'       => $data['observation'] ?? null,

@@ -7,12 +7,15 @@ use App\Models\AnneeAcademique;
 use App\Models\Eleve;
 use App\Models\Paiement;
 use App\Services\FraisCalculService;
+use App\Services\SituationFinanciereEleveService;
 use Illuminate\Http\Request;
 
 class SituationFinanciereController extends Controller
 {
-    public function __construct(private FraisCalculService $fraisCalcul)
-    {
+    public function __construct(
+        private FraisCalculService $fraisCalcul,
+        private SituationFinanciereEleveService $situationEleveService
+    ) {
     }
 
     // GET /eleves/{id}/situation-financiere
@@ -54,5 +57,15 @@ class SituationFinanciereController extends Controller
             'reste_a_payer'     => $situation['reste_a_payer'],
             'historique_paiements' => $historique,
         ]);
+    }
+
+    // GET /paiements/eleves/{id}/statut-financier
+    public function statutFinancier(Request $request, $eleveId)
+    {
+        $ecoleId = $request->user()->ecole_id;
+
+        $eleve = Eleve::where('id', $eleveId)->where('ecole_id', $ecoleId)->firstOrFail();
+
+        return response()->json($this->situationEleveService->statutFinancier($eleve->id));
     }
 }

@@ -18,6 +18,7 @@ class Paiement extends Model
         'echeance_id',
         'montant',
         'mode_paiement',
+        'session_caisse_id',
         'reference',
         'date_paiement',
         'observation',
@@ -97,5 +98,15 @@ class Paiement extends Model
     public function journalOperations()
     {
         return $this->hasMany(JournalOperationFrais::class, 'paiement_id');
+    }
+
+    public function sessionCaisse()
+    {
+        return $this->belongsTo(SessionCaisse::class, 'session_caisse_id');
+    }
+
+    public function corrections()
+    {
+        return $this->hasMany(CorrectionPaiement::class, 'paiement_id');
     }
 }
