@@ -1,27 +1,20 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/analyse_performance_model.dart';
 import '../../services/validation_note_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'detail_validation_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 String _formatDateCourt(DateTime? d) =>
     d == null ? '—' : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
 class ValidationNotesScreen extends StatefulWidget {
   final int? classeIdPreselectionne;
-  // À false quand cet écran est embarqué dans notes_module_screen.dart : son
-  // bouton retour interne, câblé sur Navigator.pop, fermerait sinon l'écran
-  // parent au lieu de n'avoir aucun effet utile.
+  // À false quand cet écran est embarqué dans notes_module_screen.dart : il
+  // n'affiche alors ni bouton retour ni son propre bandeau — le conteneur
+  // (ssm_page_scaffold) fournit déjà la navigation et le titre de page.
   final bool afficherBoutonRetour;
 
   const ValidationNotesScreen({
@@ -76,29 +69,71 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Embarqué dans notes_module_screen.dart : celui-ci défile déjà toute la
+    // page dans un SingleChildScrollView (hauteur non bornée) — un ListView
+    // ou un Expanded planterait ici. On rend donc un contenu "plat" (Column)
+    // sans scroll, RefreshIndicator ni bandeau propres (déjà fournis par le
+    // conteneur parent).
+    if (!widget.afficherBoutonRetour) {
+      if (_chargement) {
+        return const Padding(
+          padding: EdgeInsets.symmetric(vertical: 40),
+          child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+        );
+      }
+      if (_erreur != null) return _vueErreur();
+      if (_saisies.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 30),
+          child: Center(
+            child: Column(
+              children: [
+                Icon(Icons.check_circle_outline, size: 56, color: SSMPalette.teal),
+                const SizedBox(height: 12),
+                Text(
+                  'Aucune saisie en attente de validation',
+                  style: GoogleFonts.inter(color: SSMPalette.texte2),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [for (final saisie in _saisies) _carteSaisie(saisie)],
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
         child: Column(
           children: [
-            _enTete(),
+            SSMSousEnTete(
+              titre: 'Validation des notes',
+              sousTitre: '${_saisies.length} saisie(s) en attente',
+              onRetour: () => Navigator.pop(context),
+            ),
             Expanded(
               child: _chargement
-                  ? const Center(child: CircularProgressIndicator(color: _indigo))
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
                   : _erreur != null
                       ? _vueErreur()
                       : RefreshIndicator(
                           onRefresh: _charger,
+                          color: SSMPalette.indigo,
                           child: _saisies.isEmpty
                               ? ListView(
                                   padding: const EdgeInsets.all(40),
                                   children: [
-                                    const Icon(Icons.check_circle_outline, size: 56, color: _vert),
+                                    Icon(Icons.check_circle_outline, size: 56, color: SSMPalette.teal),
                                     const SizedBox(height: 12),
                                     Center(
                                       child: Text(
                                         'Aucune saisie en attente de validation',
-                                        style: GoogleFonts.inter(color: _texte),
+                                        style: GoogleFonts.inter(color: SSMPalette.texte2),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
@@ -124,13 +159,13 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -139,112 +174,75 @@ class _ValidationNotesScreenState extends State<ValidationNotesScreen> {
     );
   }
 
-  Widget _enTete() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [_indigo, _teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
-      child: Row(
-        children: [
-          if (widget.afficherBoutonRetour)
-            IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Validation des notes', style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-                Text(
-                  '${_saisies.length} saisie(s) en attente',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _carteSaisie(SaisieEnAttenteValidation saisie) {
     final aDesAnomalies = saisie.nombreAnomalies > 0;
 
-    return GestureDetector(
-      onTap: () => _ouvrirDetail(saisie),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.75),
-              borderRadius: BorderRadius.circular(14),
-              border: Border(left: BorderSide(color: aDesAnomalies ? _ambre : _indigo, width: 4)),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+    return Material(
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => _ouvrirDetail(saisie),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border(
+              top: BorderSide(color: SSMPalette.bordure),
+              right: BorderSide(color: SSMPalette.bordure),
+              bottom: BorderSide(color: SSMPalette.bordure),
+              left: BorderSide(color: aDesAnomalies ? SSMPalette.ambre : SSMPalette.indigo, width: 3),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            saisie.classeNom,
-                            style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(saisie.matiereNom, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              const Icon(Icons.person_outline, size: 12, color: _gris),
-                              const SizedBox(width: 4),
-                              Text(saisie.enseignantNom, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
-                            ],
-                          ),
-                        ],
-                      ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          saisie.classeNom,
+                          style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(saisie.matiereNom, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.person_outline, size: 12, color: SSMPalette.texte3),
+                            const SizedBox(width: 4),
+                            Text(saisie.enseignantNom, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+                          ],
+                        ),
+                      ],
                     ),
-                    if (aDesAnomalies) _badge('${saisie.nombreAnomalies} anomalie(s)', _ambre),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Soumis le ${_formatDateCourt(saisie.dateSoumission)}',
-                      style: GoogleFonts.inter(fontSize: 11, color: _gris),
-                    ),
-                    Text(
-                      saisie.moyenneClasse != null ? 'Moyenne : ${saisie.moyenneClasse!.toStringAsFixed(2)}/20' : 'Moyenne : —',
-                      style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _indigo),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                  if (aDesAnomalies) SSMPill.couleur(label: '${saisie.nombreAnomalies} anomalie(s)', couleur: SSMPalette.ambre),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Soumis le ${_formatDateCourt(saisie.dateSoumission)}',
+                    style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3),
+                  ),
+                  Text(
+                    saisie.moyenneClasse != null ? 'Moyenne : ${saisie.moyenneClasse!.toStringAsFixed(2)}/20' : 'Moyenne : —',
+                    style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
-
-  Widget _badge(String label, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur)),
     );
   }
 }

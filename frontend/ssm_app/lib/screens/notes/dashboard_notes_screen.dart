@@ -4,17 +4,12 @@ import '../../models/analyse_performance_model.dart';
 import '../../services/validation_note_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/classe_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 import 'analyse_performance_screen.dart';
 import 'validation_notes_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 // Ligne de progression d'un enseignant sur une matière/classe, construite en
 // combinant matieres-non-validees (toujours disponible) et
@@ -52,11 +47,11 @@ String _libelleStatutSaisie(String statut) {
 Color _couleurStatutSaisie(String statut) {
   switch (statut) {
     case 'en_attente_validation':
-      return _ambre;
+      return SSMPalette.ambre;
     case 'rejetee':
-      return _rouge;
+      return SSMPalette.rouge;
     default:
-      return _indigo;
+      return SSMPalette.indigo;
   }
 }
 
@@ -174,7 +169,7 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
@@ -192,49 +187,47 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _chargerDonnees,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-            children: [
-              _enTete(),
-              const SizedBox(height: 16),
-              _selecteurPeriode(),
-              const SizedBox(height: 16),
-              if (_chargementDonnees)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 60),
-                  child: Center(child: CircularProgressIndicator(color: _indigo)),
-                )
-              else if (_erreur != null)
-                _vueErreur()
-              else if (_resume != null) ...[
-                _carteTauxProgression(),
-                const SizedBox(height: 16),
-                _grilleResume(),
-                const SizedBox(height: 20),
-                _boutonAnalyse(),
-                const SizedBox(height: 20),
-                Text(
-                  'PROGRESSION PAR ENSEIGNANT',
-                  style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4),
-                ),
-                const SizedBox(height: 10),
-                if (_progressionEnseignants.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Text('Toutes les matières sont validées pour cette période.', style: GoogleFonts.inter(color: _vert)),
-                  )
-                else
-                  ..._progressionEnseignants.map(_carteProgressionEnseignant),
-              ],
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _selecteurPeriode(),
+        const SizedBox(height: 16),
+        if (_chargementDonnees)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60),
+            child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+          )
+        else if (_erreur != null)
+          _vueErreur()
+        else if (_resume != null) ...[
+          _carteTauxProgression(),
+          const SizedBox(height: 16),
+          _grilleResume(),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _periodeId == null
+                  ? null
+                  : () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => AnalysePerformanceScreen(periodeId: _periodeId!)),
+                      ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SSMPalette.indigo,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+              ),
+              icon: const Icon(Icons.insights),
+              label: const Text('Analyse des performances'),
+            ),
           ),
-        ),
-      ),
+          const SizedBox(height: 20),
+          _panelProgressionEnseignants(),
+        ],
+      ],
     );
   }
 
@@ -243,13 +236,13 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
       padding: const EdgeInsets.symmetric(vertical: 40),
       child: Column(
         children: [
-          const Icon(Icons.error_outline, color: _rouge, size: 36),
+          Icon(Icons.error_outline, color: SSMPalette.rouge, size: 36),
           const SizedBox(height: 10),
-          Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+          Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
           const SizedBox(height: 12),
           ElevatedButton(
             onPressed: _chargerDonnees,
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
             child: const Text('Réessayer'),
           ),
         ],
@@ -258,49 +251,38 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
   }
 
   // ══════════════════════════════════════════════════════
-  // EN-TÊTE + SÉLECTEUR DE PÉRIODE
+  // SÉLECTEUR DE PÉRIODE
   // ══════════════════════════════════════════════════════
-
-  Widget _enTete() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_indigo, _teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Notes & Évaluations', style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-          const SizedBox(height: 4),
-          Text(
-            'Suivi académique de l\'établissement',
-            style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _selecteurPeriode() {
     if (_chargementPeriodes) {
-      return const Center(child: CircularProgressIndicator(color: _indigo));
+      return const Center(child: CircularProgressIndicator(color: SSMPalette.indigo));
     }
     if (_periodes.isEmpty) {
-      return Text('Aucune période disponible', style: GoogleFonts.inter(color: _gris));
+      return Text('Aucune période disponible', style: GoogleFonts.inter(color: SSMPalette.texte3));
     }
 
     return DropdownButtonFormField<int>(
       initialValue: _periodeId,
       isExpanded: true,
-      decoration: const InputDecoration(
+      decoration: InputDecoration(
         labelText: 'Période',
-        prefixIcon: Icon(Icons.event_note_outlined, color: _indigo),
-        border: OutlineInputBorder(),
+        labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+        prefixIcon: const Icon(Icons.event_note_outlined, color: SSMPalette.indigo),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: const Color(0xFFF9FAFB),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(SSMRayons.moyen),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(SSMRayons.moyen),
+          borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(SSMRayons.moyen),
+          borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+        ),
       ),
       items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
       onChanged: (v) {
@@ -316,14 +298,14 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
 
   Widget _carteTauxProgression() {
     final taux = _tauxGlobalProgression;
-    final couleur = taux >= 80 ? _vert : (taux >= 50 ? _ambre : _rouge);
+    final couleur = taux >= 80 ? SSMPalette.teal : (taux >= 50 ? SSMPalette.ambre : SSMPalette.rouge);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -331,7 +313,7 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Taux global de progression', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce)),
+              Text('Taux global de progression', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
               Text('${taux.toStringAsFixed(0)}%', style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w700, color: couleur)),
             ],
           ),
@@ -343,7 +325,7 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
           const SizedBox(height: 6),
           Text(
             '${_totalClasses - (_resume?.nombreClassesIncompletes ?? 0)} / $_totalClasses classes ont toutes leurs matières validées',
-            style: GoogleFonts.inter(fontSize: 11, color: _gris),
+            style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3),
           ),
         ],
       ),
@@ -356,129 +338,106 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
 
   Widget _grilleResume() {
     final r = _resume!;
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.6,
-      children: [
-        _carteStat('Classes incomplètes', '${r.nombreClassesIncompletes}', Icons.class_outlined, _rouge),
-        _carteStat('Matières en attente', '$_nombreMatieresEnAttente', Icons.hourglass_bottom, _ambre),
-        _carteStat('Matières en cours', '$_nombreMatieresEnCours', Icons.edit_note, _indigo),
-        _carteStat('Enseignants en retard', '${r.nombreEnseignantsEnRetard}', Icons.person_off_outlined, _rouge),
-        _carteStat('Élèves en difficulté', '${r.nombreElevesFaibles}', Icons.trending_down, _rouge),
-        _carteStat('Élèves excellents', '${r.nombreElevesExcellents}', Icons.star_outline, _vert),
-      ],
-    );
-  }
+    final cartes = <Widget>[
+      SSMStatCard(icone: Icons.class_outlined, couleur: SSMPalette.rouge, valeur: '${r.nombreClassesIncompletes}', label: 'Classes incomplètes'),
+      SSMStatCard(icone: Icons.hourglass_bottom, couleur: SSMPalette.ambre, valeur: '$_nombreMatieresEnAttente', label: 'Matières en attente'),
+      SSMStatCard(icone: Icons.edit_note, couleur: SSMPalette.indigo, valeur: '$_nombreMatieresEnCours', label: 'Matières en cours'),
+      SSMStatCard(icone: Icons.person_off_outlined, couleur: SSMPalette.rouge, valeur: '${r.nombreEnseignantsEnRetard}', label: 'Enseignants en retard'),
+      SSMStatCard(icone: Icons.trending_down, couleur: SSMPalette.rouge, valeur: '${r.nombreElevesFaibles}', label: 'Élèves en difficulté'),
+      SSMStatCard(icone: Icons.star_outline, couleur: SSMPalette.teal, valeur: '${r.nombreElevesExcellents}', label: 'Élèves excellents'),
+    ];
 
-  Widget _carteStat(String titre, String valeur, IconData icone, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(color: couleur.withValues(alpha: 0.15), shape: BoxShape.circle),
-            child: Icon(icone, color: couleur, size: 16),
-          ),
-          const Spacer(),
-          Text(valeur, style: GoogleFonts.jetBrainsMono(fontSize: 20, fontWeight: FontWeight.w700, color: _texteFonce)),
-          Text(titre, style: GoogleFonts.inter(fontSize: 10, color: _gris), maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
-      ),
-    );
-  }
-
-  Widget _boutonAnalyse() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: _periodeId == null
-            ? null
-            : () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => AnalysePerformanceScreen(periodeId: _periodeId!)),
-                ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _indigo,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+    return LayoutBuilder(builder: (context, contraintes) {
+      final colonnes = contraintes.maxWidth >= 760 ? 3 : (contraintes.maxWidth >= 520 ? 2 : 1);
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: cartes.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: colonnes,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 118,
         ),
-        icon: const Icon(Icons.insights),
-        label: const Text('Analyse des performances'),
-      ),
-    );
+        itemBuilder: (context, i) => cartes[i],
+      );
+    });
   }
 
   // ══════════════════════════════════════════════════════
   // PROGRESSION PAR ENSEIGNANT
   // ══════════════════════════════════════════════════════
 
-  Widget _carteProgressionEnseignant(_LigneProgression ligne) {
-    final couleur = _couleurStatutSaisie(ligne.statut);
-
-    return GestureDetector(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ValidationNotesScreen())),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget _panelProgressionEnseignants() {
+    return SSMPanel(
+      titre: 'Progression par enseignant',
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: _progressionEnseignants.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text('Toutes les matières sont validées pour cette période.', style: GoogleFonts.inter(color: SSMPalette.teal)),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Text(
-                    '${ligne.enseignant} — ${ligne.matiere} (${ligne.classe})',
-                    style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texteFonce),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                _badge(_libelleStatutSaisie(ligne.statut), couleur),
+                for (var i = 0; i < _progressionEnseignants.length; i++) ...[
+                  if (i > 0) const SizedBox(height: 8),
+                  _carteProgressionEnseignant(_progressionEnseignants[i]),
+                ],
               ],
             ),
-            if (ligne.pourcentage != null) ...[
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (ligne.pourcentage! / 100).clamp(0.0, 1.0),
-                  minHeight: 6,
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  color: couleur,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text('${ligne.pourcentage!.toStringAsFixed(0)}% complété', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: _gris)),
-            ],
-          ],
-        ),
-      ),
     );
   }
 
-  Widget _badge(String label, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur)),
+  Widget _carteProgressionEnseignant(_LigneProgression ligne) {
+    final couleur = _couleurStatutSaisie(ligne.statut);
+
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ValidationNotesScreen())),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: SSMPalette.bordure),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '${ligne.enseignant} — ${ligne.matiere} (${ligne.classe})',
+                      style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SSMPill.couleur(label: _libelleStatutSaisie(ligne.statut), couleur: couleur),
+                ],
+              ),
+              if (ligne.pourcentage != null) ...[
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: (ligne.pourcentage! / 100).clamp(0.0, 1.0),
+                    minHeight: 6,
+                    backgroundColor: const Color(0xFFF1F5F9),
+                    color: couleur,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text('${ligne.pourcentage!.toStringAsFixed(0)}% complété', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: SSMPalette.texte3)),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

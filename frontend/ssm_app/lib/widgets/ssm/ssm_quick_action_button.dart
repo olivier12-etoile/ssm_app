@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../theme/ssm_theme.dart';
 
-enum SSMActionVariante { primaire, teal, ambre, gris }
+enum SSMActionVariante { primaire, teal, ambre, rouge, gris }
 
 class _PaletteAction {
   final Color fond;
@@ -46,6 +46,7 @@ class SSMQuickActionButton extends StatelessWidget {
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icone, size: 14, color: palette.texte),
               const SizedBox(width: 7),
@@ -75,6 +76,12 @@ class SSMQuickActionButton extends StatelessWidget {
           fond: SSMPalette.ambreClair,
           texte: SSMPalette.ambre,
           bordure: Color(0xFFFDE68A),
+        );
+      case SSMActionVariante.rouge:
+        return const _PaletteAction(
+          fond: SSMPalette.rougeClair,
+          texte: SSMPalette.rouge,
+          bordure: Color(0xFFFECACA),
         );
       case SSMActionVariante.gris:
         return const _PaletteAction(

@@ -4,19 +4,13 @@ import '../../models/utilisateur.dart';
 import '../../services/auth_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/validation_note_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_page_scaffold.dart';
+import '../../widgets/ssm/ssm_sidebar.dart';
 import 'dashboard_notes_screen.dart';
 import 'selection_saisie_screen.dart';
 import 'validation_notes_screen.dart';
 import 'analyse_performance_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 String _libelleAction(String action) {
   switch (action) {
@@ -36,13 +30,13 @@ String _libelleAction(String action) {
 Color _couleurAction(String action) {
   switch (action) {
     case 'validation':
-      return _vert;
+      return SSMPalette.teal;
     case 'rejet':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'deverrouillage':
-      return _ambre;
+      return SSMPalette.ambre;
     default:
-      return _indigo;
+      return SSMPalette.indigo;
   }
 }
 
@@ -53,6 +47,8 @@ String _formatDateHeure(String? iso) {
   return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year} à '
       '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 }
+
+enum _OngletNotes { validation, vueEnsemble }
 
 // ══════════════════════════════════════════════════════════
 // Point d'entrée unique du module Notes & Évaluations.
@@ -69,11 +65,11 @@ class NotesModuleScreen extends StatefulWidget {
   State<NotesModuleScreen> createState() => _NotesModuleScreenState();
 }
 
-class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTickerProviderStateMixin {
+class _NotesModuleScreenState extends State<NotesModuleScreen> {
   Utilisateur? _utilisateur;
   bool _chargementUtilisateur = true;
 
-  TabController? _tabController;
+  _OngletNotes _onglet = _OngletNotes.validation;
   int? _periodeId;
   int _nombreEnAttente = 0;
 
@@ -86,12 +82,6 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTicker
     _charger();
   }
 
-  @override
-  void dispose() {
-    _tabController?.dispose();
-    super.dispose();
-  }
-
   Future<void> _charger() async {
     final utilisateur = await AuthService.getUtilisateur();
     setState(() {
@@ -100,7 +90,6 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTicker
     });
 
     if (_estGestionnaire) {
-      _tabController = TabController(length: 2, vsync: this);
       _resoudrePeriodeActive();
       _chargerNombreEnAttente();
     }
@@ -141,25 +130,9 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTicker
 
   // ── Navigation ────────────────────────────────────────
 
-  String get _routeDashboardPrincipal {
-    switch (_utilisateur?.role) {
-      case 'enseignant':
-        return '/dashboard/enseignant';
-      case 'censeur':
-        return '/dashboard/censeur';
-      case 'secretaire':
-        return '/dashboard/secretaire';
-      default: // directeur, super_admin
-        return '/tableau-de-bord';
-    }
-  }
-
-  void _retour() {
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacementNamed(context, _routeDashboardPrincipal);
-    }
+  void _naviguer(BuildContext context, String route) {
+    if (route == '/notes') return;
+    Navigator.pushNamed(context, route);
   }
 
   Future<void> _ouvrirHistorique() async {
@@ -171,57 +144,129 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTicker
     );
   }
 
+  // ── Navigation latérale, adaptée au rôle connecté (voir menu_lateral.dart) ──
+  List<SSMNavSection> _sections() {
+    final role = _utilisateur?.role;
+
+    if (role == 'enseignant') {
+      return [
+        const SSMNavSection(titre: 'Principal', items: [
+          SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/dashboard/enseignant'),
+        ]),
+        SSMNavSection(titre: 'Mes classes', items: [
+          const SSMNavItem(icone: Icons.grade_outlined, label: 'Notes & évaluations', route: '/notes'),
+          const SSMNavItem(icone: Icons.event_busy_outlined, label: 'Saisie des absences', route: '/enseignant/absences'),
+          const SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Mon emploi du temps', route: '/emploi-du-temps'),
+        ]),
+        const SSMNavSection(titre: 'Général', items: [
+          SSMNavItem(icone: Icons.sync_outlined, label: 'Synchronisation', route: '/sync'),
+          SSMNavItem(icone: Icons.person_outline, label: 'Mon profil', route: '/profil'),
+          SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres', route: '/parametres'),
+        ]),
+      ];
+    }
+
+    if (role == 'censeur') {
+      return [
+        const SSMNavSection(titre: 'Principal', items: [
+          SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/dashboard/censeur'),
+        ]),
+        SSMNavSection(titre: 'Pédagogie', items: [
+          SSMNavItem(
+            icone: Icons.grade_outlined,
+            label: 'Notes & évaluations',
+            route: '/notes',
+            badge: _nombreEnAttente > 0 ? _nombreEnAttente : null,
+            couleurBadge: SSMPalette.ambre,
+          ),
+          const SSMNavItem(icone: Icons.description_outlined, label: 'Bulletins', route: '/bulletins'),
+          const SSMNavItem(icone: Icons.event_busy_outlined, label: 'Saisie des absences', route: '/enseignant/absences'),
+          const SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Emplois du temps', route: '/emploi-du-temps'),
+        ]),
+        const SSMNavSection(titre: 'Général', items: [
+          SSMNavItem(icone: Icons.sync_outlined, label: 'Synchronisation', route: '/sync'),
+          SSMNavItem(icone: Icons.person_outline, label: 'Mon profil', route: '/profil'),
+          SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres', route: '/parametres'),
+        ]),
+      ];
+    }
+
+    // Directeur (et rôles par défaut) : même structure que le dashboard directeur.
+    return [
+      const SSMNavSection(titre: 'Principal', items: [
+        SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/tableau-de-bord'),
+        SSMNavItem(icone: Icons.people_outline, label: 'Élèves', route: '/directeur/eleves'),
+        SSMNavItem(icone: Icons.price_change_outlined, label: 'Frais scolaires', route: '/directeur/frais'),
+        SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Emploi du temps', route: '/emploi-du-temps'),
+        SSMNavItem(icone: Icons.description_outlined, label: 'Bulletins PDF', route: '/bulletins'),
+      ]),
+      SSMNavSection(titre: 'Pilotage', items: [
+        SSMNavItem(
+          icone: Icons.grade_outlined,
+          label: 'Notes & évaluations',
+          route: '/notes',
+          badge: _nombreEnAttente > 0 ? _nombreEnAttente : null,
+          couleurBadge: SSMPalette.ambre,
+        ),
+        const SSMNavItem(icone: Icons.bar_chart_outlined, label: 'Statistiques', route: '/statistiques'),
+        const SSMNavItem(icone: Icons.notifications_outlined, label: 'Notifications', route: '/notifications'),
+        const SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
+      ]),
+    ];
+  }
+
+  String _libelleRole(String? role) {
+    switch (role) {
+      case 'directeur':
+        return 'Directeur';
+      case 'censeur':
+        return 'Censeur';
+      case 'secretaire':
+        return 'Secrétaire';
+      case 'enseignant':
+        return 'Enseignant';
+      case 'comptable':
+        return 'Comptable';
+      case 'super_admin':
+        return 'Super admin';
+      default:
+        return role ?? '';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: _retour),
-        title: Text('Notes & Évaluations', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        actions: [
-          if (_estGestionnaire)
-            IconButton(
-              icon: const Icon(Icons.history),
-              tooltip: 'Historique des validations',
-              onPressed: _ouvrirHistorique,
-            ),
-        ],
-        bottom: _estGestionnaire && _tabController != null
-            ? TabBar(
-                controller: _tabController,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
-                tabs: [
-                  Tab(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Validation'),
-                        if (_nombreEnAttente > 0) ...[
-                          const SizedBox(width: 6),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                            decoration: BoxDecoration(color: _ambre, borderRadius: BorderRadius.circular(999)),
-                            child: Text('$_nombreEnAttente', style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const Tab(text: 'Vue d\'ensemble'),
-                ],
-              )
-            : null,
-      ),
-      body: _chargementUtilisateur
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _utilisateur == null
-              ? _vueErreur('Impossible de charger votre profil. Reconnectez-vous.')
-              : _corps(),
+    if (_chargementUtilisateur) {
+      return const Scaffold(backgroundColor: SSMPalette.fond, body: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)));
+    }
+
+    if (_utilisateur == null) {
+      return Scaffold(
+        backgroundColor: SSMPalette.fond,
+        body: _vueErreur('Impossible de charger votre profil. Reconnectez-vous.'),
+      );
+    }
+
+    return SSMPageScaffold(
+      nomEcole: _utilisateur?.codeEcole ?? 'Mon établissement',
+      codeEcole: _utilisateur?.codeEcole ?? '—',
+      nomUtilisateur: _utilisateur?.nom ?? '…',
+      role: _libelleRole(_utilisateur?.role),
+      sections: _sections(),
+      routeActuelle: '/notes',
+      onNavigate: (route) => _naviguer(context, route),
+      onProfilTap: () => Navigator.pushNamed(context, '/profil'),
+      breadcrumb: 'Accueil',
+      breadcrumbActuel: 'Notes & Évaluations',
+      actionsTopBar: _estGestionnaire
+          ? [
+              IconButton(
+                icon: const Icon(Icons.history, color: SSMPalette.texte2),
+                tooltip: 'Historique des validations',
+                onPressed: _ouvrirHistorique,
+              ),
+            ]
+          : null,
       floatingActionButton: _estGestionnaire
           ? FloatingActionButton.extended(
               onPressed: _periodeId == null
@@ -230,7 +275,7 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTicker
                         context,
                         MaterialPageRoute(builder: (_) => AnalysePerformanceScreen(periodeId: _periodeId!)),
                       ),
-              backgroundColor: _periodeId == null ? _gris : _teal,
+              backgroundColor: _periodeId == null ? SSMPalette.texte3 : SSMPalette.teal,
               icon: const Icon(Icons.insights, color: Colors.white),
               label: Text(
                 'Analyse des performances',
@@ -238,30 +283,81 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTicker
               ),
             )
           : null,
+      child: _corps(),
     );
   }
 
   Widget _corps() {
     if (_estEnseignant) {
       // Section "Mes saisies" en priorité — pas d'accès à la validation.
-      return const SelectionSaisieScreen();
+      return const SelectionSaisieScreen(independant: false);
     }
 
     if (_estGestionnaire) {
-      return TabBarView(
-        controller: _tabController,
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // "Validation en attente" en priorité (1er onglet) : contenu
-          // intégral de ValidationNotesScreen, réutilisé tel quel — sert
-          // aussi de vue "Toutes les saisies en attente" pour la supervision.
-          const ValidationNotesScreen(afficherBoutonRetour: false),
-          // "Vue d'ensemble" : cards résumé + progression de dashboard_notes_screen.dart.
-          const DashboardNotesScreen(),
+          _segments(),
+          const SizedBox(height: 16),
+          if (_onglet == _OngletNotes.validation)
+            const ValidationNotesScreen(afficherBoutonRetour: false)
+          else
+            const DashboardNotesScreen(),
         ],
       );
     }
 
     return _vueErreur("Ce module n'est pas disponible pour votre rôle.");
+  }
+
+  // ── Sélecteur d'onglet (remplace la TabBar de l'ancien AppBar) ──
+  Widget _segments() {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+      child: Row(
+        children: [
+          Expanded(child: _segment('Validation', _OngletNotes.validation, badge: _nombreEnAttente)),
+          Expanded(child: _segment("Vue d'ensemble", _OngletNotes.vueEnsemble)),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment(String label, _OngletNotes valeur, {int badge = 0}) {
+    final actif = _onglet == valeur;
+    return GestureDetector(
+      onTap: () => setState(() => _onglet = valeur),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: actif ? SSMPalette.blanc : Colors.transparent,
+          borderRadius: BorderRadius.circular(SSMRayons.petit),
+          boxShadow: actif ? SSMOmbres.legere : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: actif ? FontWeight.w600 : FontWeight.w400,
+                color: actif ? SSMPalette.indigo : SSMPalette.texte2,
+              ),
+            ),
+            if (badge > 0) ...[
+              const SizedBox(width: 6),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                decoration: BoxDecoration(color: SSMPalette.ambre, borderRadius: BorderRadius.circular(SSMRayons.pilule)),
+                child: Text('$badge', style: GoogleFonts.jetBrainsMono(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white)),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _vueErreur(String message) {
@@ -271,9 +367,9 @@ class _NotesModuleScreenState extends State<NotesModuleScreen> with SingleTicker
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.info_outline, color: _gris, size: 40),
+            Icon(Icons.info_outline, color: SSMPalette.texte3, size: 40),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
           ],
         ),
       ),
@@ -327,28 +423,28 @@ class _FeuilleHistoriqueState extends State<_FeuilleHistorique> {
       expand: false,
       builder: (context, scrollController) => Container(
         decoration: const BoxDecoration(
-          color: Color(0xFFF8FAFC),
+          color: SSMPalette.fond,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
             const SizedBox(height: 10),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: SSMPalette.bordure, borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
               child: Row(
                 children: [
-                  Text('Historique des validations', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce)),
+                  Text('Historique des validations', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
                 ],
               ),
             ),
             Expanded(
               child: _chargement
-                  ? const Center(child: CircularProgressIndicator(color: _indigo))
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
                   : _erreur != null
-                      ? Center(child: Text(_erreur!, style: GoogleFonts.inter(color: _rouge)))
+                      ? Center(child: Text(_erreur!, style: GoogleFonts.inter(color: SSMPalette.rouge)))
                       : _lignes.isEmpty
-                          ? Center(child: Text('Aucune action enregistrée pour le moment.', style: GoogleFonts.inter(color: _gris)))
+                          ? Center(child: Text('Aucune action enregistrée pour le moment.', style: GoogleFonts.inter(color: SSMPalette.texte3)))
                           : ListView.builder(
                               controller: scrollController,
                               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -376,9 +472,14 @@ class _FeuilleHistoriqueState extends State<_FeuilleHistorique> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: couleur, width: 4)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border(
+          top: BorderSide(color: SSMPalette.bordure),
+          right: BorderSide(color: SSMPalette.bordure),
+          bottom: BorderSide(color: SSMPalette.bordure),
+          left: BorderSide(color: couleur, width: 3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -388,14 +489,14 @@ class _FeuilleHistoriqueState extends State<_FeuilleHistorique> {
               Expanded(
                 child: Text(
                   '${classe?['nom'] ?? '—'} — ${matiere?['nom'] ?? '—'} (${periode?['nom'] ?? '—'})',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texteFonce),
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+                decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(SSMRayons.pilule)),
                 child: Text(_libelleAction(action), style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur)),
               ),
             ],
@@ -403,11 +504,11 @@ class _FeuilleHistoriqueState extends State<_FeuilleHistorique> {
           const SizedBox(height: 6),
           Text(
             'Par ${effectuePar?['name'] ?? '—'} · ${_formatDateHeure(ligne['created_at'] as String?)}',
-            style: GoogleFonts.inter(fontSize: 11, color: _gris),
+            style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3),
           ),
           if (motif != null && motif.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text('Motif : $motif', style: GoogleFonts.inter(fontSize: 11, color: _texte, fontStyle: FontStyle.italic)),
+            Text('Motif : $motif', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2, fontStyle: FontStyle.italic)),
           ],
         ],
       ),

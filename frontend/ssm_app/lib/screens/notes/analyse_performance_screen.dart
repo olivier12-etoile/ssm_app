@@ -8,15 +8,13 @@ import '../../models/analyse_performance_model.dart';
 import '../../services/validation_note_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/matiere_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 String _libelleStatutSaisie(String statut) {
   switch (statut) {
@@ -34,12 +32,18 @@ String _libelleStatutSaisie(String statut) {
 Color _couleurStatutSaisie(String statut) {
   switch (statut) {
     case 'en_attente_validation':
-      return _ambre;
+      return SSMPalette.ambre;
     case 'rejetee':
-      return _rouge;
+      return SSMPalette.rouge;
     default:
-      return _indigo;
+      return SSMPalette.indigo;
   }
+}
+
+Color _couleurTaux(double taux) {
+  if (taux >= 70) return SSMPalette.teal;
+  if (taux >= 40) return SSMPalette.ambre;
+  return SSMPalette.rouge;
 }
 
 class AnalysePerformanceScreen extends StatefulWidget {
@@ -133,13 +137,13 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _vert),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -181,8 +185,9 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('Déverrouiller une saisie'),
+          backgroundColor: SSMPalette.blanc,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+          title: Text('Déverrouiller une saisie', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -190,13 +195,13 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
               children: [
                 Text(
                   'À utiliser si une saisie a été validée par erreur : elle repassera "en cours" et l\'enseignant pourra corriger.',
-                  style: GoogleFonts.inter(fontSize: 12, color: _texte),
+                  style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
                   initialValue: classeId,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Classe', border: OutlineInputBorder(), isDense: true),
+                  decoration: _decorationChamp('Classe'),
                   items: classes.map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['nom'] as String))).toList(),
                   onChanged: (v) => setDialogState(() => classeId = v),
                 ),
@@ -204,7 +209,7 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
                 DropdownButtonFormField<int>(
                   initialValue: matiereId,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Matière', border: OutlineInputBorder(), isDense: true),
+                  decoration: _decorationChamp('Matière'),
                   items: matieres.map((m) => DropdownMenuItem<int>(value: m['id'] as int, child: Text(m['nom'] as String))).toList(),
                   onChanged: (v) => setDialogState(() => matiereId = v),
                 ),
@@ -212,15 +217,15 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
                 TextField(
                   controller: motifController,
                   maxLines: 2,
-                  decoration: const InputDecoration(labelText: 'Motif du déverrouillage *', border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Motif du déverrouillage *'),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _ambre, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.ambre, foregroundColor: Colors.white, elevation: 0),
               onPressed: (classeId == null || matiereId == null || motifController.text.trim().isEmpty)
                   ? null
                   : () => Navigator.pop(context, true),
@@ -247,18 +252,40 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
     }
   }
 
+  InputDecoration _decorationChamp(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      isDense: true,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
         child: Column(
           children: [
-            _enTete(),
+            _entete(),
             _barreExport(),
             Expanded(
               child: _chargement
-                  ? const Center(child: CircularProgressIndicator(color: _indigo))
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
                   : _erreur != null
                       ? _vueErreur()
                       : TabBarView(
@@ -289,13 +316,13 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -308,34 +335,19 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
   // EN-TÊTE
   // ══════════════════════════════════════════════════════
 
-  Widget _enTete() {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [_indigo, _teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
-            child: Row(
-              children: [
-                IconButton(icon: const Icon(Icons.arrow_back, color: Colors.white), onPressed: () => Navigator.pop(context)),
-                Expanded(
-                  child: Text(
-                    'Analyse des performances',
-                    style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          TabBar(
+  Widget _entete() {
+    return Column(
+      children: [
+        SSMSousEnTete(titre: 'Analyse des performances', onRetour: () => Navigator.pop(context)),
+        Container(
+          color: SSMPalette.blanc,
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
+          child: TabBar(
             controller: _tabController,
             isScrollable: true,
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
+            indicatorColor: SSMPalette.teal,
+            labelColor: SSMPalette.indigo,
+            unselectedLabelColor: SSMPalette.texte3,
             labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
             tabs: const [
               Tab(text: 'Classes incomplètes'),
@@ -346,34 +358,37 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
               Tab(text: 'Classement classes'),
             ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _barreExport() {
     return Container(
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: _exportEnCours
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 6),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _indigo)),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)),
             )
           : Row(
               children: [
                 Expanded(
-                  child: TextButton.icon(
-                    onPressed: () => _exporter('pdf'),
-                    icon: const Icon(Icons.picture_as_pdf, size: 18, color: _rouge),
-                    label: Text('Exporter PDF', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                  child: SSMQuickActionButton(
+                    icone: Icons.picture_as_pdf,
+                    label: 'Exporter PDF',
+                    variante: SSMActionVariante.rouge,
+                    onTap: () => _exporter('pdf'),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Expanded(
-                  child: TextButton.icon(
-                    onPressed: () => _exporter('excel'),
-                    icon: const Icon(Icons.table_chart, size: 18, color: _vert),
-                    label: Text('Exporter Excel', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                  child: SSMQuickActionButton(
+                    icone: Icons.table_chart,
+                    label: 'Exporter Excel',
+                    variante: SSMActionVariante.teal,
+                    onTap: () => _exporter('excel'),
                   ),
                 ),
               ],
@@ -388,16 +403,17 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
   Widget _ongletClassesIncompletes() {
     if (_classesIncompletes.isEmpty) return _messageVide('Toutes les classes ont leurs matières complètes.');
 
-    return ListView.builder(
+    return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: _classesIncompletes.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final c = _classesIncompletes[index];
-        return _carteListe(
-          titre: c.nomClasse,
-          couleur: _rouge,
+        return SSMAlertItem(
+          type: SSMAlerteType.avertissement,
+          icone: Icons.class_outlined,
+          titre: '${c.nomClasse} — ${c.matieresManquantes.length} matière(s) manquante(s)',
           sousTitre: c.matieresManquantes.join(', '),
-          trailing: _badge('${c.matieresManquantes.length}', _rouge),
         );
       },
     );
@@ -411,35 +427,53 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        OutlinedButton.icon(
-          onPressed: _ouvrirDialogDeverrouillage,
-          style: OutlinedButton.styleFrom(foregroundColor: _ambre),
-          icon: const Icon(Icons.lock_open_outlined),
-          label: const Text('Déverrouiller une saisie'),
+        SSMQuickActionButton(
+          icone: Icons.lock_open_outlined,
+          label: 'Déverrouiller une saisie',
+          variante: SSMActionVariante.ambre,
+          onTap: _ouvrirDialogDeverrouillage,
         ),
         const SizedBox(height: 12),
         if (_matieresNonValidees.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
-            child: Text('Toutes les matières sont validées.', style: GoogleFonts.inter(color: _vert)),
+            child: Text('Toutes les matières sont validées.', style: GoogleFonts.inter(color: SSMPalette.teal)),
           )
         else
           ..._matieresNonValidees.map((classe) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(classe.classeNom, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce)),
-                    const SizedBox(height: 6),
-                    ...classe.matieres.map((m) => _carteListe(
-                          titre: m.matiereNom,
-                          sousTitre: m.enseignantNom,
-                          couleur: _couleurStatutSaisie(m.statut),
-                          trailing: _badge(_libelleStatutSaisie(m.statut), _couleurStatutSaisie(m.statut)),
-                        )),
-                  ],
+                child: SSMPanel(
+                  titre: classe.classeNom,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (var i = 0; i < classe.matieres.length; i++) ...[
+                        if (i > 0) const Divider(height: 16, color: SSMPalette.bordure),
+                        _ligneMatiere(classe.matieres[i]),
+                      ],
+                    ],
+                  ),
                 ),
               )),
+      ],
+    );
+  }
+
+  Widget _ligneMatiere(dynamic m) {
+    final couleur = _couleurStatutSaisie(m.statut as String);
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(m.matiereNom as String, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+              Text(m.enseignantNom as String, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+            ],
+          ),
+        ),
+        SSMPill.couleur(label: _libelleStatutSaisie(m.statut as String), couleur: couleur),
       ],
     );
   }
@@ -451,33 +485,33 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
   Widget _ongletEnseignantsEnRetard() {
     if (_enseignantsEnRetard.isEmpty) return _messageVide('Aucun enseignant en retard (ou la date limite de la période n\'est pas encore dépassée).');
 
-    return ListView.builder(
+    return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: _enseignantsEnRetard.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (context, index) {
         final e = _enseignantsEnRetard[index];
         return Container(
-          margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
+          decoration: BoxDecoration(color: SSMPalette.blanc, borderRadius: BorderRadius.circular(SSMRayons.grand), border: Border.all(color: SSMPalette.bordure)),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Expanded(
-                    child: Text('${e.nom} — ${e.matiere} (${e.classe})', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texteFonce)),
+                    child: Text('${e.nom} — ${e.matiere} (${e.classe})', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
                   ),
-                  _badge('${e.joursDeRetard} j de retard', _rouge),
+                  SSMPill.couleur(label: '${e.joursDeRetard} j de retard', couleur: SSMPalette.rouge),
                 ],
               ),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(value: (e.pourcentageCompletion / 100).clamp(0.0, 1.0), minHeight: 6, backgroundColor: const Color(0xFFF1F5F9), color: _rouge),
+                child: LinearProgressIndicator(value: (e.pourcentageCompletion / 100).clamp(0.0, 1.0), minHeight: 6, backgroundColor: const Color(0xFFF1F5F9), color: SSMPalette.rouge),
               ),
               const SizedBox(height: 4),
-              Text('${e.pourcentageCompletion.toStringAsFixed(0)}% complété', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: _gris)),
+              Text('${e.pourcentageCompletion.toStringAsFixed(0)}% complété', style: GoogleFonts.jetBrainsMono(fontSize: 10, color: SSMPalette.texte3)),
             ],
           ),
         );
@@ -496,14 +530,14 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Row(
             children: [
-              Text('Seuil : ${seuil.toStringAsFixed(0)}/20', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+              Text('Seuil : ${seuil.toStringAsFixed(0)}/20', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
               Expanded(
                 child: Slider(
                   value: seuil,
                   min: 0,
                   max: 20,
                   divisions: 20,
-                  activeColor: _indigo,
+                  activeColor: SSMPalette.indigo,
                   label: seuil.toStringAsFixed(0),
                   onChanged: onSeuilChange,
                   onChangeEnd: onSeuilChangeEnd,
@@ -515,21 +549,25 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
         Expanded(
           child: eleves.isEmpty
               ? _messageVide('Aucun élève pour ce seuil.')
-              : ListView.builder(
+              : SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: eleves.length,
-                  itemBuilder: (context, index) {
-                    final e = eleves[index];
-                    return _carteListe(
-                      titre: '${e.rang}. ${e.nomComplet}',
-                      sousTitre: e.classe,
-                      couleur: _indigo,
-                      trailing: Text(
-                        e.moyenne.toStringAsFixed(2),
-                        style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce),
-                      ),
-                    );
-                  },
+                  child: SSMDataTable(
+                    colonnes: const [
+                      SSMDataColumn('Rang', largeur: 40),
+                      SSMDataColumn('Élève'),
+                      SSMDataColumn('Classe'),
+                      SSMDataColumn('Moyenne'),
+                    ],
+                    lignes: [
+                      for (final e in eleves)
+                        [
+                          Text('${e.rang}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                          Text(e.nomComplet, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                          Text(e.classe, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                          Text(e.moyenne.toStringAsFixed(2), style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+                        ],
+                    ],
+                  ),
                 ),
         ),
       ],
@@ -543,14 +581,14 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
   Widget _ongletClassementClasses() {
     if (_classementClasses.isEmpty) return _messageVide('Aucune donnée de classement disponible.');
 
-    final maxY = 100.0;
+    const maxY = 100.0;
 
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))]),
+          decoration: BoxDecoration(color: SSMPalette.blanc, borderRadius: BorderRadius.circular(SSMRayons.grand), border: Border.all(color: SSMPalette.bordure)),
           child: SizedBox(
             height: 240,
             child: BarChart(
@@ -560,7 +598,7 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
                 barTouchData: BarTouchData(
                   enabled: true,
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => _indigo,
+                    getTooltipColor: (_) => SSMPalette.indigo,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
                       '${rod.toY.toStringAsFixed(0)}%',
                       const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
@@ -585,13 +623,13 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
                       ],
                     ),
                 ],
-                gridData: FlGridData(drawVerticalLine: false, horizontalInterval: 25, getDrawingHorizontalLine: (v) => FlLine(color: _texteFonce.withValues(alpha: 0.04), strokeWidth: 1)),
+                gridData: FlGridData(drawVerticalLine: false, horizontalInterval: 25, getDrawingHorizontalLine: (v) => FlLine(color: SSMPalette.texte1.withValues(alpha: 0.04), strokeWidth: 1)),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
                   topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   leftTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: true, reservedSize: 36, getTitlesWidget: (value, meta) => Text('${value.toInt()}%', style: GoogleFonts.inter(fontSize: 9, color: _gris))),
+                    sideTitles: SideTitles(showTitles: true, reservedSize: 36, getTitlesWidget: (value, meta) => Text('${value.toInt()}%', style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte3))),
                   ),
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
@@ -604,7 +642,7 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
                         final court = nom.length > 6 ? '${nom.substring(0, 5)}…' : nom;
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: Text(court, style: GoogleFonts.inter(fontSize: 9, color: _texte)),
+                          child: Text(court, style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte2)),
                         );
                       },
                     ),
@@ -615,20 +653,23 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
           ),
         ),
         const SizedBox(height: 16),
-        ..._classementClasses.map((c) => _carteListe(
-              titre: c.classe,
-              sousTitre: c.moyenneGenerale != null ? 'Moyenne : ${c.moyenneGenerale!.toStringAsFixed(2)}/20' : 'Moyenne : —',
-              couleur: _couleurTaux(c.tauxReussite),
-              trailing: Text('${c.tauxReussite.toStringAsFixed(0)}%', style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: _couleurTaux(c.tauxReussite))),
-            )),
+        SSMDataTable(
+          colonnes: const [
+            SSMDataColumn('Classe'),
+            SSMDataColumn('Moyenne'),
+            SSMDataColumn('Taux'),
+          ],
+          lignes: [
+            for (final c in _classementClasses)
+              [
+                Text(c.classe, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                Text(c.moyenneGenerale != null ? '${c.moyenneGenerale!.toStringAsFixed(2)}/20' : '—', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                SSMPill.couleur(label: '${c.tauxReussite.toStringAsFixed(0)}%', couleur: _couleurTaux(c.tauxReussite)),
+              ],
+          ],
+        ),
       ],
     );
-  }
-
-  Color _couleurTaux(double taux) {
-    if (taux >= 70) return _vert;
-    if (taux >= 40) return _ambre;
-    return _rouge;
   }
 
   // ══════════════════════════════════════════════════════
@@ -639,46 +680,8 @@ class _AnalysePerformanceScreenState extends State<AnalysePerformanceScreen> wit
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
-        child: Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _gris)),
+        child: Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte3)),
       ),
-    );
-  }
-
-  Widget _carteListe({required String titre, String? sousTitre, required Color couleur, Widget? trailing}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: couleur, width: 4)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(titre, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
-                if (sousTitre != null && sousTitre.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(sousTitre, style: GoogleFonts.inter(fontSize: 11, color: _gris), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ],
-              ],
-            ),
-          ),
-          if (trailing != null) ...[const SizedBox(width: 8), trailing],
-        ],
-      ),
-    );
-  }
-
-  Widget _badge(String label, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur)),
     );
   }
 }

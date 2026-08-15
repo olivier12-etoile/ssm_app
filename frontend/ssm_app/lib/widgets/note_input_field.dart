@@ -1,13 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../theme/ssm_theme.dart';
 
 // Champ de saisie réutilisable pour une note sur 20 : clavier numérique,
-// couleur dynamique selon la valeur (rouge clair si < 10, vert clair si
+// couleur dynamique selon la valeur (rouge clair si < 10, teal clair si
 // valide et >= 10, rouge franc si hors limites), lecture seule si la
 // saisie est verrouillée.
 class NoteInputField extends StatelessWidget {
@@ -34,21 +30,21 @@ class NoteInputField extends StatelessWidget {
     Color couleurBordure;
 
     if (horsLimites) {
-      couleurFond = _rouge.withValues(alpha: 0.1);
-      couleurTexte = _rouge;
-      couleurBordure = _rouge;
+      couleurFond = SSMPalette.rouge.withValues(alpha: 0.1);
+      couleurTexte = SSMPalette.rouge;
+      couleurBordure = SSMPalette.rouge;
     } else if (faible) {
-      couleurFond = _rouge.withValues(alpha: 0.06);
-      couleurTexte = _rouge;
-      couleurBordure = const Color(0xFFE2E8F0);
+      couleurFond = SSMPalette.rouge.withValues(alpha: 0.06);
+      couleurTexte = SSMPalette.rouge;
+      couleurBordure = const Color(0xFFE5E7EB);
     } else if (valeur != null) {
-      couleurFond = _vert.withValues(alpha: 0.07);
-      couleurTexte = _texteFonce;
-      couleurBordure = const Color(0xFFE2E8F0);
+      couleurFond = SSMPalette.teal.withValues(alpha: 0.07);
+      couleurTexte = SSMPalette.texte1;
+      couleurBordure = const Color(0xFFE5E7EB);
     } else {
-      couleurFond = Colors.white;
-      couleurTexte = _texteFonce;
-      couleurBordure = const Color(0xFFE2E8F0);
+      couleurFond = SSMPalette.blanc;
+      couleurTexte = SSMPalette.texte1;
+      couleurBordure = const Color(0xFFE5E7EB);
     }
 
     return SizedBox(
@@ -62,7 +58,7 @@ class NoteInputField extends StatelessWidget {
         style: GoogleFonts.jetBrainsMono(
           fontSize: 15,
           fontWeight: FontWeight.w700,
-          color: lectureSeule ? _gris : couleurTexte,
+          color: lectureSeule ? SSMPalette.texte3 : couleurTexte,
         ),
         onChanged: onChanged,
         decoration: InputDecoration(
@@ -70,19 +66,19 @@ class NoteInputField extends StatelessWidget {
           filled: true,
           fillColor: lectureSeule ? const Color(0xFFF1F5F9) : couleurFond,
           hintText: '—',
-          hintStyle: GoogleFonts.jetBrainsMono(color: _gris),
+          hintStyle: GoogleFonts.jetBrainsMono(color: SSMPalette.texte3),
           contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(SSMRayons.petit),
             borderSide: BorderSide(color: couleurBordure),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(SSMRayons.petit),
             borderSide: BorderSide(color: couleurBordure),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5),
+            borderRadius: BorderRadius.circular(SSMRayons.petit),
+            borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
           ),
         ),
       ),

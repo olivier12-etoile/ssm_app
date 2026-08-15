@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/analyse_performance_model.dart';
 import '../../services/validation_note_service.dart';
+import '../../theme/ssm_theme.dart';
 import '../../widgets/note_input_field.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 String _formatValeur(double? v) {
   if (v == null) return '—';
@@ -60,7 +56,7 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
@@ -68,15 +64,17 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Valider cette saisie ?'),
-        content: const Text(
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Valider cette saisie ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+        content: Text(
           'Les notes seront verrouillées et ne pourront plus être modifiées par l\'enseignant sans déverrouillage explicite.',
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.teal, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Valider'),
           ),
@@ -104,32 +102,47 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
     final motif = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Rejeter cette saisie'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Rejeter cette saisie', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "L'enseignant devra corriger et resoumettre ses notes.",
-              style: GoogleFonts.inter(fontSize: 13, color: _texte),
+              style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: motifController,
               autofocus: true,
               maxLines: 3,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Motif du rejet *',
-                border: OutlineInputBorder(),
+                labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+                ),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
             onPressed: () {
               if (motifController.text.trim().isEmpty) return;
               Navigator.pop(context, motifController.text.trim());
@@ -157,10 +170,10 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
         child: _chargement
-            ? const Center(child: CircularProgressIndicator(color: _indigo))
+            ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
             : _erreur != null
                 ? _vueErreur()
                 : Column(
@@ -171,14 +184,13 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
                         child: ListView(
                           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                           children: [
-                            _cartesStats(),
-                            const SizedBox(height: 20),
-                            Text(
-                              'NOTES DES ÉLÈVES',
-                              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4),
+                            SSMPanel(titre: 'Statistiques', child: _cartesStats()),
+                            const SizedBox(height: 16),
+                            SSMPanel(
+                              titre: 'Notes des élèves',
+                              padding: EdgeInsets.zero,
+                              child: _tableauNotes(),
                             ),
-                            const SizedBox(height: 10),
-                            _tableauNotes(),
                           ],
                         ),
                       ),
@@ -196,13 +208,13 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -217,43 +229,15 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
 
   Widget _entete() {
     final saisie = _detail!.saisie;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [_indigo, _teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
-      child: Row(
+    return SSMSousEnTete(
+      titre: saisie.classeNom ?? 'Classe',
+      sousTitre: '${saisie.matiereNom ?? ''} · ${saisie.periodeNom ?? ''}',
+      onRetour: () => Navigator.pop(context),
+      complement: Row(
         children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  saisie.classeNom ?? 'Classe',
-                  style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                Text(
-                  '${saisie.matiereNom ?? ''} · ${saisie.periodeNom ?? ''}',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
-                ),
-                Row(
-                  children: [
-                    const Icon(Icons.person_outline, size: 12, color: Colors.white70),
-                    const SizedBox(width: 4),
-                    Text(
-                      _detail!.enseignantNom,
-                      style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          Icon(Icons.person_outline, size: 12, color: SSMPalette.texte3),
+          const SizedBox(width: 4),
+          Text(_detail!.enseignantNom, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
         ],
       ),
     );
@@ -261,24 +245,13 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
 
   Widget _banniereAnomalies() {
     final critique = _detail!.statistiques.aDesAnomaliesCritiques;
-    final couleur = critique ? _rouge : _ambre;
-
-    return Container(
-      width: double.infinity,
-      color: couleur.withValues(alpha: 0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.warning_amber_rounded, color: couleur, size: 18),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              _detail!.statistiques.anomalies.join('\n'),
-              style: GoogleFonts.inter(fontSize: 12, color: couleur),
-            ),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: SSMAlertItem(
+        type: critique ? SSMAlerteType.danger : SSMAlerteType.avertissement,
+        icone: Icons.warning_amber_rounded,
+        titre: 'Anomalies détectées',
+        sousTitre: _detail!.statistiques.anomalies.join('\n'),
       ),
     );
   }
@@ -291,32 +264,21 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
     final s = _detail!.statistiques;
     return Row(
       children: [
-        Expanded(child: _carteStat('Moyenne', _formatValeur(s.moyenne), _indigo)),
-        const SizedBox(width: 8),
-        Expanded(child: _carteStat('Meilleure', _formatValeur(s.meilleureNote), _vert)),
-        const SizedBox(width: 8),
-        Expanded(child: _carteStat('Plus faible', _formatValeur(s.plusFaibleNote), _rouge)),
-        const SizedBox(width: 8),
-        Expanded(child: _carteStat('Réussite', '${s.tauxReussite.toStringAsFixed(0)}%', _teal)),
+        Expanded(child: _colonneStat('Moyenne', _formatValeur(s.moyenne), SSMPalette.indigo)),
+        Expanded(child: _colonneStat('Meilleure', _formatValeur(s.meilleureNote), SSMPalette.teal)),
+        Expanded(child: _colonneStat('Plus faible', _formatValeur(s.plusFaibleNote), SSMPalette.rouge)),
+        Expanded(child: _colonneStat('Réussite', '${s.tauxReussite.toStringAsFixed(0)}%', SSMPalette.teal)),
       ],
     );
   }
 
-  Widget _carteStat(String label, String valeur, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        children: [
-          Text(valeur, style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: couleur)),
-          const SizedBox(height: 2),
-          Text(label, style: GoogleFonts.inter(fontSize: 10, color: _gris)),
-        ],
-      ),
+  Widget _colonneStat(String label, String valeur, Color couleur) {
+    return Column(
+      children: [
+        Text(valeur, style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: couleur)),
+        const SizedBox(height: 2),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
+      ],
     );
   }
 
@@ -327,64 +289,57 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
   Widget _tableauNotes() {
     if (_detail!.eleves.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        child: Text('Aucune note saisie', style: GoogleFonts.inter(color: _gris)),
+        padding: const EdgeInsets.all(16),
+        child: Text('Aucune note saisie', style: GoogleFonts.inter(color: SSMPalette.texte3)),
       );
     }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              children: [
-                Expanded(flex: 3, child: Text('Élève', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _gris))),
-                Expanded(child: Text('Devoir', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _gris))),
-                Expanded(child: Text('Composition', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _gris))),
-              ],
-            ),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: [
+              Expanded(flex: 3, child: Text('Élève', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.texte3))),
+              Expanded(child: Text('Devoir', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.texte3))),
+              Expanded(child: Text('Composition', textAlign: TextAlign.center, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.texte3))),
+            ],
           ),
-          const Divider(height: 1),
-          ..._detail!.eleves.map((eleve) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Text(
-                        eleve.nomComplet,
-                        style: GoogleFonts.inter(fontSize: 13, color: _texteFonce),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+        ),
+        const Divider(height: 1, color: SSMPalette.bordure),
+        ..._detail!.eleves.map((eleve) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Text(
+                      eleve.nomComplet,
+                      style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: NoteInputField(
+                        controller: TextEditingController(text: _formatValeur(eleve.noteDevoir?.valeur)),
+                        lectureSeule: true,
                       ),
                     ),
-                    Expanded(
-                      child: Center(
-                        child: NoteInputField(
-                          controller: TextEditingController(text: _formatValeur(eleve.noteDevoir?.valeur)),
-                          lectureSeule: true,
-                        ),
+                  ),
+                  Expanded(
+                    child: Center(
+                      child: NoteInputField(
+                        controller: TextEditingController(text: _formatValeur(eleve.noteComposition?.valeur)),
+                        lectureSeule: true,
                       ),
                     ),
-                    Expanded(
-                      child: Center(
-                        child: NoteInputField(
-                          controller: TextEditingController(text: _formatValeur(eleve.noteComposition?.valeur)),
-                          lectureSeule: true,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-        ],
-      ),
+                  ),
+                ],
+              ),
+            )),
+      ],
     );
   }
 
@@ -395,37 +350,28 @@ class _DetailValidationScreenState extends State<DetailValidationScreen> {
   Widget _barreActions() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: SSMPalette.bordure))),
       child: _actionEnCours
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
+          ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
           : Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _demanderRejet,
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: _rouge,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      side: const BorderSide(color: _rouge),
-                    ),
-                    icon: const Text('❌'),
-                    label: Text('Rejeter', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  child: SSMQuickActionButton(
+                    icone: Icons.close,
+                    label: 'Rejeter',
+                    variante: SSMActionVariante.rouge,
+                    onTap: _demanderRejet,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _confirmerValidation,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _vert,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: const Text('✅'),
-                    label: Text('Valider', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  child: SSMQuickActionButton(
+                    icone: Icons.check,
+                    label: 'Valider',
+                    variante: SSMActionVariante.teal,
+                    onTap: _confirmerValidation,
                   ),
                 ),
               ],

@@ -3,16 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/note_model.dart';
 import '../../services/note_service.dart';
+import '../../theme/ssm_theme.dart';
 import '../../widgets/note_input_field.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 String _formatValeur(double? v) {
   if (v == null) return '';
@@ -123,14 +118,14 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
   void _afficherErreur(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _vert),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -237,15 +232,17 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Terminer la saisie ?'),
-        content: const Text(
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Terminer la saisie ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+        content: Text(
           'Les notes seront transmises à la direction pour validation. Vous ne pourrez plus les modifier tant que la saisie n\'est pas rejetée ou déverrouillée.',
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Terminer'),
           ),
@@ -283,12 +280,12 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
     final lectureSeule = _verrouillee;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       floatingActionButton: (_chargement || lectureSeule)
           ? null
           : FloatingActionButton.extended(
               onPressed: _soumissionEnCours ? null : _confirmerSoumission,
-              backgroundColor: _indigo,
+              backgroundColor: SSMPalette.indigo,
               icon: _soumissionEnCours
                   ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                   : const Icon(Icons.check_circle_outline, color: Colors.white),
@@ -299,7 +296,7 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
             ),
       body: SafeArea(
         child: _chargement
-            ? const Center(child: CircularProgressIndicator(color: _indigo))
+            ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
             : _erreur != null
                 ? _vueErreur()
                 : Column(
@@ -325,13 +322,13 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -345,97 +342,68 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _entete() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [_indigo, _teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _saisie.classeNom ?? 'Classe',
-                  style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                Text(
-                  '${_saisie.matiereNom ?? ''} · ${_saisie.periodeNom ?? ''}',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.75)),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+    return SSMSousEnTete(
+      titre: _saisie.classeNom ?? 'Classe',
+      sousTitre: '${_saisie.matiereNom ?? ''} · ${_saisie.periodeNom ?? ''}',
+      onRetour: () => Navigator.pop(context),
     );
   }
 
   Widget _banniereVerrouillee() {
-    return _banniere(
-      icone: Icons.lock_outline,
-      couleur: _vert,
-      texte: 'Notes validées, lecture seule.',
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: SSMAlertItem(
+        type: SSMAlerteType.succes,
+        icone: Icons.lock_outline,
+        titre: 'Saisie verrouillée',
+        sousTitre: 'Notes validées, lecture seule.',
+      ),
     );
   }
 
   Widget _banniereRejet() {
     final motif = _motifRejet;
-    return _banniere(
-      icone: Icons.error_outline,
-      couleur: _ambre,
-      texte: motif != null ? 'Saisie rejetée par la direction : $motif' : 'Saisie rejetée par la direction.',
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: SSMAlertItem(
+        type: SSMAlerteType.avertissement,
+        icone: Icons.error_outline,
+        titre: 'Saisie rejetée',
+        sousTitre: motif != null ? 'Rejetée par la direction : $motif' : 'Rejetée par la direction.',
+      ),
     );
   }
 
   Widget _banniereAnomalies() {
     final critique = _stats!.aDesAnomaliesCritiques;
-    final couleur = critique ? _rouge : _ambre;
-
-    return _banniere(
-      icone: Icons.warning_amber_rounded,
-      couleur: couleur,
-      texte: _stats!.anomalies.join('\n'),
-    );
-  }
-
-  Widget _banniere({required IconData icone, required Color couleur, required String texte}) {
-    return Container(
-      width: double.infinity,
-      color: couleur.withValues(alpha: 0.1),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icone, color: couleur, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text(texte, style: GoogleFonts.inter(fontSize: 12, color: couleur))),
-        ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: SSMAlertItem(
+        type: critique ? SSMAlerteType.danger : SSMAlerteType.avertissement,
+        icone: Icons.warning_amber_rounded,
+        titre: 'Anomalies détectées',
+        sousTitre: _stats!.anomalies.join('\n'),
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  // BARRE STATS LIVE
+  // BARRE STATS LIVE (variante compacte : espace vertical limité,
+  // ssm_stat_card serait trop haut au-dessus d'une liste éditable)
   // ══════════════════════════════════════════════════════
 
   Widget _barreStats() {
     final s = _stats;
     return Container(
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       child: Row(
         children: [
-          Expanded(child: _statCompacte('Moyenne', s?.moyenne, _indigo)),
-          Expanded(child: _statCompacte('Meilleure', s?.meilleureNote, _vert)),
-          Expanded(child: _statCompacte('Plus faible', s?.plusFaibleNote, _rouge)),
-          Expanded(child: _statPourcentage('Réussite', s?.tauxReussite, _teal)),
+          Expanded(child: _statCompacte('Moyenne', s?.moyenne, SSMPalette.indigo)),
+          Expanded(child: _statCompacte('Meilleure', s?.meilleureNote, SSMPalette.teal)),
+          Expanded(child: _statCompacte('Plus faible', s?.plusFaibleNote, SSMPalette.rouge)),
+          Expanded(child: _statPourcentage('Réussite', s?.tauxReussite, SSMPalette.teal)),
         ],
       ),
     );
@@ -448,7 +416,7 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
           valeur != null ? valeur.toStringAsFixed(2) : '—',
           style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: couleur),
         ),
-        Text(label, style: GoogleFonts.inter(fontSize: 10, color: _gris)),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
       ],
     );
   }
@@ -460,7 +428,7 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
           valeur != null ? '${valeur.toStringAsFixed(0)}%' : '—',
           style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: couleur),
         ),
-        Text(label, style: GoogleFonts.inter(fontSize: 10, color: _gris)),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
       ],
     );
   }
@@ -471,11 +439,11 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
 
   Widget _toggleType() {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+      color: SSMPalette.blanc,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
       child: Container(
         padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(50)),
+        decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(SSMRayons.pilule)),
         child: Row(
           children: TypeEvaluation.values.map((type) {
             final actif = _typeSelectionne == type;
@@ -486,13 +454,13 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
                   duration: const Duration(milliseconds: 150),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: actif ? _indigo : Colors.transparent,
-                    borderRadius: BorderRadius.circular(50),
+                    color: actif ? SSMPalette.indigo : Colors.transparent,
+                    borderRadius: BorderRadius.circular(SSMRayons.pilule),
                   ),
                   child: Text(
                     type.libelle,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: actif ? Colors.white : _texte),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: actif ? Colors.white : SSMPalette.texte2),
                   ),
                 ),
               ),
@@ -504,74 +472,74 @@ class _SaisieNotesScreenState extends State<SaisieNotesScreen> {
   }
 
   // ══════════════════════════════════════════════════════
-  // LISTE DES ÉLÈVES
+  // LISTE / TABLEAU DES ÉLÈVES
   // ══════════════════════════════════════════════════════
 
   Widget _listeEleves(bool lectureSeule) {
     if (_eleves.isEmpty) {
-      return Center(child: Text('Aucun élève inscrit dans cette classe', style: GoogleFonts.inter(color: _gris)));
+      return Center(child: Text('Aucun élève inscrit dans cette classe', style: GoogleFonts.inter(color: SSMPalette.texte3)));
     }
 
     final autreType = _typeSelectionne == TypeEvaluation.devoir ? TypeEvaluation.composition : TypeEvaluation.devoir;
 
-    return ListView.separated(
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-      itemCount: _eleves.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final eleve = _eleves[index];
-        final controleur = _controleurs[_cle(eleve.eleveId, _typeSelectionne)]!;
-        final autreNote = eleve.notePourType(autreType);
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              SizedBox(
-                width: 28,
-                child: Text('${index + 1}', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
-              ),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      eleve.nomComplet,
-                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
-                    ),
-                    Text(
-                      '${autreType.libelle} : ${autreNote != null ? _formatValeur(autreNote.valeur) : '—'}',
-                      style: GoogleFonts.inter(fontSize: 11, color: _gris),
-                    ),
-                  ],
-                ),
-              ),
-              NoteInputField(
-                controller: controleur,
-                lectureSeule: lectureSeule,
-                onChanged: lectureSeule ? null : (texte) => _surChangementNote(eleve, _typeSelectionne, texte),
-              ),
-            ],
-          ),
-        );
-      },
+      child: SSMDataTable(
+        colonnes: [
+          const SSMDataColumn('#', largeur: 28),
+          const SSMDataColumn('Élève'),
+          SSMDataColumn(_typeSelectionne.libelle, largeur: 90),
+        ],
+        lignes: [
+          for (var i = 0; i < _eleves.length; i++)
+            _ligneEleve(i, autreType, lectureSeule),
+        ],
+      ),
     );
+  }
+
+  List<Widget> _ligneEleve(int index, TypeEvaluation autreType, bool lectureSeule) {
+    final eleve = _eleves[index];
+    final controleur = _controleurs[_cle(eleve.eleveId, _typeSelectionne)]!;
+    final autreNote = eleve.notePourType(autreType);
+
+    return [
+      Text('${index + 1}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(eleve.nomComplet, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          Text(
+            '${autreType.libelle} : ${autreNote != null ? _formatValeur(autreNote.valeur) : '—'}',
+            style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3),
+          ),
+        ],
+      ),
+      NoteInputField(
+        controller: controleur,
+        lectureSeule: lectureSeule,
+        onChanged: lectureSeule ? null : (texte) => _surChangementNote(eleve, _typeSelectionne, texte),
+      ),
+    ];
   }
 
   Widget _barreEnregistrerTout() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: SSMPalette.bordure))),
       child: OutlinedButton.icon(
         onPressed: _enregistrementTout ? null : _enregistrerTout,
         style: OutlinedButton.styleFrom(
-          foregroundColor: _indigo,
+          foregroundColor: SSMPalette.indigo,
+          side: const BorderSide(color: SSMPalette.indigo),
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
         ),
         icon: _enregistrementTout
-            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _indigo))
+            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo))
             : const Icon(Icons.save_outlined),
         label: const Text('Enregistrer tout'),
       ),

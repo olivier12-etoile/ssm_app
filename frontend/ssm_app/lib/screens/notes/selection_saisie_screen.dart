@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/note_model.dart';
@@ -6,34 +5,32 @@ import '../../services/note_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/affectation_service.dart';
 import '../../services/auth_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
 import 'saisie_notes_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 Color _couleurStatut(StatutSaisie statut) {
   switch (statut) {
     case StatutSaisie.enCours:
-      return _indigo;
+      return SSMPalette.indigo;
     case StatutSaisie.terminee:
-      return _teal;
+      return SSMPalette.teal;
     case StatutSaisie.enAttenteValidation:
-      return _ambre;
+      return SSMPalette.ambre;
     case StatutSaisie.validee:
-      return _vert;
+      return SSMPalette.teal;
     case StatutSaisie.rejetee:
-      return _rouge;
+      return SSMPalette.rouge;
   }
 }
 
 class SelectionSaisieScreen extends StatefulWidget {
-  const SelectionSaisieScreen({super.key});
+  // À false quand cet écran est embarqué dans notes_module_screen.dart : le
+  // conteneur (ssm_page_scaffold) fournit déjà navigation et titre de page.
+  final bool independant;
+
+  const SelectionSaisieScreen({super.key, this.independant = true});
 
   @override
   State<SelectionSaisieScreen> createState() => _SelectionSaisieScreenState();
@@ -126,7 +123,7 @@ class _SelectionSaisieScreenState extends State<SelectionSaisieScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
@@ -181,37 +178,42 @@ class _SelectionSaisieScreenState extends State<SelectionSaisieScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Embarqué dans notes_module_screen.dart : celui-ci défile déjà toute la
+    // page dans un SingleChildScrollView (hauteur non bornée) — un ListView
+    // ou un Expanded planterait ici. On rend donc un contenu "plat" (Column)
+    // sans scroll ni RefreshIndicator propres.
+    if (!widget.independant) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _chargementReferences ? _carteChargement() : _carteSelecteurs(),
+          const SizedBox(height: 20),
+          _panelSaisiesEnCours(),
+        ],
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
             await Future.wait([_chargerReferences(), _chargerProgressions()]);
           },
+          color: SSMPalette.indigo,
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
             children: [
-              _enTete(),
+              Text('Saisie des notes', style: GoogleFonts.sora(fontSize: 19, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+              const SizedBox(height: 3),
+              Text(
+                'Choisissez une classe et une matière pour commencer',
+                style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
+              ),
               const SizedBox(height: 16),
               _chargementReferences ? _carteChargement() : _carteSelecteurs(),
-              const SizedBox(height: 24),
-              Text(
-                'MES SAISIES EN COURS',
-                style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4),
-              ),
-              const SizedBox(height: 10),
-              if (_chargementProgressions)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 30),
-                  child: Center(child: CircularProgressIndicator(color: _indigo)),
-                )
-              else if (_progressions.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Text('Aucune saisie en cours', style: GoogleFonts.inter(color: _gris)),
-                )
-              else
-                ..._progressions.map(_carteProgression),
+              const SizedBox(height: 20),
+              _panelSaisiesEnCours(),
             ],
           ),
         ),
@@ -219,35 +221,41 @@ class _SelectionSaisieScreenState extends State<SelectionSaisieScreen> {
     );
   }
 
-  Widget _enTete() {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_indigo, _teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Saisie des notes', style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-          const SizedBox(height: 4),
-          Text(
-            'Choisissez une classe et une matière pour commencer',
-            style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
-          ),
-        ],
-      ),
+  Widget _panelSaisiesEnCours() {
+    return SSMPanel(
+      titre: 'Mes saisies en cours',
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: _chargementProgressions
+          ? const Padding(
+              padding: EdgeInsets.symmetric(vertical: 30),
+              child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+            )
+          : _progressions.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Text('Aucune saisie en cours', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < _progressions.length; i++) ...[
+                      if (i > 0) const SizedBox(height: 8),
+                      _carteProgression(_progressions[i]),
+                    ],
+                  ],
+                ),
     );
   }
 
   Widget _carteChargement() {
-    return _carteGlass(
-      child: const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(child: CircularProgressIndicator(color: _indigo)),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
+      child: const Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
     );
   }
 
@@ -256,7 +264,13 @@ class _SelectionSaisieScreenState extends State<SelectionSaisieScreen> {
     final matieres = _matieresDisponibles;
     final peutDemarrer = _classeId != null && _matiereId != null && _periodeId != null;
 
-    return _carteGlass(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -317,10 +331,11 @@ class _SelectionSaisieScreenState extends State<SelectionSaisieScreen> {
             child: ElevatedButton.icon(
               onPressed: peutDemarrer && !_demarrageEnCours ? _demarrerSaisie : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: _indigo,
+                backgroundColor: SSMPalette.indigo,
                 foregroundColor: Colors.white,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
               ),
               icon: _demarrageEnCours
                   ? const SizedBox(
@@ -353,31 +368,27 @@ class _SelectionSaisieScreenState extends State<SelectionSaisieScreen> {
         isExpanded: true,
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icone, color: _indigo, size: 20),
-          border: const OutlineInputBorder(),
+          labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+          prefixIcon: Icon(icone, color: SSMPalette.indigo, size: 20),
           isDense: true,
+          filled: true,
+          fillColor: const Color(0xFFF9FAFB),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(SSMRayons.moyen),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(SSMRayons.moyen),
+            borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(SSMRayons.moyen),
+            borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+          ),
         ),
-        hint: Text(hintVide ?? 'Choisir', style: GoogleFonts.inter(fontSize: 13, color: _gris)),
+        hint: Text(hintVide ?? 'Choisir', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3)),
         items: actif ? items : [],
         onChanged: actif ? onChanged : null,
-      ),
-    );
-  }
-
-  Widget _carteGlass({required Widget child}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
-          ),
-          child: child,
-        ),
       ),
     );
   }
@@ -390,67 +401,66 @@ class _SelectionSaisieScreenState extends State<SelectionSaisieScreen> {
     final couleur = _couleurStatut(saisie.statut);
     final pourcentage = (saisie.pourcentageCompletion ?? 0) / 100;
 
-    return GestureDetector(
-      onTap: () => _ouvrirSaisie(saisie),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border(left: BorderSide(color: couleur, width: 4)),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        saisie.classeNom ?? 'Classe',
-                        style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${saisie.matiereNom ?? ''} · ${saisie.periodeNom ?? ''}',
-                        style: GoogleFonts.inter(fontSize: 12, color: _texte),
-                      ),
-                    ],
+    return Material(
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => _ouvrirSaisie(saisie),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border(
+              top: BorderSide(color: SSMPalette.bordure),
+              right: BorderSide(color: SSMPalette.bordure),
+              bottom: BorderSide(color: SSMPalette.bordure),
+              left: BorderSide(color: couleur, width: 3),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          saisie.classeNom ?? 'Classe',
+                          style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${saisie.matiereNom ?? ''} · ${saisie.periodeNom ?? ''}',
+                          style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                _badge(saisie.statut.libelle, couleur),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: pourcentage.clamp(0.0, 1.0),
-                minHeight: 8,
-                backgroundColor: const Color(0xFFF1F5F9),
-                color: couleur,
+                  SSMPill.couleur(label: saisie.statut.libelle, couleur: couleur),
+                ],
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '${(saisie.pourcentageCompletion ?? 0).toStringAsFixed(0)}% complété',
-              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: _texte),
-            ),
-          ],
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: pourcentage.clamp(0.0, 1.0),
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  color: couleur,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${(saisie.pourcentageCompletion ?? 0).toStringAsFixed(0)}% complété',
+                style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte2),
+              ),
+            ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _badge(String label, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur)),
     );
   }
 }
