@@ -77,4 +77,9 @@ public function getPhotoUrlAttribute()
     {
         return $this->hasMany(Sanction::class, 'eleve_id');
     }
+
+    public function bulletins()
+    {
+        return $this->hasMany(Bulletin::class, 'eleve_id');
+    }
 }

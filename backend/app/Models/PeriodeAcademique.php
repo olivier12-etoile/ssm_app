@@ -47,6 +47,11 @@ class PeriodeAcademique extends Model
         return $this->hasMany(Note::class, 'periode_id');
     }
 
+    public function bulletins()
+    {
+        return $this->hasMany(Bulletin::class, 'periode_id');
+    }
+
     public function ouvertePar()
     {
         return $this->belongsTo(User::class, 'ouverte_par');

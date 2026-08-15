@@ -141,4 +141,14 @@ class Ecole extends Model
     {
         return $this->hasMany(SauvegardeInfo::class, 'ecole_id');
     }
+
+    public function bulletins()
+    {
+        return $this->hasMany(Bulletin::class, 'ecole_id');
+    }
+
+    public function reglesAppreciation()
+    {
+        return $this->hasMany(RegleAppreciation::class, 'ecole_id');
+    }
 }

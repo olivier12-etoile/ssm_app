@@ -211,11 +211,10 @@ class NoteCalculService
         return $alertes;
     }
 
-    // ── Aides internes ────────────────────────────────────────────
-
     // Moyenne de matière d'un élève (devoir + composition) et coefficient
     // associé (pris sur la note elle-même, snapshot au moment de la saisie).
-    private function detailMatiereEleve(int $eleveId, int $matiereId, int $periodeId): array
+    // Public : réutilisé par GenerationBulletinService (module Bulletins).
+    public function detailMatiereEleve(int $eleveId, int $matiereId, int $periodeId): array
     {
         $notes = Note::where('eleve_id', $eleveId)
             ->where('matiere_id', $matiereId)

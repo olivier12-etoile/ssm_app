@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             ModeleMessageSeeder::class,
             ParametresNotificationsEcoleSeeder::class,
             PermissionsRolesSeeder::class,
+            RegleAppreciationSeeder::class,
         ]);
     }
 }

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/frais_scolaire_model.dart';
 import '../../services/eleve_service.dart';
@@ -11,10 +13,13 @@ import '../../services/annee_service.dart';
 import '../../services/paiement_service.dart';
 import '../../services/frais_scolaire_service.dart';
 import '../../services/situation_financiere_service.dart';
+import '../../models/bulletin_model.dart';
 import '../../services/bulletin_service.dart';
 import '../../services/discipline_service.dart';
 import '../../services/whatsapp_service.dart';
 import '../../widgets/ssm_widgets.dart';
+import '../bulletins/apercu_bulletin_screen.dart';
+import '../bulletins/historique_bulletins_eleve_screen.dart';
 
 const Color _indigo = Color(0xFF1E3A8A);
 const Color _teal = Color(0xFF0D9488);
@@ -196,8 +201,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
   List<dynamic> _periodes = [];
   int? _periodeSelectionneeId;
+  // Résumés indexés par periode_id (voir BulletinService.getHistoriqueEleve) :
+  // moyenne, rang, statut, décision du conseil déjà agrégés côté backend
+  // (module Bulletins) — le rang n'a donc plus besoin d'un appel séparé.
   final Map<int, Map<String, dynamic>> _bulletins = {};
-  final Map<int, Map<String, dynamic>> _rangs = {};
 
   List<dynamic> _sanctions = [];
   List<dynamic> _chronologieComplete = [];
@@ -235,7 +242,6 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       final details = await EleveService.details(widget.eleveId);
       final inscription = details['inscription_actuelle'] as Map<String, dynamic>?;
       final anneeId = inscription?['annee_academique_id'] as int?;
-      final classeId = inscription?['classe_id'] as int?;
 
       Map<String, dynamic>? situationFinanciere;
       List<dynamic> periodes = [];
@@ -275,29 +281,21 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
         _chargement = false;
       });
 
-      if (classeId != null) {
-        await _chargerBulletinsEtRangs(classeId, periodes);
-      }
+      unawaited(_chargerBulletins());
     } catch (e) {
       setState(() => _chargement = false);
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
     }
   }
 
-  Future<void> _chargerBulletinsEtRangs(int classeId, List<dynamic> periodes) async {
+  Future<void> _chargerBulletins() async {
     try {
-      final bulletins = await Future.wait(
-        periodes.map((p) => BulletinService.genererBulletin(eleveId: widget.eleveId, periodeId: p['id'] as int)),
-      );
-      final rangs = await Future.wait(
-        periodes.map((p) => AnneeService.rangsClasseDetail(classeId: classeId, periodeId: p['id'] as int)),
-      );
+      final parPeriode = await BulletinService.getHistoriqueEleve(widget.eleveId);
       if (!mounted) return;
       setState(() {
-        for (var i = 0; i < periodes.length; i++) {
-          _bulletins[periodes[i]['id'] as int] = bulletins[i];
-          _rangs[periodes[i]['id'] as int] = rangs[i];
-        }
+        _bulletins
+          ..clear()
+          ..addAll(parPeriode);
       });
     } catch (_) {
       // Non bloquant : les onglets Notes/Bulletins afficheront ce qui est disponible.
@@ -1010,6 +1008,12 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   // TAB 4 — NOTES
   // ══════════════════════════════════════════════════════
 
+  // Le détail par matière (coefficients, notes, appréciations) n'est plus
+  // disponible ici : il n'existe pas d'endpoint renvoyant un bulletin avec
+  // ses bulletin_details en dehors du moment de sa génération (voir le
+  // commentaire en tête de apercu_bulletin_screen.dart). Cet onglet
+  // affiche donc le résumé du module Bulletins (moyenne, rang, statut) et
+  // renvoie vers l'onglet Bulletins pour le PDF complet.
   Widget _tabNotes() {
     if (_periodes.isEmpty) {
       return Center(child: Text('Aucune période académique disponible', style: GoogleFonts.inter(color: _gris)));
@@ -1017,19 +1021,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
     final periodeId = _periodeSelectionneeId ?? (_periodes.first['id'] as int);
     final bulletin = _bulletins[periodeId];
-    final classement = _rangs[periodeId];
     final moyenneGenerale = bulletin != null ? double.tryParse(bulletin['moyenne_generale'].toString()) : null;
-
-    int? rang;
-    int total = 0;
-    if (classement != null) {
-      total = (classement['eleves'] as List).length;
-      final entree = (classement['eleves'] as List).cast<Map<String, dynamic>>().firstWhere(
-            (e) => e['eleve_id'] == widget.eleveId,
-            orElse: () => {},
-          );
-      rang = entree['rang'] as int?;
-    }
+    final rang = bulletin?['rang'] as int?;
+    final effectif = bulletin?['effectif_classe'] as int?;
+    final statut = bulletin != null ? StatutBulletin.depuisApi(bulletin['statut'] as String) : null;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -1042,10 +1037,13 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
         ),
         const SizedBox(height: 16),
         if (bulletin == null)
-          const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: _indigo)))
-        else ...[
-          ...((bulletin['notes'] as List).map((n) => _carteMatiereNote(n as Map<String, dynamic>))),
-          const SizedBox(height: 12),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text('Aucun bulletin généré pour cette période.', style: GoogleFonts.inter(color: _gris)),
+            ),
+          )
+        else
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
@@ -1053,46 +1051,21 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
             child: Column(
               children: [
                 Text('Moyenne générale', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600)),
-                Text('${bulletin['moyenne_generale']}/20', style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: _indigo)),
-                SSMBadge(label: bulletin['mention_generale']?.toString() ?? '', couleur: _couleurMoyenne(moyenneGenerale)),
-                if (rang != null) Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text('Rang $rangème / $total élèves', style: GoogleFonts.inter(fontSize: 13, color: _gris)),
-                ),
+                Text('${bulletin['moyenne_generale']}/20',
+                    style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: _couleurMoyenne(moyenneGenerale))),
+                if (statut != null) SSMBadge(label: statut.libelle, couleur: statut.couleur),
+                if (rang != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text('Rang $rangème / ${effectif ?? '—'} élèves', style: GoogleFonts.inter(fontSize: 13, color: _gris)),
+                  ),
+                const SizedBox(height: 8),
+                Text('Détail par matière disponible dans le PDF (onglet Bulletins).',
+                    style: GoogleFonts.inter(fontSize: 11, color: _gris)),
               ],
             ),
           ),
-        ],
       ],
-    );
-  }
-
-  Widget _carteMatiereNote(Map<String, dynamic> n) {
-    final moyenneFinale = n['moyenne_finale'] != null ? double.tryParse(n['moyenne_finale'].toString()) : null;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: _carteGlass(
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(n['matiere'] as String, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600)),
-                  Text('Coefficient ${n['coefficient']}', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
-                  if (n['note_composition'] != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Chip(label: Text('Compo: ${n['note_composition']}'), backgroundColor: _ambre.withValues(alpha: 0.15), labelStyle: const TextStyle(fontSize: 11)),
-                    ),
-                ],
-              ),
-            ),
-            Text(moyenneFinale != null ? moyenneFinale.toStringAsFixed(2) : '-',
-                style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _couleurMoyenne(moyenneFinale))),
-          ],
-        ),
-      ),
     );
   }
 
@@ -1101,28 +1074,32 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   // ══════════════════════════════════════════════════════
 
   Widget _tabBulletins() {
-    final periodesAvecNotes = _periodes.where((p) {
-      final b = _bulletins[p['id'] as int];
-      return b != null && (b['total_matieres'] as int? ?? 0) > 0;
-    }).toList();
+    final periodesAvecBulletin = _periodes.where((p) => _bulletins[p['id'] as int] != null).toList();
 
-    if (periodesAvecNotes.isEmpty) {
-      return Center(child: Text('Aucun bulletin disponible pour le moment', style: GoogleFonts.inter(color: _gris)));
+    if (periodesAvecBulletin.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          _boutonHistoriqueComplet(),
+          const SizedBox(height: 40),
+          Center(child: Text('Aucun bulletin disponible pour le moment', style: GoogleFonts.inter(color: _gris))),
+        ],
+      );
     }
 
     return ListView(
       padding: const EdgeInsets.all(16),
-      children: periodesAvecNotes.map((p) {
+      children: [
+        _boutonHistoriqueComplet(),
+        const SizedBox(height: 12),
+        ...periodesAvecBulletin.map((p) {
         final periodeId = p['id'] as int;
+        final periodeNom = p['nom'] as String;
         final bulletin = _bulletins[periodeId]!;
-        final classement = _rangs[periodeId];
-        int? rang;
-        int total = 0;
-        if (classement != null) {
-          total = (classement['eleves'] as List).length;
-          final entree = (classement['eleves'] as List).cast<Map<String, dynamic>>().firstWhere((e) => e['eleve_id'] == widget.eleveId, orElse: () => {});
-          rang = entree['rang'] as int?;
-        }
+        final bulletinId = bulletin['bulletin_id'] as int;
+        final rang = bulletin['rang'] as int?;
+        final effectif = bulletin['effectif_classe'] as int?;
+        final statut = StatutBulletin.depuisApi(bulletin['statut'] as String);
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -1130,30 +1107,28 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(p['nom'] as String, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600)),
+                Row(
+                  children: [
+                    Expanded(child: Text(periodeNom, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600))),
+                    SSMBadge(label: statut.libelle, couleur: statut.couleur),
+                  ],
+                ),
                 const SizedBox(height: 4),
-                Text('${bulletin['moyenne_generale']}/20 — ${bulletin['mention_generale']}', style: GoogleFonts.inter(fontSize: 13, color: _grisFonce)),
-                if (rang != null) Text('Rang $rang / $total élèves', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                Text('${bulletin['moyenne_generale']}/20', style: GoogleFonts.inter(fontSize: 13, color: _grisFonce)),
+                if (rang != null) Text('Rang $rang / ${effectif ?? '—'} élèves', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () => _dialogApercuBulletin(p['nom'] as String, bulletin),
+                        onPressed: () => _ouvrirApercuBulletin(bulletinId, periodeId, periodeNom, bulletin),
                         child: const Text('Aperçu'),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: () async {
-                          try {
-                            final chemin = await BulletinService.telechargerPdf(eleveId: widget.eleveId, periodeId: periodeId);
-                            await OpenFile.open(chemin);
-                          } catch (e) {
-                            _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-                          }
-                        },
+                        onPressed: () => _telechargerBulletinPdf(bulletinId),
                         child: const Text('PDF'),
                       ),
                     ),
@@ -1161,7 +1136,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(foregroundColor: _vert),
-                        onPressed: () => _envoyerBulletinWhatsApp(p['nom'] as String, bulletin),
+                        onPressed: () => _envoyerBulletinWhatsApp(periodeNom, bulletin),
                         child: const Text('WhatsApp'),
                       ),
                     ),
@@ -1171,45 +1146,88 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
             ),
           ),
         );
-      }).toList(),
+        }),
+      ],
     );
   }
 
-  void _dialogApercuBulletin(String periodeNom, Map<String, dynamic> bulletin) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 600),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Bulletin — $periodeNom', style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 12),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      children: (bulletin['notes'] as List)
-                          .map((n) => _carteMatiereNote(n as Map<String, dynamic>))
-                          .toList(),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text('Moyenne générale : ${bulletin['moyenne_generale']}/20 (${bulletin['mention_generale']})',
-                    style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: _indigo)),
-                const SizedBox(height: 12),
-                Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer'))),
-              ],
-            ),
-          ),
+  void _ouvrirHistoriqueComplet() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => HistoriqueBulletinsEleveScreen(
+          eleveId: widget.eleveId,
+          nomEleve: '${_eleve?['nom'] ?? ''} ${_eleve?['prenom'] ?? ''}'.trim(),
         ),
       ),
     );
+  }
+
+  Widget _boutonHistoriqueComplet() {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: _ouvrirHistoriqueComplet,
+        style: OutlinedButton.styleFrom(foregroundColor: _indigo, side: const BorderSide(color: _indigo)),
+        icon: const Icon(Icons.history, size: 18),
+        label: const Text("Voir l'historique complet (toutes années)"),
+      ),
+    );
+  }
+
+  // Réutilise l'écran de prévisualisation du module Bulletins plutôt que de
+  // dupliquer un rendu ad hoc ici : le résumé connu (moyenne, rang, statut,
+  // décision) est reconstruit à partir de ce qu'expose l'historique, le
+  // détail par matière restant réservé au PDF (voir apercu_bulletin_screen.dart).
+  void _ouvrirApercuBulletin(int bulletinId, int periodeId, String periodeNom, Map<String, dynamic> bulletin) {
+    final resume = Bulletin(
+      id: bulletinId,
+      eleveId: widget.eleveId,
+      nomEleve: '${_eleve?['nom'] ?? ''} ${_eleve?['prenom'] ?? ''}'.trim(),
+      matriculeEleve: _eleve?['matricule'] as String?,
+      classeId: _classeId ?? 0,
+      nomClasse: bulletin['classe_nom'] as String?,
+      periodeId: periodeId,
+      nomPeriode: periodeNom,
+      moyenneGenerale: double.tryParse(bulletin['moyenne_generale'].toString()) ?? 0,
+      rang: bulletin['rang'] as int?,
+      rangExAequo: bulletin['rang_ex_aequo'] as bool? ?? false,
+      effectifClasse: (bulletin['effectif_classe'] as num?)?.toInt() ?? 0,
+      totalCoefficients: 0,
+      totalPoints: 0,
+      statut: StatutBulletin.depuisApi(bulletin['statut'] as String),
+      decisionConseil: DecisionConseil.depuisApi(bulletin['decision_conseil'] as String?),
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => ApercuBulletinScreen(bulletinId: bulletinId, resume: resume)),
+    ).then((_) => _chargerBulletins());
+  }
+
+  Future<void> _telechargerBulletinPdf(int bulletinId) async {
+    try {
+      final octets = await BulletinService.telechargerPdf(bulletinId);
+      final dossier = await getTemporaryDirectory();
+      final fichier = File('${dossier.path}/bulletin_$bulletinId.pdf');
+      await fichier.writeAsBytes(octets);
+      await OpenFile.open(fichier.path);
+    } catch (e) {
+      _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // Barème d'appréciation par défaut du module Bulletins (voir
+  // RegleAppreciationSeeder côté backend) — approximation client uniquement
+  // pour le texte du message WhatsApp, la mention officielle par matière
+  // n'étant plus disponible ici (voir commentaire de _tabNotes()).
+  String _mentionApproximative(double? moyenne) {
+    if (moyenne == null) return '—';
+    if (moyenne >= 16) return 'Excellent';
+    if (moyenne >= 14) return 'Très bien';
+    if (moyenne >= 12) return 'Bien';
+    if (moyenne >= 10) return 'Passable';
+    return 'Insuffisant';
   }
 
   Future<void> _envoyerBulletinWhatsApp(String periodeNom, Map<String, dynamic> bulletin) async {
@@ -1218,13 +1236,14 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       _afficherErreur('Aucun numéro de téléphone parent enregistré');
       return;
     }
+    final moyenne = double.tryParse(bulletin['moyenne_generale'].toString());
     final message = WhatsAppService.messageBulletin(
       nomParent: 'Cher parent',
       nomEleve: '${_eleve?['nom']} ${_eleve?['prenom']}',
       classe: _classeActuelle?['nom']?.toString() ?? '',
       periode: periodeNom,
       moyenne: '${bulletin['moyenne_generale']}',
-      mention: bulletin['mention_generale']?.toString() ?? '',
+      mention: _mentionApproximative(moyenne),
       nomEcole: "L'établissement",
     );
     await WhatsAppService.envoyerMessage(numeroTelephone: tel, message: message);

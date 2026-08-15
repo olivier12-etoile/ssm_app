@@ -147,15 +147,20 @@ class DeclencheurNotificationService
     }
 
     /**
-     * À appeler quand un bulletin est généré pour un élève/une période.
-     * NOTE : il n'existe pas de table "bulletins" dans SSM — les bulletins
-     * sont calculés à la volée par BulletinController::generer(), jamais
-     * persistés. Cette méthode est donc prête à être appelée depuis
-     * BulletinController (ex: dans generer()/genererPdf(), après un calcul
-     * réussi), mais n'est PAS encore câblée : BulletinController crée déjà
-     * sa propre NotificationAttente via /bulletins/notifier
-     * (notifierBulletin()), qu'il faudrait remplacer par cet appel pour
-     * éviter une double notification — hors périmètre de cette tâche.
+     * À appeler quand un bulletin est officiellement validé (pas seulement
+     * généré : on ne notifie le parent qu'une fois le bulletin figé par
+     * ValidationBulletinController, pas à chaque brouillon régénéré).
+     * Câblée dans ValidationBulletinController::validerBulletin() (module
+     * Bulletins, Phase 3/5), juste après le passage du statut à "valide" —
+     * ce point unique couvre à la fois la validation individuelle
+     * (valider()) et la validation en masse (validerEnMasse()).
+     *
+     * Il existe encore une ancienne route /bulletins/notifier
+     * (BulletinController::notifierBulletin()) qui crée sa propre
+     * NotificationAttente à la main : elle repose sur le modèle Evaluation
+     * désormais supprimé (voir migration drop_evaluations_tables) et est
+     * donc déjà inopérante — pas de risque de double notification avec ce
+     * nouveau câblage.
      */
     public function surBulletinDisponible(int $eleveId, int $periodeId, ?int $declenchePar = null): void
     {

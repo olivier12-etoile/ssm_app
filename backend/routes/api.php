@@ -23,6 +23,13 @@ use App\Http\Controllers\Api\StatistiquePedagogiqueController;
 use App\Http\Controllers\Api\CentreDecisionController;
 use App\Http\Controllers\Api\RapportStatistiqueController;
 use App\Http\Controllers\Api\BulletinController;
+use App\Http\Controllers\Api\GenerationBulletinController;
+use App\Http\Controllers\Api\ValidationBulletinController;
+use App\Http\Controllers\Api\CorrectionBulletinController;
+use App\Http\Controllers\Api\PdfBulletinController;
+use App\Http\Controllers\Api\HistoriqueBulletinController;
+use App\Http\Controllers\Api\StatistiqueBulletinController;
+use App\Http\Controllers\Api\DashboardBulletinController;
 use App\Http\Controllers\Api\AbsenceController;
 use App\Http\Controllers\Api\NotificationAttenteController;
 use App\Http\Controllers\Api\AppreciationController;
@@ -535,6 +542,35 @@ Route::prefix('parametres')->group(function () {
 
     Route::post('/actions-avancees/archiver-annee',          [ActionAvanceeController::class, 'archiverAnnee']);
     Route::post('/actions-avancees/reinitialiser-parametres', [ActionAvanceeController::class, 'reinitialiserParametres']);
+});
+
+// Module Bulletins — génération automatique, validation, corrections, PDF
+Route::prefix('bulletins')->group(function () {
+    Route::post('/generation/individuel',                    [GenerationBulletinController::class, 'genererIndividuel']);
+    Route::post('/generation/classe',                        [GenerationBulletinController::class, 'genererClasse']);
+    Route::post('/generation/regenerer',                     [GenerationBulletinController::class, 'regenererIndividuel']);
+    Route::get('/generation/statut/{classeId}/{periodeId}',  [GenerationBulletinController::class, 'statutGeneration']);
+
+    Route::post('/validation/valider',                       [ValidationBulletinController::class, 'valider']);
+    Route::post('/validation/verrouiller/{id}',              [ValidationBulletinController::class, 'verrouiller']);
+    Route::post('/validation/valider-masse',                 [ValidationBulletinController::class, 'validerEnMasse']);
+
+    Route::post('/corrections',                               [CorrectionBulletinController::class, 'demanderCorrection']);
+    Route::get('/corrections/{bulletinId}/historique',       [CorrectionBulletinController::class, 'historique']);
+
+    Route::get('/pdf/classe/{classeId}/{periodeId}/zip',     [PdfBulletinController::class, 'telechargerClasseZip']);
+    Route::get('/pdf/classe/{classeId}/{periodeId}/global',  [PdfBulletinController::class, 'telechargerGlobalClasse']);
+    Route::get('/pdf/{bulletinId}/apercu',                   [PdfBulletinController::class, 'previsualiser']);
+    Route::get('/pdf/{bulletinId}',                           [PdfBulletinController::class, 'telechargerIndividuel']);
+
+    Route::get('/historique/rechercher',                     [HistoriqueBulletinController::class, 'rechercher']);
+    Route::get('/historique/eleve/{eleveId}',                 [HistoriqueBulletinController::class, 'parEleve']);
+
+    Route::get('/statistiques/comparaison',                   [StatistiqueBulletinController::class, 'comparaison']);
+    Route::get('/statistiques/classe/{classeId}/{periodeId}', [StatistiqueBulletinController::class, 'parClasse']);
+    Route::get('/statistiques/distribution/{classeId}/{periodeId}', [StatistiqueBulletinController::class, 'distribution']);
+
+    Route::get('/dashboard/resume',                            [DashboardBulletinController::class, 'resume']);
 });
 
 });
