@@ -39,6 +39,7 @@ class SSMPageScaffold extends StatelessWidget {
   // Contenu
   final Widget child;
   final EdgeInsetsGeometry contentPadding;
+  final Widget? floatingActionButton;
 
   const SSMPageScaffold({
     super.key,
@@ -59,6 +60,7 @@ class SSMPageScaffold extends StatelessWidget {
     this.hasNotification = false,
     this.actionsTopBar,
     this.contentPadding = const EdgeInsets.fromLTRB(24, 22, 24, 28),
+    this.floatingActionButton,
   });
 
   @override
@@ -74,6 +76,7 @@ class SSMPageScaffold extends StatelessWidget {
     if (estDesktop) {
       return Scaffold(
         backgroundColor: SSMPalette.fond,
+        floatingActionButton: floatingActionButton,
         body: Row(
           children: [
             SSMSidebar(
@@ -111,6 +114,7 @@ class SSMPageScaffold extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: SSMPalette.fond,
+      floatingActionButton: floatingActionButton,
       drawer: Drawer(
         backgroundColor: SSMPalette.indigo,
         width: 224,

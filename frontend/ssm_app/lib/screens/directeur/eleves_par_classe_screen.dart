@@ -1,8 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
 
 class ElevesParClasseScreen extends StatefulWidget {
   final int classeId;
@@ -65,15 +68,15 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge),
+    );
   }
 
   void _afficherSucces(String msg) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.teal),
+    );
   }
 
   Future<void> _changerPhoto(int eleveId) async {
@@ -100,6 +103,28 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
     }
   }
 
+  InputDecoration _decorationChamp(String label, IconData icone) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      prefixIcon: Icon(icone, size: 19, color: SSMPalette.texte3),
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+      ),
+    );
+  }
+
   Future<void> _afficherDialogCreation() async {
     final nomController = TextEditingController();
     final prenomController = TextEditingController();
@@ -112,75 +137,74 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
-            title: Text('Inscrire un élève — ${_nomClasse ?? "classe"}'),
+            backgroundColor: SSMPalette.blanc,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            title: Text(
+              'Inscrire un élève — ${_nomClasse ?? "classe"}',
+              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+            ),
             content: SizedBox(
               width: 400,
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    TextField(
-                      controller: nomController,
-                      decoration: const InputDecoration(
-                        labelText: 'Nom',
-                        prefixIcon: Icon(Icons.person),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
+                    TextField(controller: nomController, decoration: _decorationChamp('Nom', Icons.person_outline)),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: prenomController,
-                      decoration: const InputDecoration(
-                        labelText: 'Prénom',
-                        prefixIcon: Icon(Icons.person_outline),
-                        border: OutlineInputBorder(),
-                      ),
-                    ),
+                    TextField(controller: prenomController, decoration: _decorationChamp('Prénom', Icons.person_outline)),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
-                      value: sexeSelectionne,
-                      decoration: const InputDecoration(
-                        labelText: 'Sexe',
-                        prefixIcon: Icon(Icons.wc),
-                        border: OutlineInputBorder(),
-                      ),
+                      initialValue: sexeSelectionne,
+                      decoration: _decorationChamp('Sexe', Icons.wc),
                       items: const [
                         DropdownMenuItem(value: 'M', child: Text('Masculin')),
                         DropdownMenuItem(value: 'F', child: Text('Féminin')),
                       ],
-                      onChanged: (v) =>
-                          setStateDialog(() => sexeSelectionne = v!),
+                      onChanged: (v) => setStateDialog(() => sexeSelectionne = v!),
                     ),
                     const SizedBox(height: 12),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.cake),
-                      title: Text(
-                        dateNaissance != null
-                            ? '${dateNaissance!.day}/${dateNaissance!.month}/${dateNaissance!.year}'
-                            : 'Date de naissance',
+                    Material(
+                      color: const Color(0xFFF9FAFB),
+                      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                        onTap: () async {
+                          final choisie = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime(2015),
+                            firstDate: DateTime(1995),
+                            lastDate: DateTime.now(),
+                          );
+                          if (choisie != null) {
+                            setStateDialog(() => dateNaissance = choisie);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                            border: Border.all(color: const Color(0xFFE5E7EB)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.cake_outlined, size: 19, color: SSMPalette.texte3),
+                              const SizedBox(width: 10),
+                              Text(
+                                dateNaissance != null
+                                    ? '${dateNaissance!.day}/${dateNaissance!.month}/${dateNaissance!.year}'
+                                    : 'Date de naissance',
+                                style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                      onTap: () async {
-                        final choisie = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime(2015),
-                          firstDate: DateTime(1995),
-                          lastDate: DateTime.now(),
-                        );
-                        if (choisie != null) {
-                          setStateDialog(() => dateNaissance = choisie);
-                        }
-                      },
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: telParentController,
                       keyboardType: TextInputType.phone,
-                      decoration: const InputDecoration(
-                        labelText: 'Téléphone parent (optionnel)',
-                        prefixIcon: Icon(Icons.phone),
-                        border: OutlineInputBorder(),
-                      ),
+                      decoration: _decorationChamp('Téléphone parent (optionnel)', Icons.phone_outlined),
                     ),
                   ],
                 ),
@@ -189,17 +213,16 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.deepOrange,
+                  backgroundColor: SSMPalette.indigo,
                   foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                 ),
-                onPressed:
-                    nomController.text.isEmpty ||
-                        prenomController.text.isEmpty ||
-                        dateNaissance == null
+                onPressed: nomController.text.isEmpty || prenomController.text.isEmpty || dateNaissance == null
                     ? null
                     : () async {
                         try {
@@ -228,9 +251,7 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
                           _afficherSucces('Élève inscrit avec succès');
                           _chargerEleves();
                         } catch (e) {
-                          _afficherErreur(
-                            e.toString().replaceAll('Exception: ', ''),
-                          );
+                          _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                         }
                       },
                 child: const Text('Inscrire'),
@@ -245,118 +266,118 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: SSMPalette.fond,
       appBar: AppBar(
-        title: Text(_nomClasse ?? 'Élèves de la classe'),
-        backgroundColor: Colors.deepOrange,
-        foregroundColor: Colors.white,
+        backgroundColor: SSMPalette.blanc,
+        foregroundColor: SSMPalette.texte1,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        title: Text(
+          _nomClasse ?? 'Élèves de la classe',
+          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new, color: SSMPalette.texte2, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: SSMPalette.texte2),
             onPressed: _chargerEleves,
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: SSMPalette.bordure),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _afficherDialogCreation,
-        backgroundColor: Colors.deepOrange,
-        icon: const Icon(Icons.add),
+        backgroundColor: SSMPalette.indigo,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.person_add_alt_1),
         label: const Text('Inscrire un élève'),
       ),
       body: _chargement
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
           : _eleves.isEmpty
-          ? const Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.people_outline, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
-                  Text(
-                    'Aucun élève inscrit dans cette classe',
-                    style: TextStyle(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _eleves.length,
-              itemBuilder: (context, index) {
-                final e = _eleves[index];
-                final sexe = e['sexe'] as String;
-                final eleveId = e['id'] as int;
-                final photoUrl = e['photo_url'] as String?;
-
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    onTap: () => Navigator.pushNamed(
-                      context,
-                      '/eleve/fiche',
-                      arguments: {'eleveId': eleveId},
-                    ),
-                    leading: GestureDetector(
-                      onTap: () => _changerPhoto(eleveId),
-                      child: Stack(
-                        children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundColor: sexe == 'M'
-                                ? Colors.blue
-                                : Colors.pink,
-                            backgroundImage: photoUrl != null
-                                ? NetworkImage(photoUrl)
-                                : null,
-                            child: photoUrl == null
-                                ? Text(
-                                    e['prenom'].toString().substring(0, 1),
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                          Positioned(
-                            bottom: -2,
-                            right: -2,
-                            child: Container(
-                              padding: const EdgeInsets.all(2),
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                size: 14,
-                                color: Colors.deepOrange,
-                              ),
-                            ),
-                          ),
-                        ],
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.people_outline, size: 56, color: SSMPalette.texte3),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Aucun élève inscrit dans cette classe',
+                        style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
                       ),
-                    ),
-                    title: Text(
-                      '${e['nom']} ${e['prenom']}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text('Matricule : ${e['matricule']}'),
-                    trailing: Icon(
-                      sexe == 'M' ? Icons.boy : Icons.girl,
-                      color: sexe == 'M' ? Colors.blue : Colors.pink,
-                    ),
+                    ],
                   ),
-                );
-              },
-            ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _eleves.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final e = _eleves[index];
+                    final sexe = e['sexe'] as String;
+                    final eleveId = e['id'] as int;
+                    final photoUrl = e['photo_url'] as String?;
+
+                    return Material(
+                      color: SSMPalette.blanc,
+                      borderRadius: BorderRadius.circular(SSMRayons.grand),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(SSMRayons.grand),
+                        onTap: () => Navigator.pushNamed(
+                          context,
+                          '/eleve/fiche',
+                          arguments: {'eleveId': eleveId},
+                        ),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(SSMRayons.grand),
+                            border: Border.all(color: SSMPalette.bordure),
+                          ),
+                          child: Row(
+                            children: [
+                              SSMAvatar(
+                                nom: e['prenom'].toString(),
+                                photoUrl: photoUrl,
+                                sexe: sexe,
+                                rayon: 24,
+                                afficherBoutonCamera: true,
+                                onTap: () => _changerPhoto(eleveId),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '${e['nom']} ${e['prenom']}',
+                                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Matricule : ${e['matricule']}',
+                                      style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte2),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                sexe == 'M' ? Icons.boy : Icons.girl,
+                                color: sexe == 'M' ? SSMPalette.indigo : SSMPalette.teal,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
     );
   }
 }

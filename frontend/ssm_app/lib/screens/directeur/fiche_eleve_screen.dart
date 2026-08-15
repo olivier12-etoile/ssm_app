@@ -17,61 +17,56 @@ import '../../models/bulletin_model.dart';
 import '../../services/bulletin_service.dart';
 import '../../services/discipline_service.dart';
 import '../../services/whatsapp_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
 import '../bulletins/apercu_bulletin_screen.dart';
 import '../bulletins/historique_bulletins_eleve_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _orange = Color(0xFFEA580C);
-const Color _violet = Color(0xFF7C3AED);
-const Color _rose = Color(0xFFDB2777);
-const Color _gris = Color(0xFF94A3B8);
-const Color _grisFonce = Color(0xFF475569);
 
 Color _couleurStatutEleve(String? statut) {
   switch (statut) {
     case 'actif':
-      return _indigo;
+      return SSMPalette.indigo;
     case 'suspendu':
-      return _orange;
+      return SSMPalette.ambre;
     case 'exclu':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'diplome':
-      return _vert;
+      return SSMPalette.teal;
     case 'transfere':
-      return _teal;
+      return SSMPalette.teal;
     case 'abandon':
-      return _gris;
+      return SSMPalette.texte3;
     default:
-      return _gris;
+      return SSMPalette.texte3;
   }
 }
 
 Color _couleurMoyenne(double? m) {
-  if (m == null) return _gris;
-  if (m >= 14) return _vert;
-  if (m >= 10) return _orange;
-  return _rouge;
+  if (m == null) return SSMPalette.texte3;
+  if (m >= 14) return SSMPalette.teal;
+  if (m >= 10) return SSMPalette.ambre;
+  return SSMPalette.rouge;
 }
 
 Color _couleurTypeDocument(String? type) {
   switch (type) {
     case 'acte_naissance':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'certificat_scolarite':
-      return _indigo;
+      return SSMPalette.indigo;
     case 'photo':
-      return _teal;
+      return SSMPalette.teal;
     case 'bulletin':
-      return _ambre;
+      return SSMPalette.ambre;
     case 'certificat_transfert':
-      return _violet;
+      return SSMPalette.indigo;
     default:
-      return _gris;
+      return SSMPalette.texte3;
   }
 }
 
@@ -95,26 +90,26 @@ IconData _iconeTypeDocument(String? type) {
 Color _couleurTypeChronologie(String? type) {
   switch (type) {
     case 'inscription':
-      return _indigo;
+      return SSMPalette.indigo;
     case 'paiement':
-      return _teal;
+      return SSMPalette.teal;
     case 'note_validee':
-      return _vert;
+      return SSMPalette.teal;
     case 'bulletin_genere':
-      return _ambre;
+      return SSMPalette.ambre;
     case 'absence':
-      return _orange;
+      return SSMPalette.ambre;
     case 'sanction':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'document_ajoute':
-      return _violet;
+      return SSMPalette.indigo;
     case 'message_envoye':
-      return const Color(0xFF4ADE80);
+      return SSMPalette.teal;
     case 'passage':
     case 'transfert':
-      return const Color(0xFF0284C7);
+      return SSMPalette.indigo;
     default:
-      return _gris;
+      return SSMPalette.texte3;
   }
 }
 
@@ -145,16 +140,25 @@ IconData _iconeTypeChronologie(String? type) {
   }
 }
 
-Color _couleurSanction(String? type) {
+SSMAlerteType _typeAlerteSanction(String? type) {
+  switch (type) {
+    case 'exclusion':
+      return SSMAlerteType.danger;
+    default:
+      return SSMAlerteType.avertissement;
+  }
+}
+
+IconData _iconeSanction(String? type) {
   switch (type) {
     case 'retard':
-      return _orange;
+      return Icons.schedule;
     case 'avertissement':
-      return _ambre;
+      return Icons.warning_amber_rounded;
     case 'exclusion':
-      return _rouge;
+      return Icons.gavel;
     default:
-      return _gris;
+      return Icons.info_outline;
   }
 }
 
@@ -179,6 +183,38 @@ String _formatDateHeure(String? iso) {
   final m = d.minute.toString().padLeft(2, '0');
   return '${_formatDateCourt(iso)} à $h:$m';
 }
+
+// Champ de saisie flat commun aux dialogs de cet écran.
+InputDecoration _decorationChamp(String label, {bool dense = false, IconData? icone}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    prefixIcon: icone != null ? Icon(icone, size: 19, color: SSMPalette.texte3) : null,
+    isDense: dense,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
+
+ButtonStyle _stylePrimaire(Color couleur) => ElevatedButton.styleFrom(
+      backgroundColor: couleur,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+    );
 
 class FicheEleveScreen extends StatefulWidget {
   final int eleveId;
@@ -332,12 +368,12 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
   void _afficherErreur(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge));
   }
 
   void _afficherSucces(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _vert));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: SSMPalette.teal));
   }
 
   Future<void> _changerPhoto() async {
@@ -364,18 +400,20 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   @override
   Widget build(BuildContext context) {
     if (_chargement || _eleve == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator(color: _indigo)));
+      return const Scaffold(backgroundColor: SSMPalette.fond, body: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)));
     }
 
     final sexe = _eleve!['sexe'] as String? ?? 'M';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       body: RefreshIndicator(
         onRefresh: _chargerTout,
+        color: SSMPalette.indigo,
         child: NestedScrollView(
           headerSliverBuilder: (context, innerBoxIsScrolled) => [
-            SliverToBoxAdapter(child: _heroSection(sexe)),
+            SliverToBoxAdapter(child: _enTeteBarre()),
+            SliverToBoxAdapter(child: _carteIdentite(sexe)),
             SliverPersistentHeader(pinned: true, delegate: _TabBarDelegate(_tabBar())),
           ],
           body: TabBarView(
@@ -397,124 +435,106 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   }
 
   // ══════════════════════════════════════════════════════
-  // HERO
+  // EN-TÊTE — barre plate + carte d'identité (remplace le hero glass)
   // ══════════════════════════════════════════════════════
 
-  Widget _heroSection(String sexe) {
-    final eleve = _eleve!;
-    final classe = _classeActuelle;
-    final photoUrl = eleve['photo_url'] as String?;
-    final telephoneParent = eleve['telephone_parent'] as String?;
-
+  Widget _enTeteBarre() {
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 8, bottom: 20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: sexe == 'F' ? [_rose, _violet] : [_indigo, _teal],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                Expanded(
-                  child: Text('Fiche élève', textAlign: TextAlign.center,
-                      style: GoogleFonts.sora(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  onPressed: _dialogModifierInfos,
-                ),
-              ],
+      color: SSMPalette.blanc,
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      child: Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: SSMPalette.texte2),
+              onPressed: () => Navigator.pop(context),
             ),
-          ),
-          const SizedBox(height: 8),
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 55,
-                backgroundColor: Colors.white,
-                child: CircleAvatar(
-                  radius: 52,
-                  backgroundColor: Colors.white24,
-                  backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-                  child: _uploadPhotoEnCours
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : photoUrl == null
-                          ? Text((eleve['prenom'] as String? ?? '?').substring(0, 1),
-                              style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white))
-                          : null,
-                ),
+            Expanded(
+              child: Text(
+                'Fiche élève',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
               ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: GestureDetector(
-                  onTap: _changerPhoto,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                    child: const Icon(Icons.camera_alt, size: 16, color: _indigo),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text('${eleve['nom']}', style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-          Text('${eleve['prenom']}', style: GoogleFonts.inter(fontSize: 16, color: Colors.white.withValues(alpha: 0.8))),
-          const SizedBox(height: 10),
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              SSMBadge(label: 'Matricule: ${eleve['matricule']}', couleur: Colors.white),
-              SSMBadge(label: classe?['nom']?.toString() ?? 'Non affecté', couleur: Colors.white),
-              SSMBadge(label: (eleve['statut'] as String? ?? 'actif'), couleur: _couleurStatutEleve(eleve['statut'] as String?)),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _actionRapide(Icons.edit, 'Modifier', _dialogModifierInfos),
-              if (telephoneParent != null && telephoneParent.isNotEmpty)
-                _actionRapide(Icons.chat, 'WhatsApp', _dialogCommuniquer),
-              _actionRapide(Icons.picture_as_pdf, 'Bulletin', () => _tabController.animateTo(4)),
-              _actionRapide(Icons.more_vert, 'Plus', _dialogPlusActions),
-            ],
-          ),
-        ],
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: SSMPalette.texte2),
+              onPressed: _dialogModifierInfos,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _actionRapide(IconData icone, String label, VoidCallback onTap) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+  Widget _carteIdentite(String sexe) {
+    final eleve = _eleve!;
+    final classe = _classeActuelle;
+    final photoUrl = eleve['photo_url'] as String?;
+    final telephoneParent = eleve['telephone_parent'] as String?;
+    final statutAdmin = eleve['statut'] as String? ?? 'actif';
+    final sf = _situationFinanciere;
+    final resteAPayer = sf != null ? (double.tryParse(sf['reste_a_payer'].toString()) ?? 0) : null;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
       child: Column(
         children: [
-          Material(
-            color: Colors.white.withValues(alpha: 0.2),
-            shape: const CircleBorder(),
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: Padding(padding: const EdgeInsets.all(10), child: Icon(icone, color: Colors.white, size: 20)),
-            ),
+          SSMAvatar(
+            nom: eleve['prenom'] as String? ?? '?',
+            photoUrl: photoUrl,
+            sexe: sexe,
+            rayon: 44,
+            afficherBoutonCamera: true,
+            enTeleversement: _uploadPhotoEnCours,
+            onTap: _changerPhoto,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            '${eleve['nom']}',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+          ),
+          Text(
+            '${eleve['prenom']}',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte2),
           ),
           const SizedBox(height: 4),
-          Text(label, style: GoogleFonts.inter(fontSize: 10, color: Colors.white.withValues(alpha: 0.8))),
+          Text('Matricule : ${eleve['matricule']}', style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte3)),
+          const SizedBox(height: 10),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              SSMPill.couleur(label: classe?['nom']?.toString() ?? 'Non affecté', couleur: SSMPalette.indigo),
+              SSMPill.couleur(label: statutAdmin, couleur: _couleurStatutEleve(statutAdmin)),
+              if (resteAPayer != null)
+                (resteAPayer <= 0 ? const SSMPill.paye(label: 'En règle') : const SSMPill.retard(label: 'Dette')),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              SSMQuickActionButton(icone: Icons.edit_outlined, label: 'Modifier', variante: SSMActionVariante.primaire, onTap: _dialogModifierInfos),
+              if (telephoneParent != null && telephoneParent.isNotEmpty)
+                SSMQuickActionButton(icone: Icons.chat_bubble_outline, label: 'WhatsApp', variante: SSMActionVariante.teal, onTap: _dialogCommuniquer),
+              SSMQuickActionButton(icone: Icons.picture_as_pdf_outlined, label: 'Bulletin', variante: SSMActionVariante.ambre, onTap: () => _tabController.animateTo(4)),
+              SSMQuickActionButton(icone: Icons.more_horiz, label: 'Plus', variante: SSMActionVariante.gris, onTap: _dialogPlusActions),
+            ],
+          ),
         ],
       ),
     );
@@ -522,13 +542,14 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
   Widget _tabBar() {
     return Container(
-      color: Colors.white.withValues(alpha: 0.95),
+      color: SSMPalette.blanc,
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       child: TabBar(
         controller: _tabController,
         isScrollable: true,
-        indicatorColor: _indigo,
-        labelColor: _indigo,
-        unselectedLabelColor: _gris,
+        indicatorColor: SSMPalette.teal,
+        labelColor: SSMPalette.indigo,
+        unselectedLabelColor: SSMPalette.texte3,
         labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
         tabs: const [
           Tab(text: '📋 Infos'),
@@ -547,12 +568,13 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   void _dialogPlusActions() {
     showModalBottomSheet(
       context: context,
+      backgroundColor: SSMPalette.blanc,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.swap_horiz, color: _orange),
+              leading: const Icon(Icons.swap_horiz, color: SSMPalette.ambre),
               title: const Text('Changer le statut'),
               onTap: () {
                 Navigator.pop(context);
@@ -560,7 +582,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.refresh, color: _indigo),
+              leading: const Icon(Icons.refresh, color: SSMPalette.indigo),
               title: const Text('Rafraîchir'),
               onTap: () {
                 Navigator.pop(context);
@@ -584,59 +606,76 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _carteGlass(
+        SSMPanel(
+          titre: 'Informations personnelles',
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SSMSectionTitre(titre: 'Informations personnelles'),
-              SSMListeTile(titre: 'Date de naissance', sousTitre: _formatDateCourt(eleve['date_naissance'] as String?), icone: Icons.cake, couleurIcone: _indigo),
-              SSMListeTile(titre: 'Lieu de naissance', sousTitre: eleve['lieu_naissance']?.toString() ?? 'Non renseigné', icone: Icons.place, couleurIcone: _teal),
-              SSMListeTile(titre: 'Nationalité', sousTitre: eleve['nationalite']?.toString() ?? 'Non renseignée', icone: Icons.flag, couleurIcone: _ambre),
-              SSMListeTile(titre: 'Sexe', sousTitre: eleve['sexe'] == 'F' ? 'Féminin' : 'Masculin', icone: Icons.wc, couleurIcone: _violet),
-              SSMListeTile(titre: "N° d'appel", sousTitre: eleve['numero_appel']?.toString() ?? 'Non renseigné', icone: Icons.confirmation_number, couleurIcone: _rouge),
-              SSMListeTile(titre: "Date d'inscription", sousTitre: _formatDateCourt(eleve['date_inscription'] as String?), icone: Icons.calendar_today, couleurIcone: _grisFonce),
+              _ligneInfo(Icons.cake_outlined, SSMPalette.indigo, 'Date de naissance', _formatDateCourt(eleve['date_naissance'] as String?)),
+              _ligneInfo(Icons.place_outlined, SSMPalette.teal, 'Lieu de naissance', eleve['lieu_naissance']?.toString() ?? 'Non renseigné'),
+              _ligneInfo(Icons.flag_outlined, SSMPalette.ambre, 'Nationalité', eleve['nationalite']?.toString() ?? 'Non renseignée'),
+              _ligneInfo(Icons.wc, SSMPalette.indigo, 'Sexe', eleve['sexe'] == 'F' ? 'Féminin' : 'Masculin'),
+              _ligneInfo(Icons.confirmation_number_outlined, SSMPalette.rouge, "N° d'appel", eleve['numero_appel']?.toString() ?? 'Non renseigné'),
+              _ligneInfo(Icons.calendar_today_outlined, SSMPalette.texte2, "Date d'inscription", _formatDateCourt(eleve['date_inscription'] as String?), dernier: true),
             ],
           ),
         ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Expanded(child: _miniStat('${stats['nombre_absences_total'] ?? 0}', 'absences', _orange)),
+            Expanded(child: _miniStat('${stats['nombre_absences_total'] ?? 0}', 'absences', SSMPalette.ambre)),
             const SizedBox(width: 10),
-            Expanded(child: _miniStat(stats['rang_actuel'] != null ? 'Rang ${stats['rang_actuel']}' : '—', '', _indigo)),
+            Expanded(child: _miniStat(stats['rang_actuel'] != null ? 'Rang ${stats['rang_actuel']}' : '—', '', SSMPalette.indigo)),
             const SizedBox(width: 10),
-            Expanded(child: _miniStat(stats['moyenne_generale_actuelle'] != null ? '${stats['moyenne_generale_actuelle']}/20' : '—', 'moy.', _vert)),
+            Expanded(child: _miniStat(stats['moyenne_generale_actuelle'] != null ? '${stats['moyenne_generale_actuelle']}/20' : '—', 'moy.', SSMPalette.teal)),
           ],
         ),
       ],
     );
   }
 
-  Widget _miniStat(String valeur, String label, Color couleur) {
+  Widget _ligneInfo(IconData icone, Color couleur, String titre, String valeur, {bool dernier = false}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [
-        BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
-      ]),
-      child: Column(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: dernier ? null : const Border(bottom: BorderSide(color: SSMPalette.bordure)),
+      ),
+      child: Row(
         children: [
-          Text(valeur, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: couleur), textAlign: TextAlign.center),
-          if (label.isNotEmpty) Text(label, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
+            child: Icon(icone, size: 17, color: couleur),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(titre, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+                Text(valeur, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: SSMPalette.texte1)),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _carteGlass({required Widget child}) {
+  Widget _miniStat(String valeur, String label, Color couleur) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
-      child: child,
+      child: Column(
+        children: [
+          Text(valeur, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: couleur), textAlign: TextAlign.center),
+          if (label.isNotEmpty) Text(label, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+        ],
+      ),
     );
   }
 
@@ -654,12 +693,12 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.family_restroom, size: 56, color: _gris),
+                    Icon(Icons.family_restroom, size: 56, color: SSMPalette.texte3),
                     const SizedBox(height: 12),
-                    Text('Aucun parent enregistré', style: GoogleFonts.inter(color: _gris)),
+                    Text('Aucun parent enregistré', style: GoogleFonts.inter(color: SSMPalette.texte3)),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+                      style: _stylePrimaire(SSMPalette.indigo),
                       onPressed: _dialogGererParents,
                       child: const Text('Ajouter un parent'),
                     ),
@@ -674,7 +713,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
           bottom: 16,
           right: 16,
           child: FloatingActionButton.extended(
-            backgroundColor: _indigo,
+            backgroundColor: SSMPalette.indigo,
             foregroundColor: Colors.white,
             onPressed: _dialogGererParents,
             icon: const Icon(Icons.edit),
@@ -692,19 +731,16 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: _carteGlass(
+      child: SSMPanel(
+        titre: lienLabels[parent['lien_parente']] ?? 'Autre',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SSMBadge(label: lienLabels[parent['lien_parente']] ?? 'Autre', couleur: _indigo),
+            Text('${parent['nom']} ${parent['prenom'] ?? ''}', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+            if (parent['profession'] != null) Text(parent['profession'] as String, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
             const SizedBox(height: 8),
-            Text('${parent['nom']} ${parent['prenom'] ?? ''}', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600)),
-            if (parent['profession'] != null) Text(parent['profession'] as String, style: GoogleFonts.inter(fontSize: 12, color: _gris)),
-            const SizedBox(height: 10),
-            if (telPrincipal != null && telPrincipal.isNotEmpty)
-              _ligneTelephone(telPrincipal),
-            if (telSecondaire != null && telSecondaire.isNotEmpty)
-              _ligneTelephone(telSecondaire),
+            if (telPrincipal != null && telPrincipal.isNotEmpty) _ligneTelephone(telPrincipal),
+            if (telSecondaire != null && telSecondaire.isNotEmpty) _ligneTelephone(telSecondaire),
           ],
         ),
       ),
@@ -716,16 +752,16 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: [
-          const Icon(Icons.phone, size: 16, color: _gris),
+          Icon(Icons.phone_outlined, size: 16, color: SSMPalette.texte3),
           const SizedBox(width: 6),
-          Text(tel, style: GoogleFonts.inter(fontSize: 13)),
+          Text(tel, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.call, size: 18, color: _indigo),
+            icon: const Icon(Icons.call, size: 18, color: SSMPalette.indigo),
             onPressed: () => launchUrl(Uri.parse('tel:$tel')),
           ),
           IconButton(
-            icon: const Icon(Icons.chat, size: 18, color: _vert),
+            icon: const Icon(Icons.chat, size: 18, color: SSMPalette.teal),
             onPressed: () => WhatsAppService.envoyerMessage(numeroTelephone: tel, message: 'Bonjour,'),
           ),
         ],
@@ -767,13 +803,17 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
             return Container(
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: _gris.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(SSMRayons.grand),
+                border: Border.all(color: SSMPalette.bordure),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   DropdownButtonFormField<String>(
                     initialValue: p['lien_parente'] as String,
-                    decoration: const InputDecoration(labelText: 'Lien', border: OutlineInputBorder(), isDense: true),
+                    decoration: _decorationChamp('Lien', dense: true),
                     items: const [
                       DropdownMenuItem(value: 'pere', child: Text('Père')),
                       DropdownMenuItem(value: 'mere', child: Text('Mère')),
@@ -783,23 +823,23 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                     onChanged: (v) => setStateDialog(() => p['lien_parente'] = v),
                   ),
                   const SizedBox(height: 8),
-                  TextField(controller: p['nom'] as TextEditingController, decoration: const InputDecoration(labelText: 'Nom *', border: OutlineInputBorder(), isDense: true)),
+                  TextField(controller: p['nom'] as TextEditingController, decoration: _decorationChamp('Nom *', dense: true)),
                   const SizedBox(height: 8),
-                  TextField(controller: p['prenom'] as TextEditingController, decoration: const InputDecoration(labelText: 'Prénom', border: OutlineInputBorder(), isDense: true)),
+                  TextField(controller: p['prenom'] as TextEditingController, decoration: _decorationChamp('Prénom', dense: true)),
                   const SizedBox(height: 8),
-                  TextField(controller: p['telephone_principal'] as TextEditingController, decoration: const InputDecoration(labelText: 'Téléphone principal *', border: OutlineInputBorder(), isDense: true)),
+                  TextField(controller: p['telephone_principal'] as TextEditingController, decoration: _decorationChamp('Téléphone principal *', dense: true)),
                   const SizedBox(height: 8),
-                  TextField(controller: p['telephone_secondaire'] as TextEditingController, decoration: const InputDecoration(labelText: 'Téléphone secondaire', border: OutlineInputBorder(), isDense: true)),
+                  TextField(controller: p['telephone_secondaire'] as TextEditingController, decoration: _decorationChamp('Téléphone secondaire', dense: true)),
                   const SizedBox(height: 8),
-                  TextField(controller: p['profession'] as TextEditingController, decoration: const InputDecoration(labelText: 'Profession', border: OutlineInputBorder(), isDense: true)),
+                  TextField(controller: p['profession'] as TextEditingController, decoration: _decorationChamp('Profession', dense: true)),
                 ],
               ),
             );
           }
 
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480, maxHeight: 640),
               child: Padding(
@@ -808,7 +848,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Parents / Tuteurs', style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700)),
+                    Text('Parents / Tuteurs', style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
                     const SizedBox(height: 16),
                     Flexible(
                       child: SingleChildScrollView(
@@ -817,6 +857,11 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                             ...List.generate(parents.length, carte),
                             if (parents.length < 2)
                               OutlinedButton.icon(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: SSMPalette.indigo,
+                                  side: const BorderSide(color: SSMPalette.indigo),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                                ),
                                 onPressed: () => setStateDialog(() => parents.add({
                                       'lien_parente': 'mere',
                                       'nom': TextEditingController(),
@@ -835,11 +880,16 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+                            style: _stylePrimaire(SSMPalette.indigo),
                             onPressed: enCours
                                 ? null
                                 : () async {
@@ -889,7 +939,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   Widget _tabFinances() {
     final s = _situationFinanciere;
     if (s == null) {
-      return Center(child: Text('Situation financière indisponible', style: GoogleFonts.inter(color: _gris)));
+      return Center(child: Text('Situation financière indisponible', style: GoogleFonts.inter(color: SSMPalette.texte3)));
     }
 
     final montantDu = double.tryParse(s['montant_attendu'].toString()) ?? 0;
@@ -901,22 +951,12 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _carteGlass(
+        SSMPanel(
+          titre: 'Situation financière',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(color: enRegle ? _vert : _rouge, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(enRegle ? 'En règle' : 'En retard de paiement',
-                      style: GoogleFonts.sora(fontWeight: FontWeight.w700, fontSize: 16, color: enRegle ? _vert : _rouge)),
-                ],
-              ),
+              SSMPill.couleur(label: enRegle ? 'En règle' : 'En retard de paiement', couleur: enRegle ? SSMPalette.teal : SSMPalette.rouge),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -929,13 +969,13 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               const SizedBox(height: 12),
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
-                child: LinearProgressIndicator(value: progression, minHeight: 8, backgroundColor: const Color(0xFFF1F5F9), color: enRegle ? _vert : _rouge),
+                child: LinearProgressIndicator(value: progression, minHeight: 8, backgroundColor: const Color(0xFFF1F5F9), color: enRegle ? SSMPalette.teal : SSMPalette.rouge),
               ),
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
+                  style: _stylePrimaire(SSMPalette.teal),
                   onPressed: _dialogPaiementRapide,
                   icon: const Icon(Icons.payment),
                   label: const Text('Enregistrer un paiement'),
@@ -945,45 +985,60 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
           ),
         ),
         const SizedBox(height: 16),
-        const SSMSectionTitre(titre: 'Historique des paiements'),
-        if (_paiements.isEmpty)
-          Text('Aucun paiement enregistré', style: GoogleFonts.inter(color: _gris))
-        else
-          ..._paiements.map((p) {
-            final frais = p['frais_scolaire'] as Map<String, dynamic>?;
-            final echeance = p['echeance'] as Map<String, dynamic>?;
-            final estAnnule = p['statut'] == 'annule';
-            final libelle = [frais?['nom'], echeance?['libelle']].where((v) => v != null).join(' — ');
-            return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                child: SSMListeTile(
-                  titre: '${p['montant']} FCFA${estAnnule ? ' (annulé)' : ''}',
-                  sousTitre: '$libelle · ${_formatDateCourt(p['date_paiement'] as String?)}',
-                  icone: Icons.payment,
-                  couleurIcone: estAnnule ? _gris : _teal,
-                  trailing: IconButton(
-                    icon: const Icon(Icons.receipt_long, color: _indigo),
-                    onPressed: () async {
-                      try {
-                        final chemin = await PaiementService.telechargerRecuPdf(p['id'] as int);
-                        await OpenFile.open(chemin);
-                      } catch (e) {
-                        _afficherErreur(e.toString().replaceAll('Exception: ', ''));
-                      }
-                    },
-                  ),
+        SSMPanel(
+          titre: 'Historique des paiements',
+          padding: EdgeInsets.zero,
+          child: _paiements.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('Aucun paiement enregistré', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                )
+              : SSMDataTable(
+                  colonnes: const [
+                    SSMDataColumn('Paiement'),
+                    SSMDataColumn('Montant'),
+                    SSMDataColumn('Date'),
+                    SSMDataColumn('Reçu'),
+                  ],
+                  lignes: [for (final p in _paiements) _lignePaiement(p as Map<String, dynamic>)],
                 ),
-              );
-          }),
+        ),
       ],
     );
+  }
+
+  List<Widget> _lignePaiement(Map<String, dynamic> p) {
+    final frais = p['frais_scolaire'] as Map<String, dynamic>?;
+    final echeance = p['echeance'] as Map<String, dynamic>?;
+    final estAnnule = p['statut'] == 'annule';
+    final libelle = [frais?['nom'], echeance?['libelle']].where((v) => v != null).join(' — ');
+
+    return [
+      Text(libelle.isEmpty ? '—' : libelle, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1)),
+      Text(
+        '${p['montant']} FCFA${estAnnule ? ' (annulé)' : ''}',
+        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: estAnnule ? SSMPalette.texte3 : SSMPalette.texte1),
+      ),
+      Text(_formatDateCourt(p['date_paiement'] as String?), style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      IconButton(
+        icon: const Icon(Icons.receipt_long_outlined, size: 18, color: SSMPalette.indigo),
+        onPressed: () async {
+          try {
+            final chemin = await PaiementService.telechargerRecuPdf(p['id'] as int);
+            await OpenFile.open(chemin);
+          } catch (e) {
+            _afficherErreur(e.toString().replaceAll('Exception: ', ''));
+          }
+        },
+      ),
+    ];
   }
 
   Widget _colonneMontant(String label, double valeur) {
     return Column(
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
-        Text(valeur.toStringAsFixed(0), style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700)),
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+        Text(valeur.toStringAsFixed(0), style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
       ],
     );
   }
@@ -1016,7 +1071,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   // renvoie vers l'onglet Bulletins pour le PDF complet.
   Widget _tabNotes() {
     if (_periodes.isEmpty) {
-      return Center(child: Text('Aucune période académique disponible', style: GoogleFonts.inter(color: _gris)));
+      return Center(child: Text('Aucune période académique disponible', style: GoogleFonts.inter(color: SSMPalette.texte3)));
     }
 
     final periodeId = _periodeSelectionneeId ?? (_periodes.first['id'] as int);
@@ -1031,7 +1086,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       children: [
         DropdownButtonFormField<int>(
           initialValue: periodeId,
-          decoration: const InputDecoration(labelText: 'Période', border: OutlineInputBorder(), isDense: true),
+          decoration: _decorationChamp('Période', dense: true),
           items: _periodes.cast<Map<String, dynamic>>().map((p) => DropdownMenuItem(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
           onChanged: (v) => setState(() => _periodeSelectionneeId = v),
         ),
@@ -1040,28 +1095,32 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
           Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
-              child: Text('Aucun bulletin généré pour cette période.', style: GoogleFonts.inter(color: _gris)),
+              child: Text('Aucun bulletin généré pour cette période.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
             ),
           )
         else
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(14)),
+            decoration: BoxDecoration(
+              color: SSMPalette.indigoClair,
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
+              border: Border.all(color: SSMPalette.indigo.withValues(alpha: 0.15)),
+            ),
             child: Column(
               children: [
-                Text('Moyenne générale', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text('Moyenne générale', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
                 Text('${bulletin['moyenne_generale']}/20',
                     style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: _couleurMoyenne(moyenneGenerale))),
-                if (statut != null) SSMBadge(label: statut.libelle, couleur: statut.couleur),
+                if (statut != null) SSMPill.couleur(label: statut.libelle, couleur: statut.couleur),
                 if (rang != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 6),
-                    child: Text('Rang $rangème / ${effectif ?? '—'} élèves', style: GoogleFonts.inter(fontSize: 13, color: _gris)),
+                    child: Text('Rang $rangème / ${effectif ?? '—'} élèves', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
                   ),
                 const SizedBox(height: 8),
                 Text('Détail par matière disponible dans le PDF (onglet Bulletins).',
-                    style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+                    style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
               ],
             ),
           ),
@@ -1082,7 +1141,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
         children: [
           _boutonHistoriqueComplet(),
           const SizedBox(height: 40),
-          Center(child: Text('Aucun bulletin disponible pour le moment', style: GoogleFonts.inter(color: _gris))),
+          Center(child: Text('Aucun bulletin disponible pour le moment', style: GoogleFonts.inter(color: SSMPalette.texte3))),
         ],
       );
     }
@@ -1103,24 +1162,21 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: _carteGlass(
+          child: SSMPanel(
+            titre: periodeNom,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(child: Text(periodeNom, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600))),
-                    SSMBadge(label: statut.libelle, couleur: statut.couleur),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text('${bulletin['moyenne_generale']}/20', style: GoogleFonts.inter(fontSize: 13, color: _grisFonce)),
-                if (rang != null) Text('Rang $rang / ${effectif ?? '—'} élèves', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                SSMPill.couleur(label: statut.libelle, couleur: statut.couleur),
+                const SizedBox(height: 6),
+                Text('${bulletin['moyenne_generale']}/20', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
+                if (rang != null) Text('Rang $rang / ${effectif ?? '—'} élèves', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
                       child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(foregroundColor: SSMPalette.indigo, side: const BorderSide(color: SSMPalette.indigo)),
                         onPressed: () => _ouvrirApercuBulletin(bulletinId, periodeId, periodeNom, bulletin),
                         child: const Text('Aperçu'),
                       ),
@@ -1128,6 +1184,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(foregroundColor: SSMPalette.indigo, side: const BorderSide(color: SSMPalette.indigo)),
                         onPressed: () => _telechargerBulletinPdf(bulletinId),
                         child: const Text('PDF'),
                       ),
@@ -1135,7 +1192,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                     const SizedBox(width: 8),
                     Expanded(
                       child: OutlinedButton(
-                        style: OutlinedButton.styleFrom(foregroundColor: _vert),
+                        style: OutlinedButton.styleFrom(foregroundColor: SSMPalette.teal, side: const BorderSide(color: SSMPalette.teal)),
                         onPressed: () => _envoyerBulletinWhatsApp(periodeNom, bulletin),
                         child: const Text('WhatsApp'),
                       ),
@@ -1168,7 +1225,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       width: double.infinity,
       child: OutlinedButton.icon(
         onPressed: _ouvrirHistoriqueComplet,
-        style: OutlinedButton.styleFrom(foregroundColor: _indigo, side: const BorderSide(color: _indigo)),
+        style: OutlinedButton.styleFrom(foregroundColor: SSMPalette.indigo, side: const BorderSide(color: SSMPalette.indigo)),
         icon: const Icon(Icons.history, size: 18),
         label: const Text("Voir l'historique complet (toutes années)"),
       ),
@@ -1265,16 +1322,16 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
           children: [
             Row(
               children: [
-                Expanded(child: _miniStat('$retards', 'retards', _orange)),
+                Expanded(child: _miniStat('$retards', 'retards', SSMPalette.ambre)),
                 const SizedBox(width: 10),
-                Expanded(child: _miniStat('$avertissements', 'avertissements', _ambre)),
+                Expanded(child: _miniStat('$avertissements', 'avertissements', SSMPalette.ambre)),
                 const SizedBox(width: 10),
-                Expanded(child: _miniStat('$exclusions', 'exclusions', _rouge)),
+                Expanded(child: _miniStat('$exclusions', 'exclusions', SSMPalette.rouge)),
               ],
             ),
             const SizedBox(height: 16),
             if (_sanctions.isEmpty)
-              Center(child: Padding(padding: const EdgeInsets.all(20), child: Text('Aucune sanction enregistrée', style: GoogleFonts.inter(color: _gris))))
+              Center(child: Padding(padding: const EdgeInsets.all(20), child: Text('Aucune sanction enregistrée', style: GoogleFonts.inter(color: SSMPalette.texte3))))
             else
               ..._sanctions.map((s) => _carteSanction(s as Map<String, dynamic>)),
           ],
@@ -1283,7 +1340,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
           bottom: 16,
           right: 16,
           child: FloatingActionButton.extended(
-            backgroundColor: _rouge,
+            backgroundColor: SSMPalette.rouge,
             foregroundColor: Colors.white,
             onPressed: _dialogAjouterSanction,
             icon: const Icon(Icons.add),
@@ -1295,29 +1352,14 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   }
 
   Widget _carteSanction(Map<String, dynamic> s) {
-    final couleur = _couleurSanction(s['type'] as String?);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(12),
-        border: Border(left: BorderSide(color: couleur, width: 4)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(_formatDateCourt(s['date_sanction'] as String?), style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600)),
-              const SizedBox(width: 8),
-              SSMBadge(label: (s['type'] as String? ?? '').toUpperCase(), couleur: couleur),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(s['description'] as String? ?? '', style: GoogleFonts.inter(fontSize: 13)),
-        ],
+    final type = s['type'] as String?;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SSMAlertItem(
+        type: _typeAlerteSanction(type),
+        icone: _iconeSanction(type),
+        titre: '${_formatDateCourt(s['date_sanction'] as String?)} · ${(type ?? '').toUpperCase()}',
+        sousTitre: s['description'] as String? ?? '',
       ),
     );
   }
@@ -1332,7 +1374,9 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Ajouter une sanction'),
+          backgroundColor: SSMPalette.blanc,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+          title: Text('Ajouter une sanction', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
           content: SizedBox(
             width: 400,
             child: Column(
@@ -1340,7 +1384,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               children: [
                 DropdownButtonFormField<String>(
                   initialValue: type,
-                  decoration: const InputDecoration(labelText: 'Type', border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Type'),
                   items: const [
                     DropdownMenuItem(value: 'retard', child: Text('Retard')),
                     DropdownMenuItem(value: 'avertissement', child: Text('Avertissement')),
@@ -1351,24 +1395,37 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                   onChanged: (v) => setStateDialog(() => type = v!),
                 ),
                 const SizedBox(height: 12),
-                TextField(controller: descriptionController, maxLines: 3, decoration: const InputDecoration(labelText: 'Description *', border: OutlineInputBorder())),
+                TextField(controller: descriptionController, maxLines: 3, decoration: _decorationChamp('Description *')),
                 const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.date_range),
-                  title: Text('Date : ${date.day}/${date.month}/${date.year}'),
-                  onTap: () async {
-                    final d = await showDatePicker(context: context, initialDate: date, firstDate: DateTime(2020), lastDate: DateTime(2100));
-                    if (d != null) setStateDialog(() => date = d);
-                  },
+                Material(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                    onTap: () async {
+                      final d = await showDatePicker(context: context, initialDate: date, firstDate: DateTime(2020), lastDate: DateTime(2100));
+                      if (d != null) setStateDialog(() => date = d);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(SSMRayons.moyen), border: Border.all(color: const Color(0xFFE5E7EB))),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.date_range, size: 19, color: SSMPalette.texte3),
+                          const SizedBox(width: 10),
+                          Text('Date : ${date.day}/${date.month}/${date.year}', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+              style: _stylePrimaire(SSMPalette.rouge),
               onPressed: enCours || _classeId == null
                   ? null
                   : () async {
@@ -1417,22 +1474,23 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _gris.withValues(alpha: 0.4), style: BorderStyle.solid, width: 1.4),
+              color: const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
+              border: Border.all(color: const Color(0xFFE5E7EB), width: 1.4),
             ),
             child: Column(
               children: [
-                const Icon(Icons.upload_file, size: 40, color: _gris),
+                Icon(Icons.upload_file, size: 40, color: SSMPalette.texte3),
                 const SizedBox(height: 8),
-                Text('Ajouter un document', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _grisFonce)),
-                Text('Tap pour sélectionner', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                Text('Ajouter un document', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                Text('Tap pour sélectionner', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
               ],
             ),
           ),
         ),
         const SizedBox(height: 16),
         if (documents.isEmpty)
-          Center(child: Padding(padding: const EdgeInsets.all(20), child: Text('Aucun document', style: GoogleFonts.inter(color: _gris))))
+          Center(child: Padding(padding: const EdgeInsets.all(20), child: Text('Aucun document', style: GoogleFonts.inter(color: SSMPalette.texte3))))
         else
           GridView.count(
             crossAxisCount: 2,
@@ -1452,27 +1510,27 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.85),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         children: [
           Icon(_iconeTypeDocument(doc['type'] as String?), size: 48, color: couleur),
           const SizedBox(height: 8),
           Text(doc['nom'] as String? ?? '', textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600)),
-          Text(doc['type'] as String? ?? '', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          Text(doc['type'] as String? ?? '', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
           const Spacer(),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.download, size: 18, color: _indigo),
+                icon: const Icon(Icons.download, size: 18, color: SSMPalette.indigo),
                 onPressed: () => launchUrl(Uri.parse(doc['url_fichier'] as String)),
               ),
               IconButton(
-                icon: const Icon(Icons.delete, size: 18, color: _rouge),
+                icon: const Icon(Icons.delete, size: 18, color: SSMPalette.rouge),
                 onPressed: () async {
                   try {
                     await EleveService.supprimerDocument(widget.eleveId, doc['id'] as int);
@@ -1501,17 +1559,19 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Ajouter un document'),
+          backgroundColor: SSMPalette.blanc,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+          title: Text('Ajouter un document', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
           content: SizedBox(
             width: 400,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                TextField(controller: nomController, decoration: const InputDecoration(labelText: 'Nom du document *', border: OutlineInputBorder())),
+                TextField(controller: nomController, decoration: _decorationChamp('Nom du document *')),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: type,
-                  decoration: const InputDecoration(labelText: 'Type *', border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Type *'),
                   items: const [
                     DropdownMenuItem(value: 'acte_naissance', child: Text('Acte de naissance')),
                     DropdownMenuItem(value: 'certificat_scolarite', child: Text('Certificat de scolarité')),
@@ -1524,6 +1584,11 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SSMPalette.indigo,
+                    side: const BorderSide(color: SSMPalette.indigo),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                  ),
                   onPressed: () async {
                     final resultat = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png']);
                     if (resultat != null && resultat.files.single.path != null) {
@@ -1537,14 +1602,14 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                   label: const Text('Choisir le fichier'),
                 ),
                 if (nomFichier != null)
-                  Padding(padding: const EdgeInsets.only(top: 8), child: Text(nomFichier!, style: GoogleFonts.inter(fontSize: 12, color: _gris))),
+                  Padding(padding: const EdgeInsets.only(top: 8), child: Text(nomFichier!, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3))),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: _stylePrimaire(SSMPalette.indigo),
               onPressed: enCours
                   ? null
                   : () async {
@@ -1576,7 +1641,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
   Widget _tabChronologie() {
     if (_chronologieComplete.isEmpty) {
-      return Center(child: Text('Aucun événement enregistré', style: GoogleFonts.inter(color: _gris)));
+      return Center(child: Text('Aucun événement enregistré', style: GoogleFonts.inter(color: SSMPalette.texte3)));
     }
 
     return ListView.builder(
@@ -1603,9 +1668,9 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))],
+                    color: SSMPalette.blanc,
+                    borderRadius: BorderRadius.circular(SSMRayons.grand),
+                    border: Border.all(color: SSMPalette.bordure),
                   ),
                   child: Row(
                     children: [
@@ -1615,10 +1680,10 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(evt['titre'] as String? ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600)),
+                            Text(evt['titre'] as String? ?? '', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
                             if (evt['description'] != null)
-                              Text(evt['description'] as String, style: GoogleFonts.inter(fontSize: 12, color: _gris)),
-                            Text(_formatDateHeure(evt['created_at'] as String?), style: GoogleFonts.inter(fontSize: 11, color: _gris.withValues(alpha: 0.7))),
+                              Text(evt['description'] as String, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
+                            Text(_formatDateHeure(evt['created_at'] as String?), style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
                           ],
                         ),
                       ),
@@ -1648,12 +1713,13 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: SSMPalette.blanc,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.money_off, color: _rouge),
+              leading: const Icon(Icons.money_off, color: SSMPalette.rouge),
               title: const Text('Rappel de paiement'),
               onTap: () async {
                 Navigator.pop(context);
@@ -1669,7 +1735,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.picture_as_pdf, color: _ambre),
+              leading: const Icon(Icons.picture_as_pdf, color: SSMPalette.ambre),
               title: const Text('Envoyer le bulletin'),
               onTap: () {
                 Navigator.pop(context);
@@ -1677,7 +1743,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.event, color: _orange),
+              leading: const Icon(Icons.event, color: SSMPalette.ambre),
               title: const Text('Convocation'),
               onTap: () async {
                 Navigator.pop(context);
@@ -1687,7 +1753,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               },
             ),
             ListTile(
-              leading: const Icon(Icons.chat, color: _vert),
+              leading: const Icon(Icons.chat, color: SSMPalette.teal),
               title: const Text('Information générale'),
               onTap: () async {
                 Navigator.pop(context);
@@ -1714,32 +1780,34 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Modifier les informations'),
+          backgroundColor: SSMPalette.blanc,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+          title: Text('Modifier les informations', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
           content: SizedBox(
             width: 420,
             child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: nomController, decoration: const InputDecoration(labelText: 'Nom *', border: OutlineInputBorder())),
+                  TextField(controller: nomController, decoration: _decorationChamp('Nom *')),
                   const SizedBox(height: 10),
-                  TextField(controller: prenomController, decoration: const InputDecoration(labelText: 'Prénom *', border: OutlineInputBorder())),
+                  TextField(controller: prenomController, decoration: _decorationChamp('Prénom *')),
                   const SizedBox(height: 10),
-                  TextField(controller: lieuController, decoration: const InputDecoration(labelText: 'Lieu de naissance', border: OutlineInputBorder())),
+                  TextField(controller: lieuController, decoration: _decorationChamp('Lieu de naissance')),
                   const SizedBox(height: 10),
-                  TextField(controller: nationaliteController, decoration: const InputDecoration(labelText: 'Nationalité', border: OutlineInputBorder())),
+                  TextField(controller: nationaliteController, decoration: _decorationChamp('Nationalité')),
                   const SizedBox(height: 10),
-                  TextField(controller: telephoneController, decoration: const InputDecoration(labelText: 'Téléphone parent', border: OutlineInputBorder())),
+                  TextField(controller: telephoneController, decoration: _decorationChamp('Téléphone parent')),
                   const SizedBox(height: 10),
-                  TextField(controller: numeroAppelController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "N° d'appel", border: OutlineInputBorder())),
+                  TextField(controller: numeroAppelController, keyboardType: TextInputType.number, decoration: _decorationChamp("N° d'appel")),
                 ],
               ),
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: _stylePrimaire(SSMPalette.indigo),
               onPressed: enCours
                   ? null
                   : () async {
@@ -1780,13 +1848,15 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) => AlertDialog(
-          title: const Text('Changer le statut'),
+          backgroundColor: SSMPalette.blanc,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+          title: Text('Changer le statut', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               DropdownButtonFormField<String>(
                 initialValue: statut,
-                decoration: const InputDecoration(labelText: 'Statut', border: OutlineInputBorder()),
+                decoration: _decorationChamp('Statut'),
                 items: const [
                   DropdownMenuItem(value: 'actif', child: Text('Actif')),
                   DropdownMenuItem(value: 'suspendu', child: Text('Suspendu')),
@@ -1798,13 +1868,13 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
                 onChanged: (v) => setStateDialog(() => statut = v!),
               ),
               const SizedBox(height: 12),
-              TextField(controller: motifController, decoration: const InputDecoration(labelText: 'Motif (optionnel)', border: OutlineInputBorder())),
+              TextField(controller: motifController, decoration: _decorationChamp('Motif (optionnel)')),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _orange, foregroundColor: Colors.white),
+              style: _stylePrimaire(SSMPalette.ambre),
               onPressed: enCours
                   ? null
                   : () async {
@@ -1917,11 +1987,11 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
   Future<void> _enregistrer() async {
     final montant = double.tryParse(_montantController.text.replaceAll(',', '.'));
     if (_fraisSelectionne == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sélectionnez un frais'), backgroundColor: _rouge));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sélectionnez un frais'), backgroundColor: SSMPalette.rouge));
       return;
     }
     if (montant == null || montant <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Montant invalide'), backgroundColor: _rouge));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Montant invalide'), backgroundColor: SSMPalette.rouge));
       return;
     }
 
@@ -1946,7 +2016,7 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
     } catch (e) {
       setState(() => _enregistrement = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SSMPalette.rouge));
       }
     }
   }
@@ -1956,7 +2026,9 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
     final echeances = _fraisSelectionne?.echeances ?? [];
 
     return AlertDialog(
-      title: const Text('Enregistrer un paiement'),
+      backgroundColor: SSMPalette.blanc,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+      title: Text('Enregistrer un paiement', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
       content: SizedBox(
         width: 400,
         child: SingleChildScrollView(
@@ -1964,17 +2036,17 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_chargement)
-                const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: LinearProgressIndicator())
+                const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: LinearProgressIndicator(color: SSMPalette.indigo))
               else if (_frais.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Aucun frais configuré pour cette classe', style: GoogleFonts.inter(color: _gris)),
+                  child: Text('Aucun frais configuré pour cette classe', style: GoogleFonts.inter(color: SSMPalette.texte3)),
                 )
               else ...[
                 DropdownButtonFormField<FraisScolaire>(
                   initialValue: _fraisSelectionne,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Frais *', prefixIcon: Icon(Icons.category), border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Frais *', icone: Icons.category_outlined),
                   items: _frais.map((f) => DropdownMenuItem(value: f, child: Text(f.nom))).toList(),
                   onChanged: (v) => setState(() {
                     _fraisSelectionne = v;
@@ -1987,7 +2059,7 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
                   DropdownButtonFormField<EcheanceFrais?>(
                     initialValue: _echeanceSelectionnee,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Échéance', prefixIcon: Icon(Icons.layers), border: OutlineInputBorder()),
+                    decoration: _decorationChamp('Échéance', icone: Icons.layers_outlined),
                     items: [
                       const DropdownMenuItem<EcheanceFrais?>(value: null, child: Text('Paiement complet')),
                       ...echeances.map((e) => DropdownMenuItem(value: e, child: Text(e.libelle))),
@@ -2002,12 +2074,12 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
                 TextField(
                   controller: _montantController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Montant (FCFA)', prefixIcon: Icon(Icons.attach_money), border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Montant (FCFA)', icone: Icons.attach_money),
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
                   initialValue: _modePaiement,
-                  decoration: const InputDecoration(labelText: 'Mode de paiement *', prefixIcon: Icon(Icons.payment), border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Mode de paiement *', icone: Icons.payment),
                   items: const [
                     DropdownMenuItem(value: 'especes', child: Text('Espèces')),
                     DropdownMenuItem(value: 'moov_money', child: Text('Moov Money')),
@@ -2018,18 +2090,32 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
                   onChanged: (v) => setState(() => _modePaiement = v!),
                 ),
                 const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.date_range),
-                  title: Text('Date : ${_date.day}/${_date.month}/${_date.year}'),
-                  onTap: () async {
-                    final d = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2030));
-                    if (d != null) setState(() => _date = d);
-                  },
+                Material(
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                    onTap: () async {
+                      final d = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime(2030));
+                      if (d != null) setState(() => _date = d);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(SSMRayons.moyen), border: Border.all(color: const Color(0xFFE5E7EB))),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.date_range, size: 19, color: SSMPalette.texte3),
+                          const SizedBox(width: 10),
+                          Text('Date : ${_date.day}/${_date.month}/${_date.year}', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
+                const SizedBox(height: 12),
                 TextField(
                   controller: _referenceController,
-                  decoration: const InputDecoration(labelText: 'Référence (optionnel)', prefixIcon: Icon(Icons.receipt), border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Référence (optionnel)', icone: Icons.receipt_outlined),
                 ),
               ],
             ],
@@ -2037,9 +2123,9 @@ class _DialogPaiementRapideState extends State<_DialogPaiementRapide> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white),
+          style: _stylePrimaire(SSMPalette.teal),
           onPressed: _enregistrement || _frais.isEmpty ? null : _enregistrer,
           child: _enregistrement
               ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))

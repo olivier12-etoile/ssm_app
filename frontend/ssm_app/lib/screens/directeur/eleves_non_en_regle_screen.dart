@@ -2,12 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/annee_service.dart';
-import '../../widgets/ssm_widgets.dart';
-
-const Color _rouge = Color(0xFFDC2626);
-const Color _orange = Color(0xFFEA580C);
-const Color _vert = Color(0xFF16A34A);
-const Color _gris = Color(0xFF94A3B8);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_pill.dart';
 
 class ElevesNonEnRegleScreen extends StatefulWidget {
   const ElevesNonEnRegleScreen({super.key});
@@ -66,9 +63,9 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
 
   void _afficherErreur(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge),
+    );
   }
 
   Future<void> _exporterPdf() async {
@@ -102,13 +99,20 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       appBar: AppBar(
-        backgroundColor: _rouge,
-        foregroundColor: Colors.white,
+        backgroundColor: SSMPalette.blanc,
+        foregroundColor: SSMPalette.texte1,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: SSMPalette.texte2),
         title: Text(
           'Élèves non en règle',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w700),
+          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: SSMPalette.bordure),
         ),
       ),
       body: Column(
@@ -128,13 +132,13 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
           Expanded(
             child: _chargement
                 ? const Center(
-                    child: CircularProgressIndicator(color: _rouge),
+                    child: CircularProgressIndicator(color: SSMPalette.rouge),
                   )
                 : _classes.isEmpty
                 ? Center(
                     child: Text(
                       'Aucun élève non en règle 🎉',
-                      style: GoogleFonts.inter(color: _gris),
+                      style: GoogleFonts.inter(color: SSMPalette.texte3),
                     ),
                   )
                 : RefreshIndicator(
@@ -155,9 +159,11 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _rouge,
+                        backgroundColor: SSMPalette.rouge,
                         foregroundColor: Colors.white,
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                       ),
                       onPressed: _exportEnCours ? null : _exporterPdf,
                       icon: const Icon(Icons.picture_as_pdf),
@@ -168,9 +174,11 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
                   Expanded(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: _vert,
+                        backgroundColor: SSMPalette.teal,
                         foregroundColor: Colors.white,
+                        elevation: 0,
                         padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                       ),
                       onPressed: _exportEnCours ? null : _exporterExcel,
                       icon: const Icon(Icons.table_chart),
@@ -190,11 +198,13 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
     return ChoiceChip(
       label: Text(label),
       selected: selectionne,
-      selectedColor: _rouge.withValues(alpha: 0.15),
+      selectedColor: SSMPalette.rougeClair,
+      backgroundColor: const Color(0xFFF9FAFB),
+      side: BorderSide(color: selectionne ? SSMPalette.rouge : SSMPalette.bordure),
       labelStyle: GoogleFonts.inter(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: selectionne ? _rouge : _gris,
+        color: selectionne ? SSMPalette.rouge : SSMPalette.texte2,
       ),
       onSelected: (_) {
         setState(() => _filtre = valeur);
@@ -209,7 +219,13 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SSMSectionTitre(titre: classeNom),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              classeNom,
+              style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+            ),
+          ),
           ...eleves.map((e) => _carteEleve(e as Map<String, dynamic>)),
         ],
       ),
@@ -225,27 +241,18 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: const Border(left: BorderSide(color: _rouge, width: 4)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border(
+          top: BorderSide(color: SSMPalette.bordure),
+          right: BorderSide(color: SSMPalette.bordure),
+          bottom: BorderSide(color: SSMPalette.bordure),
+          left: const BorderSide(color: SSMPalette.rouge, width: 3),
+        ),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: _rouge.withValues(alpha: 0.1),
-            child: Text(
-              (eleve['nom'] as String? ?? '?').substring(0, 1),
-              style: GoogleFonts.sora(color: _rouge, fontWeight: FontWeight.w700),
-            ),
-          ),
+          SSMAvatar(nom: eleve['nom'] as String? ?? '?', couleur: SSMPalette.rouge, rayon: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -253,10 +260,7 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
               children: [
                 Text(
                   '${eleve['nom']} ${eleve['prenom']}',
-                  style: GoogleFonts.sora(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                 ),
                 const SizedBox(height: 6),
                 Wrap(
@@ -264,16 +268,14 @@ class _ElevesNonEnRegleScreenState extends State<ElevesNonEnRegleScreen> {
                   runSpacing: 6,
                   children: [
                     if (paiement != null)
-                      SSMBadge(
-                        label:
-                            '💰 Dette : ${paiement['montant_restant']} FCFA',
-                        couleur: _rouge,
+                      SSMPill.couleur(
+                        label: '💰 Dette : ${paiement['montant_restant']} FCFA',
+                        couleur: SSMPalette.rouge,
                       ),
                     if (absences != null)
-                      SSMBadge(
-                        label:
-                            '📅 ${absences['nombre_absences_non_justifiees']} absences',
-                        couleur: _orange,
+                      SSMPill.couleur(
+                        label: '📅 ${absences['nombre_absences_non_justifiees']} absences',
+                        couleur: SSMPalette.ambre,
                       ),
                   ],
                 ),

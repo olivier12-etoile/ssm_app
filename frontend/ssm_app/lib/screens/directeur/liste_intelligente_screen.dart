@@ -2,30 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/eleve_service.dart';
-import '../../widgets/ssm_widgets.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _rougeFonce = Color(0xFF991B1B);
-const Color _orange = Color(0xFFEA580C);
-const Color _gris = Color(0xFF94A3B8);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_pill.dart';
 
 Color _couleurAppBar(String type) {
   switch (type) {
     case 'en_regle':
-      return _vert;
+      return SSMPalette.teal;
     case 'en_retard_paiement':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'absents_aujourd_hui':
-      return _orange;
+      return SSMPalette.ambre;
     case 'suspendus':
-      return _rougeFonce;
+      return SSMPalette.rouge;
     case 'redoublants':
-      return _ambre;
+      return SSMPalette.ambre;
     default:
-      return _indigo;
+      return SSMPalette.indigo;
   }
 }
 
@@ -52,34 +46,34 @@ String _infoContextuelle(String type, Map<String, dynamic> eleve) {
 Color _couleurStatutEleve(String? statut) {
   switch (statut) {
     case 'actif':
-      return _indigo;
+      return SSMPalette.indigo;
     case 'suspendu':
-      return _orange;
+      return SSMPalette.ambre;
     case 'exclu':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'diplome':
-      return _vert;
+      return SSMPalette.teal;
     case 'transfere':
-      return _ambre;
+      return SSMPalette.ambre;
     case 'abandon':
-      return _gris;
+      return SSMPalette.texte3;
     default:
-      return _gris;
+      return SSMPalette.texte3;
   }
 }
 
 Color _couleurInfoContextuelle(String type) {
   switch (type) {
     case 'en_retard_paiement':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'absents_aujourd_hui':
-      return _orange;
+      return SSMPalette.ambre;
     case 'redoublants':
-      return _ambre;
+      return SSMPalette.ambre;
     case 'en_difficulte':
-      return _rouge;
+      return SSMPalette.rouge;
     default:
-      return _gris;
+      return SSMPalette.texte3;
   }
 }
 
@@ -127,9 +121,9 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
 
   void _afficherErreur(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge),
+    );
   }
 
   Future<void> _exporterPdf({bool ouvrirPourImpression = false}) async {
@@ -165,13 +159,16 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
     final couleur = _couleurAppBar(widget.type);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       appBar: AppBar(
-        backgroundColor: couleur,
-        foregroundColor: Colors.white,
+        backgroundColor: SSMPalette.blanc,
+        foregroundColor: SSMPalette.texte1,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: SSMPalette.texte2),
         title: Text(
           widget.titre,
-          style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700),
+          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
         ),
         actions: [
           IconButton(
@@ -189,6 +186,10 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                 : () => _exporterPdf(ouvrirPourImpression: true),
           ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: SSMPalette.bordure),
+        ),
       ),
       body: _chargement
           ? Center(child: CircularProgressIndicator(color: couleur))
@@ -197,14 +198,14 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.search_off, size: 64, color: _gris),
+                  Icon(Icons.search_off, size: 56, color: SSMPalette.texte3),
                   const SizedBox(height: 12),
                   Text(
                     'Aucun élève dans cette catégorie',
                     style: GoogleFonts.sora(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: _gris,
+                      color: SSMPalette.texte3,
                     ),
                   ),
                 ],
@@ -219,7 +220,8 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: couleur.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(SSMRayons.grand),
+                      border: Border.all(color: couleur.withValues(alpha: 0.2)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,15 +229,16 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                         Text(
                           '$_total élève(s) trouvé(s)',
                           style: GoogleFonts.sora(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: couleur,
                           ),
                         ),
                         Text(
                           'Groupés par classe',
                           style: GoogleFonts.inter(
                             fontSize: 12,
-                            color: _gris,
+                            color: SSMPalette.texte2,
                           ),
                         ),
                       ],
@@ -263,9 +266,11 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _rouge,
+                          backgroundColor: SSMPalette.rouge,
                           foregroundColor: Colors.white,
+                          elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                         ),
                         onPressed: _exportEnCours ? null : () => _exporterPdf(),
                         icon: const Icon(Icons.picture_as_pdf, size: 18),
@@ -275,8 +280,9 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: _vert,
-                        side: const BorderSide(color: _vert),
+                        foregroundColor: SSMPalette.teal,
+                        side: const BorderSide(color: SSMPalette.teal),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                       ),
                       onPressed: _exportEnCours ? null : _exporterExcel,
                       icon: const Icon(Icons.table_chart, size: 18),
@@ -285,8 +291,9 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                     const SizedBox(width: 8),
                     OutlinedButton.icon(
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: _gris,
-                        side: const BorderSide(color: _gris),
+                        foregroundColor: SSMPalette.texte2,
+                        side: const BorderSide(color: SSMPalette.bordure),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                       ),
                       onPressed: _exportEnCours
                           ? null
@@ -307,7 +314,13 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SSMSectionTitre(titre: '$classeNom (${eleves.length} élèves)'),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              '$classeNom (${eleves.length} élèves)',
+              style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+            ),
+          ),
           ...eleves.map(
             (e) => _carteEleve(e as Map<String, dynamic>, couleur),
           ),
@@ -321,10 +334,10 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
     final infoCouleur = _couleurInfoContextuelle(widget.type);
 
     return Material(
-      color: Colors.white.withValues(alpha: 0.85),
-      borderRadius: BorderRadius.circular(12),
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
         onTap: () => Navigator.pushNamed(
           context,
           '/eleve/fiche',
@@ -334,32 +347,16 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: SSMPalette.bordure),
           ),
           child: Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: couleur.withValues(alpha: 0.1),
-                backgroundImage: eleve['photo_url'] != null
-                    ? NetworkImage(eleve['photo_url'] as String)
-                    : null,
-                child: eleve['photo_url'] == null
-                    ? Text(
-                        (eleve['nom'] as String? ?? '?').substring(0, 1),
-                        style: GoogleFonts.sora(
-                          color: couleur,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      )
-                    : null,
+              SSMAvatar(
+                nom: eleve['nom'] as String? ?? '?',
+                photoUrl: eleve['photo_url'] as String?,
+                couleur: couleur,
+                rayon: 20,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -368,10 +365,7 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                   children: [
                     Text(
                       '${eleve['nom']} ${eleve['prenom']}',
-                      style: GoogleFonts.sora(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                     ),
                     if (infoTexte.isNotEmpty)
                       Text(
@@ -384,12 +378,12 @@ class _ListeIntelligenteScreenState extends State<ListeIntelligenteScreen> {
                   ],
                 ),
               ),
-              SSMBadge(
+              SSMPill.couleur(
                 label: (eleve['statut'] as String? ?? 'actif'),
                 couleur: _couleurStatutEleve(eleve['statut'] as String?),
               ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: _gris),
+              Icon(Icons.chevron_right, color: SSMPalette.texte3),
             ],
           ),
         ),
