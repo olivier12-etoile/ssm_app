@@ -4,15 +4,9 @@ import '../../models/frais_scolaire_model.dart';
 import '../../models/paiement_model.dart';
 import '../../services/frais_scolaire_service.dart';
 import '../../services/paiement_service.dart';
+import '../../theme/ssm_theme.dart';
 import '../../widgets/recu_pdf_viewer.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 String _formatDateCourt(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
@@ -26,6 +20,28 @@ String _formatMontant(double m) {
     buffer.write(texte[i]);
   }
   return '$buffer FCFA';
+}
+
+InputDecoration _decorationChamp(String label, {IconData? icone}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    prefixIcon: icone != null ? Icon(icone, size: 20, color: SSMPalette.texte3) : null,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
 }
 
 class NouveauPaiementScreen extends StatefulWidget {
@@ -194,17 +210,21 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Nouveau paiement', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Nouveau paiement', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _paiementEnregistre != null
+                  ? _vueConfirmation(_paiementEnregistre!)
+                  : _chargement
+                      ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                      : _vueFormulaire(),
+            ),
+          ],
+        ),
       ),
-      body: _paiementEnregistre != null
-          ? _vueConfirmation(_paiementEnregistre!)
-          : _chargement
-              ? const Center(child: CircularProgressIndicator(color: _indigo))
-              : _vueFormulaire(),
     );
   }
 
@@ -218,12 +238,12 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
       children: [
         Text(
           widget.eleveNomComplet,
-          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: _texteFonce),
+          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
         ),
         const SizedBox(height: 4),
         Text(
           'Reste à payer global : ${_formatMontant(widget.situation.resteAPayer)}',
-          style: GoogleFonts.jetBrainsMono(fontSize: 13, color: _texte),
+          style: GoogleFonts.jetBrainsMono(fontSize: 13, color: SSMPalette.texte2),
         ),
         const SizedBox(height: 20),
         _titreSection('Frais scolaire'),
@@ -231,17 +251,17 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: _vert.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+              color: SSMPalette.tealClair,
+              borderRadius: BorderRadius.circular(SSMRayons.moyen),
             ),
             child: Row(
               children: [
-                const Icon(Icons.check_circle, color: _vert, size: 18),
+                const Icon(Icons.check_circle, color: SSMPalette.teal, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Tous les frais applicables sont déjà soldés.',
-                    style: GoogleFonts.inter(fontSize: 13, color: _vert),
+                    style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.teal),
                   ),
                 ),
               ],
@@ -251,12 +271,8 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
           DropdownButtonFormField<FraisScolaire>(
             initialValue: _fraisSelectionne,
             isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Frais concerné *',
-              prefixIcon: Icon(Icons.category_outlined),
-              border: OutlineInputBorder(),
-            ),
-            hint: const Text('Choisir un frais'),
+            decoration: _decorationChamp('Frais concerné *', icone: Icons.category_outlined),
+            hint: Text('Choisir un frais', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3)),
             items: _frais.map((f) {
               return DropdownMenuItem<FraisScolaire>(
                 value: f,
@@ -274,11 +290,7 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
           DropdownButtonFormField<EcheanceFrais?>(
             initialValue: _echeanceSelectionnee,
             isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Échéance',
-              prefixIcon: Icon(Icons.layers_outlined),
-              border: OutlineInputBorder(),
-            ),
+            decoration: _decorationChamp('Échéance', icone: Icons.layers_outlined),
             items: [
               const DropdownMenuItem<EcheanceFrais?>(
                 value: null,
@@ -302,12 +314,8 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
         TextField(
           controller: _montantController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w600),
-          decoration: const InputDecoration(
-            labelText: 'Montant à payer (FCFA) *',
-            prefixIcon: Icon(Icons.payments_outlined),
-            border: OutlineInputBorder(),
-          ),
+          style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+          decoration: _decorationChamp('Montant à payer (FCFA) *', icone: Icons.payments_outlined),
         ),
         const SizedBox(height: 20),
         _titreSection('Mode de paiement'),
@@ -319,16 +327,17 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
             return ChoiceChip(
               selected: selectionne,
               onSelected: (_) => setState(() => _modePaiement = mode),
-              avatar: Icon(mode.icone, size: 16, color: selectionne ? Colors.white : _indigo),
+              avatar: Icon(mode.icone, size: 16, color: selectionne ? Colors.white : SSMPalette.indigo),
               label: Text(mode.libelle),
               labelStyle: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: selectionne ? Colors.white : _texte,
+                color: selectionne ? Colors.white : SSMPalette.texte2,
               ),
-              selectedColor: _indigo,
-              backgroundColor: const Color(0xFFF1F5F9),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              selectedColor: SSMPalette.indigo,
+              backgroundColor: const Color(0xFFF3F4F6),
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
             );
           }).toList(),
         ),
@@ -336,41 +345,18 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
           const SizedBox(height: 16),
           TextField(
             controller: _referenceController,
-            style: GoogleFonts.inter(fontSize: 14),
-            decoration: const InputDecoration(
-              labelText: 'Référence (optionnel)',
-              prefixIcon: Icon(Icons.confirmation_number_outlined),
-              border: OutlineInputBorder(),
-            ),
+            style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+            decoration: _decorationChamp('Référence (optionnel)', icone: Icons.confirmation_number_outlined),
           ),
         ],
         const SizedBox(height: 16),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.event, color: _indigo),
-          title: const Text('Date du paiement *'),
-          subtitle: Text(_formatDateCourt(_date)),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () async {
-            final choisie = await showDatePicker(
-              context: context,
-              initialDate: _date,
-              firstDate: DateTime(2020),
-              lastDate: DateTime(2100),
-            );
-            if (choisie != null) setState(() => _date = choisie);
-          },
-        ),
+        _ligneDate(),
         const SizedBox(height: 12),
         TextField(
           controller: _observationController,
           maxLines: 2,
-          style: GoogleFonts.inter(fontSize: 14),
-          decoration: const InputDecoration(
-            labelText: 'Observation (optionnel)',
-            prefixIcon: Icon(Icons.notes),
-            border: OutlineInputBorder(),
-          ),
+          style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+          decoration: _decorationChamp('Observation (optionnel)', icone: Icons.notes_outlined),
         ),
         const SizedBox(height: 20),
         if (_erreur != null)
@@ -378,14 +364,14 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: _rouge.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+              color: SSMPalette.rougeClair,
+              borderRadius: BorderRadius.circular(SSMRayons.moyen),
             ),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber, color: _rouge, size: 18),
+                const Icon(Icons.warning_amber, color: SSMPalette.rouge, size: 18),
                 const SizedBox(width: 8),
-                Expanded(child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: _rouge))),
+                Expanded(child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.rouge))),
               ],
             ),
           ),
@@ -393,10 +379,11 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
           width: double.infinity,
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: _indigo,
+              backgroundColor: SSMPalette.indigo,
               foregroundColor: Colors.white,
+              elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
             ),
             onPressed: _frais.isEmpty || _enregistrement ? null : _enregistrer,
             child: _enregistrement
@@ -412,12 +399,48 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
     );
   }
 
+  Widget _ligneDate() {
+    return Material(
+      color: const Color(0xFFF9FAFB),
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        onTap: () async {
+          final choisie = await showDatePicker(
+            context: context,
+            initialDate: _date,
+            firstDate: DateTime(2020),
+            lastDate: DateTime(2100),
+          );
+          if (choisie != null) setState(() => _date = choisie);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(SSMRayons.moyen), border: Border.all(color: const Color(0xFFE5E7EB))),
+          child: Row(
+            children: [
+              const Icon(Icons.event_outlined, size: 20, color: SSMPalette.indigo),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Date du paiement : ${_formatDateCourt(_date)}',
+                  style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 18, color: SSMPalette.texte3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _titreSection(String titre) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, top: 4),
       child: Text(
         titre.toUpperCase(),
-        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4),
+        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4),
       ),
     );
   }
@@ -436,24 +459,24 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
             Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(color: _vert.withValues(alpha: 0.12), shape: BoxShape.circle),
-              child: const Icon(Icons.check_circle, color: _vert, size: 40),
+              decoration: BoxDecoration(color: SSMPalette.tealClair, shape: BoxShape.circle),
+              child: const Icon(Icons.check_circle, color: SSMPalette.teal, size: 40),
             ),
             const SizedBox(height: 20),
             Text(
               'Paiement enregistré',
-              style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: _texteFonce),
+              style: GoogleFonts.sora(fontSize: 19, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
             ),
             const SizedBox(height: 8),
             Text(
               _formatMontant(paiement.montant),
-              style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.w700, color: _vert),
+              style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.w700, color: SSMPalette.teal),
             ),
             if (paiement.numeroRecu != null) ...[
               const SizedBox(height: 4),
               Text(
                 'Reçu ${paiement.numeroRecu}',
-                style: GoogleFonts.inter(fontSize: 13, color: _gris),
+                style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
               ),
             ],
             const SizedBox(height: 28),
@@ -466,7 +489,11 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: _reinitialiserFormulaire,
-                style: OutlinedButton.styleFrom(foregroundColor: _teal),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SSMPalette.teal,
+                  side: const BorderSide(color: SSMPalette.teal),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                ),
                 icon: const Icon(Icons.add),
                 label: Text('Nouveau paiement', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
               ),
@@ -476,10 +503,11 @@ class _NouveauPaiementScreenState extends State<NouveauPaiementScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _indigo,
+                  backgroundColor: SSMPalette.indigo,
                   foregroundColor: Colors.white,
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                 ),
                 onPressed: () => Navigator.pop(context, true),
                 child: const Text('Terminer'),

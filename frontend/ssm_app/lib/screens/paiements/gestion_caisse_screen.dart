@@ -1,18 +1,13 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/caisse_model.dart';
 import '../../services/caisse_service.dart';
 import '../../services/paiement_service.dart';
 import '../../services/auth_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 String _formatMontant(double m) {
   final entier = m.round();
@@ -35,6 +30,30 @@ String _formatDateHeure(DateTime? d) {
 
 String _formatDateApi(DateTime d) =>
     '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+InputDecoration _decorationChamp(String label, {String? hintText, String? suffixText}) {
+  return InputDecoration(
+    labelText: label,
+    hintText: hintText,
+    suffixText: suffixText,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    hintStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
 
 // ══════════════════════════════════════════════════════════
 // Écran principal — Gestion de caisse (directeur / secrétaire)
@@ -151,13 +170,13 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _vert),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -171,22 +190,19 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
     final nom = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Créer une caisse'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Créer une caisse', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: TextField(
           controller: controller,
           autofocus: true,
-          style: GoogleFonts.inter(fontSize: 15),
-          decoration: const InputDecoration(
-            labelText: 'Nom de la caisse',
-            hintText: 'Ex : Caisse principale',
-            border: OutlineInputBorder(),
-          ),
+          style: GoogleFonts.inter(fontSize: 15, color: SSMPalette.texte1),
+          decoration: _decorationChamp('Nom de la caisse', hintText: 'Ex : Caisse principale'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
             onPressed: () {
               if (controller.text.trim().isEmpty) return;
               Navigator.pop(context, controller.text.trim());
@@ -214,23 +230,20 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Ouvrir « ${caisse.nom} »'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Ouvrir « ${caisse.nom} »', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: TextField(
           controller: controller,
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w600),
-          decoration: const InputDecoration(
-            labelText: 'Montant initial (fond de caisse)',
-            suffixText: 'FCFA',
-            border: OutlineInputBorder(),
-          ),
+          style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+          decoration: _decorationChamp('Montant initial (fond de caisse)', suffixText: 'FCFA'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.teal, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Ouvrir la caisse'),
           ),
@@ -274,60 +287,70 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(title: const Text('Gestion de caisse')),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
-        child: !_accesAutorise
-            ? _vueAccesRefuse()
-            : _chargement
-                ? const Center(child: CircularProgressIndicator(color: _indigo))
-                : _erreur != null
-                    ? _vueErreur()
-                    : _caisses.isEmpty
-                        ? _vueCreerPremiereCaisse()
-                        : RefreshIndicator(
-                            onRefresh: _chargerCaisses,
-                            child: ListView(
-                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Caisses',
-                                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600, color: _texteFonce),
-                                    ),
-                                    TextButton.icon(
-                                      onPressed: _creerCaisseDialog,
-                                      icon: const Icon(Icons.add, size: 18),
-                                      label: const Text('Nouvelle caisse'),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 8),
-                                ..._caisses.map(_carteCaisse),
-                                if (_caisseSelectionneeId != null) ...[
-                                  const SizedBox(height: 24),
-                                  Text(
-                                    'Historique des sessions',
-                                    style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w600, color: _texteFonce),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  if (_chargementHistorique)
-                                    const Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(20),
-                                        child: CircularProgressIndicator(color: _indigo),
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Gestion de caisse', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: !_accesAutorise
+                  ? _vueAccesRefuse()
+                  : _chargement
+                      ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                      : _erreur != null
+                          ? _vueErreur()
+                          : _caisses.isEmpty
+                              ? _vueCreerPremiereCaisse()
+                              : RefreshIndicator(
+                                  onRefresh: _chargerCaisses,
+                                  color: SSMPalette.indigo,
+                                  child: ListView(
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Caisses',
+                                            style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+                                          ),
+                                          TextButton.icon(
+                                            onPressed: _creerCaisseDialog,
+                                            icon: const Icon(Icons.add, size: 18),
+                                            label: const Text('Nouvelle caisse'),
+                                          ),
+                                        ],
                                       ),
-                                    )
-                                  else if (_historique.isEmpty)
-                                    _messageVide('Aucune session clôturée pour cette caisse.')
-                                  else
-                                    ..._historique.map(_carteHistorique),
-                                ],
-                              ],
-                            ),
-                          ),
+                                      const SizedBox(height: 8),
+                                      ..._caisses.map(_carteCaisse),
+                                      if (_caisseSelectionneeId != null) ...[
+                                        const SizedBox(height: 12),
+                                        SSMPanel(
+                                          titre: 'Historique des sessions',
+                                          child: _chargementHistorique
+                                              ? const Padding(
+                                                  padding: EdgeInsets.all(20),
+                                                  child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+                                                )
+                                              : _historique.isEmpty
+                                                  ? _messageVide('Aucune session clôturée pour cette caisse.')
+                                                  : Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                                      children: [
+                                                        for (var i = 0; i < _historique.length; i++) ...[
+                                                          if (i > 0) const SizedBox(height: 10),
+                                                          _carteHistorique(_historique[i]),
+                                                        ],
+                                                      ],
+                                                    ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -339,12 +362,12 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline, color: _gris, size: 40),
+            Icon(Icons.lock_outline, color: SSMPalette.texte3, size: 40),
             const SizedBox(height: 12),
             Text(
               'Accès réservé au directeur et à la secrétaire.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: _texte),
+              style: GoogleFonts.inter(color: SSMPalette.texte2),
             ),
           ],
         ),
@@ -359,13 +382,13 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _initialiser,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -376,8 +399,8 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
 
   Widget _messageVide(String message) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(child: Text(message, style: GoogleFonts.inter(color: _gris))),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Center(child: Text(message, style: GoogleFonts.inter(color: SSMPalette.texte3))),
     );
   }
 
@@ -390,29 +413,25 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.point_of_sale, color: _indigo, size: 48),
+            Icon(Icons.point_of_sale, color: SSMPalette.indigo, size: 48),
             const SizedBox(height: 16),
             Text(
               'Aucune caisse créée',
-              style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _texteFonce),
+              style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
             ),
             const SizedBox(height: 6),
             Text(
               'Créez une première caisse pour commencer à suivre les sessions d\'encaissement.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(fontSize: 13, color: _texte),
+              style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
             ),
             const SizedBox(height: 20),
             SizedBox(
               width: 280,
               child: TextField(
                 controller: controller,
-                style: GoogleFonts.inter(fontSize: 15),
-                decoration: const InputDecoration(
-                  labelText: 'Nom de la caisse',
-                  hintText: 'Ex : Caisse principale',
-                  border: OutlineInputBorder(),
-                ),
+                style: GoogleFonts.inter(fontSize: 15, color: SSMPalette.texte1),
+                decoration: _decorationChamp('Nom de la caisse', hintText: 'Ex : Caisse principale'),
               ),
             ),
             const SizedBox(height: 14),
@@ -429,7 +448,12 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
               },
               icon: const Icon(Icons.add),
               label: const Text('Créer la caisse'),
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SSMPalette.indigo,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+              ),
             ),
           ],
         ),
@@ -446,93 +470,104 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
     final estOuverte = session != null;
     final estSelectionnee = _caisseSelectionneeId == caisse.id;
 
-    return GestureDetector(
-      onTap: () => _selectionnerCaisse(caisse.id!),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: estSelectionnee ? _indigo.withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.6),
-                width: estSelectionnee ? 1.5 : 1,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(SSMRayons.grand + 2),
+          border: estSelectionnee ? Border.all(color: SSMPalette.indigo, width: 2) : null,
+        ),
+        padding: EdgeInsets.all(estSelectionnee ? 2 : 0),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(SSMRayons.grand),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            onTap: () => _selectionnerCaisse(caisse.id!),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: SSMPalette.blanc,
+                borderRadius: BorderRadius.circular(SSMRayons.grand),
+                border: Border.all(color: SSMPalette.bordure),
               ),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 4)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: (estOuverte ? _vert : _gris).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: (estOuverte ? SSMPalette.teal : SSMPalette.texte3).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                        ),
+                        child: Icon(Icons.point_of_sale, color: estOuverte ? SSMPalette.teal : SSMPalette.texte3, size: 20),
                       ),
-                      child: Icon(Icons.point_of_sale, color: estOuverte ? _vert : _gris, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              caisse.nom,
+                              style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+                            ),
+                            const SizedBox(height: 4),
+                            SSMPill.couleur(label: estOuverte ? 'Ouverte' : 'Fermée', couleur: estOuverte ? SSMPalette.teal : SSMPalette.texte3),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (estOuverte) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            caisse.nom,
-                            style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce),
-                          ),
+                          _ligneInfo('Fond de caisse', _formatMontant(session.montantInitial), mono: true),
                           const SizedBox(height: 4),
-                          _badgePilule(estOuverte ? 'Ouverte' : 'Fermée', estOuverte ? _vert : _gris),
+                          _ligneInfo('Ouverte le', _formatDateHeure(session.dateOuverture)),
+                          if (session.ouvertParNom != null) ...[
+                            const SizedBox(height: 4),
+                            _ligneInfo('Ouverte par', session.ouvertParNom!),
+                          ],
                         ],
                       ),
                     ),
                   ],
-                ),
-                if (estOuverte) ...[
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _ligneInfo('Fond de caisse', _formatMontant(session.montantInitial), mono: true),
-                        const SizedBox(height: 4),
-                        _ligneInfo('Ouverte le', _formatDateHeure(session.dateOuverture)),
-                        if (session.ouvertParNom != null) ...[
-                          const SizedBox(height: 4),
-                          _ligneInfo('Ouverte par', session.ouvertParNom!),
-                        ],
-                      ],
-                    ),
+                  SizedBox(
+                    width: double.infinity,
+                    child: estOuverte
+                        ? OutlinedButton.icon(
+                            onPressed: () => _fermerCaisseDialog(session),
+                            icon: const Icon(Icons.lock_outline, size: 18),
+                            label: const Text('Fermer la caisse'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: SSMPalette.rouge,
+                              side: const BorderSide(color: SSMPalette.rouge),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                            ),
+                          )
+                        : ElevatedButton.icon(
+                            onPressed: () => _ouvrirCaisseDialog(caisse),
+                            icon: const Icon(Icons.lock_open, size: 18),
+                            label: const Text('Ouvrir la caisse'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: SSMPalette.teal,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                            ),
+                          ),
                   ),
                 ],
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: estOuverte
-                      ? OutlinedButton.icon(
-                          onPressed: () => _fermerCaisseDialog(session),
-                          icon: const Icon(Icons.lock_outline, size: 18),
-                          label: const Text('Fermer la caisse'),
-                          style: OutlinedButton.styleFrom(foregroundColor: _rouge, side: const BorderSide(color: _rouge)),
-                        )
-                      : ElevatedButton.icon(
-                          onPressed: () => _ouvrirCaisseDialog(caisse),
-                          icon: const Icon(Icons.lock_open, size: 18),
-                          label: const Text('Ouvrir la caisse'),
-                          style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white),
-                        ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -544,41 +579,32 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+        Text(label, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
         Text(
           valeur,
           style: mono
-              ? GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: _texteFonce)
-              : GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texte),
+              ? GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)
+              : GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte2),
         ),
       ],
     );
   }
 
-  Widget _badgePilule(String label, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur)),
-    );
-  }
-
   // ══════════════════════════════════════════════════════
-  // Historique des sessions
+  // Historique des sessions — teal si écart nul, ambre sinon (cohérent avec
+  // le dialog de fermeture, qui utilisait déjà ce même code couleur).
   // ══════════════════════════════════════════════════════
 
   Widget _carteHistorique(SessionCaisse s) {
     final ecart = s.ecart ?? 0;
     final ecartNul = ecart.abs() < 0.01;
-    final couleurEcart = ecartNul ? _vert : _rouge;
+    final couleurEcart = ecartNul ? SSMPalette.teal : SSMPalette.ambre;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,12 +614,12 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
               Expanded(
                 child: Text(
                   '${_formatDateHeure(s.dateOuverture)} → ${_formatDateHeure(s.dateFermeture)}',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texteFonce),
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                 ),
               ),
-              _badgePilule(
-                ecartNul ? 'Écart nul' : 'Écart ${ecart > 0 ? '+' : ''}${_formatMontant(ecart)}',
-                couleurEcart,
+              SSMPill.couleur(
+                label: ecartNul ? 'Écart nul' : 'Écart ${ecart > 0 ? '+' : ''}${_formatMontant(ecart)}',
+                couleur: couleurEcart,
               ),
             ],
           ),
@@ -607,13 +633,13 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
           ),
           if (s.fermeParNom != null) ...[
             const SizedBox(height: 8),
-            Text('Fermée par ${s.fermeParNom}', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+            Text('Fermée par ${s.fermeParNom}', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
           ],
           if (s.observationFermeture != null && s.observationFermeture!.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               'Observation : ${s.observationFermeture}',
-              style: GoogleFonts.inter(fontSize: 11, color: _texte, fontStyle: FontStyle.italic),
+              style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2, fontStyle: FontStyle.italic),
             ),
           ],
         ],
@@ -625,11 +651,11 @@ class _GestionCaisseScreenState extends State<GestionCaisseScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 10, color: _gris)),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
         const SizedBox(height: 2),
         Text(
           _formatMontant(montant),
-          style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _texteFonce),
+          style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
         ),
       ],
     );
@@ -736,10 +762,12 @@ class _DialogFermetureCaisseState extends State<_DialogFermetureCaisse> {
   @override
   Widget build(BuildContext context) {
     final ecart = _ecart;
-    final couleurEcart = ecart == null ? _gris : (ecart.abs() < 0.01 ? _vert : _ambre);
+    // Cohérent avec l'historique des sessions : teal (0) / ambre (différent).
+    final couleurEcart = ecart == null ? SSMPalette.texte3 : (ecart.abs() < 0.01 ? SSMPalette.teal : SSMPalette.ambre);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: SSMPalette.blanc,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 420),
         child: Padding(
@@ -751,11 +779,11 @@ class _DialogFermetureCaisseState extends State<_DialogFermetureCaisse> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.lock_outline, color: _rouge, size: 22),
+                    const Icon(Icons.lock_outline, color: SSMPalette.rouge, size: 22),
                     const SizedBox(width: 8),
                     Text(
                       'Fermer la caisse',
-                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _texteFonce),
+                      style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                     ),
                   ],
                 ),
@@ -764,40 +792,38 @@ class _DialogFermetureCaisseState extends State<_DialogFermetureCaisse> {
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(12)),
+                  decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Montant théorique estimé', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                      Text('Montant théorique estimé', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
                       const SizedBox(height: 4),
                       _chargementEstimation
                           ? const SizedBox(
                               height: 22,
                               width: 22,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo),
                             )
                           : Text(
                               _formatMontant(_montantTheoriqueEstime ?? 0),
-                              style: GoogleFonts.jetBrainsMono(fontSize: 20, fontWeight: FontWeight.w700, color: _texteFonce),
+                              style: GoogleFonts.jetBrainsMono(fontSize: 20, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
                             ),
                       const SizedBox(height: 4),
                       Text(
                         'Fond initial + paiements espèces depuis l\'ouverture — le montant définitif est recalculé à la confirmation.',
-                        style: GoogleFonts.inter(fontSize: 10, color: _gris, fontStyle: FontStyle.italic),
+                        style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3, fontStyle: FontStyle.italic),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
 
-                Text('Montant réel compté *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texte)),
-                const SizedBox(height: 6),
                 TextField(
                   controller: _montantReelController,
                   autofocus: true,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: GoogleFonts.jetBrainsMono(fontSize: 17, fontWeight: FontWeight.w700),
-                  decoration: const InputDecoration(suffixText: 'FCFA', border: OutlineInputBorder()),
+                  style: GoogleFonts.jetBrainsMono(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+                  decoration: _decorationChamp('Montant réel compté *', suffixText: 'FCFA'),
                 ),
                 const SizedBox(height: 12),
 
@@ -807,7 +833,7 @@ class _DialogFermetureCaisseState extends State<_DialogFermetureCaisse> {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: couleurEcart.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(SSMRayons.moyen),
                       border: Border.all(color: couleurEcart.withValues(alpha: 0.4)),
                     ),
                     child: Row(
@@ -827,18 +853,16 @@ class _DialogFermetureCaisseState extends State<_DialogFermetureCaisse> {
                   ),
                 const SizedBox(height: 14),
 
-                Text('Observation (optionnel)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texte)),
-                const SizedBox(height: 6),
                 TextField(
                   controller: _observationController,
                   maxLines: 2,
-                  style: GoogleFonts.inter(fontSize: 14),
-                  decoration: const InputDecoration(hintText: 'Remarque sur la clôture…', border: OutlineInputBorder()),
+                  style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+                  decoration: _decorationChamp('Observation (optionnel)', hintText: 'Remarque sur la clôture…'),
                 ),
 
                 if (_erreur != null) ...[
                   const SizedBox(height: 10),
-                  Text(_erreur!, style: GoogleFonts.inter(fontSize: 12, color: _rouge)),
+                  Text(_erreur!, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.rouge)),
                 ],
 
                 const SizedBox(height: 18),
@@ -847,12 +871,12 @@ class _DialogFermetureCaisseState extends State<_DialogFermetureCaisse> {
                   children: [
                     TextButton(
                       onPressed: _envoiEnCours ? null : () => Navigator.pop(context),
-                      child: const Text('Annuler'),
+                      child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: _envoiEnCours ? null : _confirmer,
-                      style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
                       child: _envoiEnCours
                           ? const SizedBox(
                               width: 18,

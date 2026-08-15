@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -9,18 +8,18 @@ import 'package:share_plus/share_plus.dart';
 import '../../models/rapport_paiement_model.dart';
 import '../../services/rapport_paiement_service.dart';
 import '../../services/annee_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
+// Violet — 5ème couleur du cycle "mode de paiement", absente de SSMPalette
+// (4 couleurs de marque seulement) mais nécessaire ici pour distinguer
+// jusqu'à 5 modes de paiement sur le camembert.
 const Color _violet = Color(0xFF7C3AED);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
-const List<Color> _paletteModes = [_teal, _indigo, _ambre, _vert, _violet];
+const List<Color> _paletteModes = [SSMPalette.teal, SSMPalette.indigo, SSMPalette.ambre, SSMPalette.rouge, _violet];
 
 const List<String> _moisFrancais = [
   'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
@@ -43,6 +42,27 @@ String _formatDateApi(DateTime d) =>
 
 String _formatDateCourt(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+InputDecoration _decorationChamp(String label) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
 
 enum _TypeRapportSelection {
   journalier('journalier', 'Journalier', Icons.today),
@@ -184,7 +204,7 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
@@ -227,16 +247,17 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
   Future<void> _proposerOuvrirOuPartager(File fichier) async {
     await showModalBottomSheet<void>(
       context: context,
+      backgroundColor: SSMPalette.blanc,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            Text('Fichier généré', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce)),
+            Text('Fichier généré', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.open_in_new, color: _indigo),
+              leading: const Icon(Icons.open_in_new, color: SSMPalette.indigo),
               title: const Text('Ouvrir'),
               onTap: () {
                 Navigator.pop(context);
@@ -244,7 +265,7 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
               },
             ),
             ListTile(
-              leading: const Icon(Icons.ios_share, color: _teal),
+              leading: const Icon(Icons.ios_share, color: SSMPalette.teal),
               title: const Text('Partager'),
               onTap: () {
                 Navigator.pop(context);
@@ -303,46 +324,53 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(title: const Text('Rapports de paiements')),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: _genererRapport,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-            children: [
-              _selecteurType(),
-              const SizedBox(height: 12),
-              _selecteurDate(),
-              const SizedBox(height: 16),
-              if (_chargementRapport)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: CircularProgressIndicator(color: _indigo)),
-                )
-              else if (_erreur != null)
-                _vueErreur()
-              else if (_rapport != null) ...[
-                _cartesResume(_rapport!),
-                const SizedBox(height: 16),
-                if (_rapport!.ventilationParMode.isNotEmpty) ...[
-                  _carteVentilationMode(_rapport!),
-                  const SizedBox(height: 16),
-                ],
-                if (_rapport!.ventilationParClasse.isNotEmpty) ...[
-                  _carteVentilationClasse(_rapport!),
-                  const SizedBox(height: 16),
-                ],
-                if (_rapport!.evolutionMensuelle.isNotEmpty) ...[
-                  _carteEvolutionMensuelle(_rapport!),
-                  const SizedBox(height: 16),
-                ],
-                _carteDetail(_rapport!),
-                const SizedBox(height: 20),
-                _boutonsExport(),
-              ],
-            ],
-          ),
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Rapports de paiements', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _genererRapport,
+                color: SSMPalette.indigo,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                  children: [
+                    _selecteurType(),
+                    const SizedBox(height: 12),
+                    _selecteurDate(),
+                    const SizedBox(height: 16),
+                    if (_chargementRapport)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+                      )
+                    else if (_erreur != null)
+                      _vueErreur()
+                    else if (_rapport != null) ...[
+                      _cartesResume(_rapport!),
+                      const SizedBox(height: 16),
+                      if (_rapport!.ventilationParMode.isNotEmpty) ...[
+                        _carteVentilationMode(_rapport!),
+                        const SizedBox(height: 16),
+                      ],
+                      if (_rapport!.ventilationParClasse.isNotEmpty) ...[
+                        _carteVentilationClasse(_rapport!),
+                        const SizedBox(height: 16),
+                      ],
+                      if (_rapport!.evolutionMensuelle.isNotEmpty) ...[
+                        _carteEvolutionMensuelle(_rapport!),
+                        const SizedBox(height: 16),
+                      ],
+                      _carteDetail(_rapport!),
+                      const SizedBox(height: 20),
+                      _boutonsExport(),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -355,13 +383,13 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _genererRapport,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -380,7 +408,7 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _TypeRapportSelection.values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final type = _TypeRapportSelection.values[i];
           final selectionne = type == _type;
@@ -394,16 +422,16 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
               });
               _genererRapport();
             },
-            avatar: Icon(type.icone, size: 16, color: selectionne ? Colors.white : _indigo),
+            avatar: Icon(type.icone, size: 16, color: selectionne ? Colors.white : SSMPalette.indigo),
             label: Text(type.libelle),
             labelStyle: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: selectionne ? Colors.white : _texte,
+              color: selectionne ? Colors.white : SSMPalette.texte2,
             ),
-            selectedColor: _indigo,
-            backgroundColor: Colors.white,
-            side: BorderSide(color: selectionne ? _indigo : const Color(0xFFE2E8F0)),
+            selectedColor: SSMPalette.indigo,
+            backgroundColor: SSMPalette.blanc,
+            side: BorderSide(color: selectionne ? SSMPalette.indigo : SSMPalette.bordure),
           );
         },
       ),
@@ -434,8 +462,8 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
           children: [
             Expanded(
               child: DropdownButtonFormField<int>(
-                value: _moisMensuel,
-                decoration: const InputDecoration(labelText: 'Mois', border: OutlineInputBorder()),
+                initialValue: _moisMensuel,
+                decoration: _decorationChamp('Mois'),
                 items: [
                   for (var m = 1; m <= 12; m++)
                     DropdownMenuItem(value: m, child: Text(_moisFrancais[m - 1])),
@@ -451,8 +479,8 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
             SizedBox(
               width: 110,
               child: DropdownButtonFormField<int>(
-                value: _anneeMensuel,
-                decoration: const InputDecoration(labelText: 'Année', border: OutlineInputBorder()),
+                initialValue: _anneeMensuel,
+                decoration: _decorationChamp('Année'),
                 items: [
                   for (var a = DateTime.now().year; a >= DateTime.now().year - 5; a--)
                     DropdownMenuItem(value: a, child: Text('$a')),
@@ -468,12 +496,12 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
         );
       case _TypeRapportSelection.annuel:
         if (_chargementAnnees) {
-          return const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2)));
+          return const Center(child: Padding(padding: EdgeInsets.all(8), child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)));
         }
         return DropdownButtonFormField<int>(
-          value: _anneeScolaireId,
+          initialValue: _anneeScolaireId,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Année scolaire', border: OutlineInputBorder()),
+          decoration: _decorationChamp('Année scolaire'),
           items: _annees
               .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'].toString())))
               .toList(),
@@ -495,25 +523,28 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
   }
 
   Widget _champSelection({required IconData icone, required String texte, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF94A3B8)),
-        ),
-        child: Row(
-          children: [
-            Icon(icone, size: 18, color: _indigo),
-            const SizedBox(width: 10),
-            Text(texte, style: GoogleFonts.inter(fontSize: 14, color: _texteFonce)),
-            const Spacer(),
-            const Icon(Icons.edit_calendar_outlined, size: 16, color: _gris),
-          ],
+    return Material(
+      color: const Color(0xFFF9FAFB),
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.moyen),
+            border: Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          child: Row(
+            children: [
+              Icon(icone, size: 18, color: SSMPalette.indigo),
+              const SizedBox(width: 10),
+              Text(texte, style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1)),
+              const Spacer(),
+              Icon(Icons.edit_calendar_outlined, size: 16, color: SSMPalette.texte3),
+            ],
+          ),
         ),
       ),
     );
@@ -524,48 +555,29 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _cartesResume(RapportPaiement r) {
-    final cards = <Widget>[
-      _carteStat('Transactions', '${r.nombrePaiements}', Icons.receipt_long_outlined, _indigo),
-      _carteStat('Total encaissé', _formatMontant(r.totalEncaisse), Icons.payments_outlined, _teal),
+    final cartes = <Widget>[
+      SSMStatCard(icone: Icons.receipt_long_outlined, couleur: SSMPalette.indigo, valeur: '${r.nombrePaiements}', label: 'Transactions'),
+      SSMStatCard(icone: Icons.payments_outlined, couleur: SSMPalette.teal, valeur: _formatMontant(r.totalEncaisse), label: 'Total encaissé'),
     ];
     if (r.resteARecouvrer != null) {
-      cards.add(_carteStat('Reste à recouvrer', _formatMontant(r.resteARecouvrer!), Icons.error_outline, _rouge));
+      cartes.add(SSMStatCard(icone: Icons.error_outline, couleur: SSMPalette.rouge, valeur: _formatMontant(r.resteARecouvrer!), label: 'Reste à recouvrer'));
     }
 
-    return Row(
-      children: [
-        for (var i = 0; i < cards.length; i++) ...[
-          if (i > 0) const SizedBox(width: 10),
-          Expanded(child: cards[i]),
-        ],
-      ],
-    );
-  }
-
-  Widget _carteStat(String titre, String valeur, IconData icone, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icone, color: couleur, size: 20),
-          const SizedBox(height: 8),
-          Text(
-            valeur,
-            style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Text(titre, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
-        ],
-      ),
-    );
+    return LayoutBuilder(builder: (context, contraintes) {
+      final colonnes = contraintes.maxWidth >= 520 ? cartes.length : 1;
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: cartes.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: colonnes,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          mainAxisExtent: 118,
+        ),
+        itemBuilder: (context, i) => cartes[i],
+      );
+    });
   }
 
   // ══════════════════════════════════════════════════════
@@ -576,16 +588,11 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
     final entrees = r.ventilationParMode.entries.where((e) => e.value > 0).toList();
     final total = entrees.fold<double>(0, (t, e) => t + e.value);
 
-    return _carteGlass(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Ventilation par mode de paiement', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce)),
-          const SizedBox(height: 16),
-          if (entrees.isEmpty)
-            Center(child: Text('Aucune donnée', style: GoogleFonts.inter(color: _gris)))
-          else
-            SizedBox(
+    return SSMPanel(
+      titre: 'Ventilation par mode de paiement',
+      child: entrees.isEmpty
+          ? Center(child: Text('Aucune donnée', style: GoogleFonts.inter(color: SSMPalette.texte3)))
+          : SizedBox(
               height: 190,
               child: Row(
                 children: [
@@ -622,9 +629,9 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
                               Container(width: 10, height: 10, decoration: BoxDecoration(color: _paletteModes[i % _paletteModes.length], shape: BoxShape.circle)),
                               const SizedBox(width: 8),
                               Expanded(
-                                child: Text(e.key, style: GoogleFonts.inter(fontSize: 12, color: _texte), overflow: TextOverflow.ellipsis),
+                                child: Text(e.key, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2), overflow: TextOverflow.ellipsis),
                               ),
-                              Text('${pct.toStringAsFixed(0)}%', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w700, color: _texteFonce)),
+                              Text('${pct.toStringAsFixed(0)}%', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
                             ],
                           ),
                         );
@@ -634,8 +641,6 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
                 ],
               ),
             ),
-        ],
-      ),
     );
   }
 
@@ -647,79 +652,73 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
     final entrees = r.ventilationParClasse.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
     final maxY = entrees.isEmpty ? 100.0 : entrees.map((e) => e.value).reduce((a, b) => a > b ? a : b) * 1.2;
 
-    return _carteGlass(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Ventilation par classe', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce)),
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 220,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: maxY <= 0 ? 10 : maxY,
-                barTouchData: BarTouchData(
-                  enabled: true,
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => _indigo,
-                    getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
-                      _formatMontant(rod.toY),
-                      const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+    return SSMPanel(
+      titre: 'Ventilation par classe',
+      child: SizedBox(
+        height: 220,
+        child: BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceAround,
+            maxY: maxY <= 0 ? 10 : maxY,
+            barTouchData: BarTouchData(
+              enabled: true,
+              touchTooltipData: BarTouchTooltipData(
+                getTooltipColor: (_) => SSMPalette.indigo,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
+                  _formatMontant(rod.toY),
+                  const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
                 ),
-                barGroups: [
-                  for (var i = 0; i < entrees.length; i++)
-                    BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: entrees[i].value,
-                          width: 18,
-                          borderRadius: BorderRadius.circular(4),
-                          gradient: const LinearGradient(colors: [_indigo, _teal], begin: Alignment.topCenter, end: Alignment.bottomCenter),
-                        ),
-                      ],
+              ),
+            ),
+            barGroups: [
+              for (var i = 0; i < entrees.length; i++)
+                BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: entrees[i].value,
+                      width: 18,
+                      borderRadius: BorderRadius.circular(4),
+                      gradient: const LinearGradient(colors: [SSMPalette.indigo, SSMPalette.teal], begin: Alignment.topCenter, end: Alignment.bottomCenter),
                     ),
-                ],
-                gridData: FlGridData(
-                  drawVerticalLine: false,
-                  horizontalInterval: (maxY <= 0 ? 10 : maxY) / 4,
-                  getDrawingHorizontalLine: (v) => FlLine(color: _texteFonce.withValues(alpha: 0.04), strokeWidth: 1),
+                  ],
                 ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 44,
-                      getTitlesWidget: (value, meta) => Text('${(value / 1000).toStringAsFixed(0)}k', style: GoogleFonts.inter(fontSize: 9, color: _gris)),
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 46,
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= entrees.length) return const SizedBox();
-                        final libelle = entrees[i].key;
-                        final court = libelle.length > 8 ? '${libelle.substring(0, 7)}…' : libelle;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Transform.rotate(angle: -0.5, child: Text(court, style: GoogleFonts.inter(fontSize: 9, color: _texte))),
-                        );
-                      },
-                    ),
-                  ),
+            ],
+            gridData: FlGridData(
+              drawVerticalLine: false,
+              horizontalInterval: (maxY <= 0 ? 10 : maxY) / 4,
+              getDrawingHorizontalLine: (v) => FlLine(color: SSMPalette.texte1.withValues(alpha: 0.04), strokeWidth: 1),
+            ),
+            borderData: FlBorderData(show: false),
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 44,
+                  getTitlesWidget: (value, meta) => Text('${(value / 1000).toStringAsFixed(0)}k', style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte3)),
+                ),
+              ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 46,
+                  getTitlesWidget: (value, meta) {
+                    final i = value.toInt();
+                    if (i < 0 || i >= entrees.length) return const SizedBox();
+                    final libelle = entrees[i].key;
+                    final court = libelle.length > 8 ? '${libelle.substring(0, 7)}…' : libelle;
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Transform.rotate(angle: -0.5, child: Text(court, style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte2))),
+                    );
+                  },
                 ),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -729,23 +728,22 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _carteEvolutionMensuelle(RapportPaiement r) {
-    return _carteGlass(
+    return SSMPanel(
+      titre: 'Évolution mensuelle',
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Évolution mensuelle', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce)),
-          const SizedBox(height: 12),
-          ...r.evolutionMensuelle.map((m) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(m.libelle, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                    Text(_formatMontant(m.montant), style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _texteFonce)),
-                  ],
-                ),
-              )),
-        ],
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: r.evolutionMensuelle
+            .map((m) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(m.libelle, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                      Text(_formatMontant(m.montant), style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+                    ],
+                  ),
+                ))
+            .toList(),
       ),
     );
   }
@@ -756,37 +754,38 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
 
   Widget _carteDetail(RapportPaiement r) {
     if (r.transactions.isNotEmpty) {
-      return _carteGlass(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Transactions (${r.transactions.length})', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce)),
-            const SizedBox(height: 10),
-            ...r.transactions.map(_ligneTransaction),
+      return SSMPanel(
+        titre: 'Transactions (${r.transactions.length})',
+        padding: EdgeInsets.zero,
+        child: SSMDataTable(
+          colonnes: const [
+            SSMDataColumn('Élève'),
+            SSMDataColumn('Référence'),
+            SSMDataColumn('Montant'),
           ],
+          lignes: [for (final t in r.transactions) _ligneTransaction(t)],
         ),
       );
     }
 
     if (r.parJour.isNotEmpty) {
-      return _carteGlass(
+      return SSMPanel(
+        titre: 'Détail par jour',
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Détail par jour', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce)),
-            const SizedBox(height: 10),
-            ...r.parJour.map((j) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(j.libelle, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                      Text('${j.nombrePaiements} paiement(s) · ${_formatMontant(j.totalEncaisse)}',
-                          style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: _texteFonce)),
-                    ],
-                  ),
-                )),
-          ],
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: r.parJour
+              .map((j) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(j.libelle, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                        Text('${j.nombrePaiements} paiement(s) · ${_formatMontant(j.totalEncaisse)}',
+                            style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                      ],
+                    ),
+                  ))
+              .toList(),
         ),
       );
     }
@@ -794,30 +793,15 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
     return const SizedBox.shrink();
   }
 
-  Widget _ligneTransaction(TransactionResume t) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(10)),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(t.eleve, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
-                const SizedBox(height: 2),
-                Text(
-                  [t.numeroRecu, t.classe ?? t.fraisNom].whereType<String>().join(' · '),
-                  style: GoogleFonts.inter(fontSize: 11, color: _gris),
-                ),
-              ],
-            ),
-          ),
-          Text(_formatMontant(t.montant), style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: _texteFonce)),
-        ],
+  List<Widget> _ligneTransaction(TransactionResume t) {
+    return [
+      Text(t.eleve, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+      Text(
+        [t.numeroRecu, t.classe ?? t.fraisNom].whereType<String>().join(' · '),
+        style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
       ),
-    );
+      Text(_formatMontant(t.montant), style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+    ];
   }
 
   // ══════════════════════════════════════════════════════
@@ -834,7 +818,12 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.picture_as_pdf_outlined, size: 18),
             label: const Text('Exporter PDF'),
-            style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SSMPalette.rouge,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+            ),
           ),
         ),
         const SizedBox(width: 10),
@@ -845,28 +834,15 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
                 ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.grid_on_outlined, size: 18),
             label: const Text('Exporter Excel'),
-            style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SSMPalette.teal,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+            ),
           ),
         ),
       ],
-    );
-  }
-
-  Widget _carteGlass({required Widget child}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
-          ),
-          child: child,
-        ),
-      ),
     );
   }
 }

@@ -1,19 +1,14 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../models/rapport_paiement_model.dart';
 import '../../services/rapport_paiement_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import '../eleves/situation_financiere_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 String _formatMontant(double m) {
   final entier = m.round();
@@ -78,7 +73,7 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
@@ -136,33 +131,41 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
-        child: _chargement
-            ? const Center(child: CircularProgressIndicator(color: _indigo))
-            : _erreur != null
-                ? _vueErreur()
-                : RefreshIndicator(
-                    onRefresh: _charger,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                      children: [
-                        _enTete(),
-                        const SizedBox(height: 16),
-                        _boutonsExport(),
-                        const SizedBox(height: 20),
-                        Text(
-                          'Élèves non en règle (${_impayes.length})',
-                          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: _texteFonce),
+        child: Column(
+          children: [
+            _entete(),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _vueErreur()
+                      : RefreshIndicator(
+                          onRefresh: _charger,
+                          color: SSMPalette.indigo,
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                            children: [
+                              _boutonsExport(),
+                              const SizedBox(height: 20),
+                              Text(
+                                'Élèves non en règle (${_impayes.length})',
+                                style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+                              ),
+                              const SizedBox(height: 12),
+                              if (_impayes.isEmpty)
+                                _messageVide('Tous les élèves de cette classe sont en règle. 🎉')
+                              else
+                                LayoutBuilder(builder: (context, contraintes) {
+                                  return contraintes.maxWidth >= 620 ? _tableImpayes() : _listeCartes();
+                                }),
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 12),
-                        if (_impayes.isEmpty)
-                          _messageVide('Tous les élèves de cette classe sont en règle. 🎉')
-                        else
-                          ..._impayes.map(_carteEleve),
-                      ],
-                    ),
-                  ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -174,14 +177,13 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -193,7 +195,7 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
   Widget _messageVide(String message) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 30),
-      child: Center(child: Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _gris))),
+      child: Center(child: Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte3))),
     );
   }
 
@@ -201,49 +203,23 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
   // EN-TÊTE
   // ══════════════════════════════════════════════════════
 
-  Widget _enTete() {
+  Widget _entete() {
     final s = _situation;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [_indigo, _teal], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return SSMSousEnTete(
+      titre: widget.classeNom,
+      sousTitre: 'Impayés',
+      onRetour: () => Navigator.pop(context),
+      complement: s == null
+          ? null
+          : Row(
               children: [
-                Text('Impayés', style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.7))),
-                const SizedBox(height: 4),
-                Text(
-                  widget.classeNom,
-                  style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                if (s != null) ...[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _statEnTete('Attendu', _formatMontant(s.montantAttendu)),
-                      const SizedBox(width: 16),
-                      _statEnTete('Encaissé', _formatMontant(s.montantEncaisse)),
-                      const SizedBox(width: 16),
-                      _statEnTete('Reste', _formatMontant(s.resteARecouvrer)),
-                    ],
-                  ),
-                ],
+                _statEnTete('Attendu', _formatMontant(s.montantAttendu)),
+                const SizedBox(width: 16),
+                _statEnTete('Encaissé', _formatMontant(s.montantEncaisse)),
+                const SizedBox(width: 16),
+                _statEnTete('Reste', _formatMontant(s.resteARecouvrer)),
               ],
             ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -251,8 +227,8 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 10, color: Colors.white.withValues(alpha: 0.7))),
-        Text(valeur, style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.white)),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
+        Text(valeur, style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
       ],
     );
   }
@@ -264,10 +240,14 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
           child: OutlinedButton.icon(
             onPressed: _exportPdfEnCours ? null : () => _exporter('pdf'),
             icon: _exportPdfEnCours
-                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: _rouge))
+                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.rouge))
                 : const Icon(Icons.picture_as_pdf_outlined, size: 16),
             label: const Text('Exporter PDF'),
-            style: OutlinedButton.styleFrom(foregroundColor: _rouge, side: const BorderSide(color: _rouge)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: SSMPalette.rouge,
+              side: const BorderSide(color: SSMPalette.rouge),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+            ),
           ),
         ),
         const SizedBox(width: 10),
@@ -275,10 +255,14 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
           child: OutlinedButton.icon(
             onPressed: _exportExcelEnCours ? null : () => _exporter('excel'),
             icon: _exportExcelEnCours
-                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: _teal))
+                ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.teal))
                 : const Icon(Icons.grid_on_outlined, size: 16),
             label: const Text('Exporter Excel'),
-            style: OutlinedButton.styleFrom(foregroundColor: _teal, side: const BorderSide(color: _teal)),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: SSMPalette.teal,
+              side: const BorderSide(color: SSMPalette.teal),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+            ),
           ),
         ),
       ],
@@ -286,59 +270,89 @@ class _ImpayesClasseScreenState extends State<ImpayesClasseScreen> {
   }
 
   // ══════════════════════════════════════════════════════
-  // Carte élève
+  // TABLEAU (desktop large)
   // ══════════════════════════════════════════════════════
 
+  Widget _tableImpayes() {
+    return SSMDataTable(
+      colonnes: const [
+        SSMDataColumn('Élève'),
+        SSMDataColumn('Matricule'),
+        SSMDataColumn('Reste à payer'),
+      ],
+      onLigneTap: (i) => _voirFicheEleve(_impayes[i]),
+      lignes: [
+        for (final e in _impayes)
+          [
+            Text(e.nomComplet, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+            Text(e.matricule ?? '—', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: SSMPalette.texte2)),
+            Text(_formatMontant(e.resteAPayer), style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.rouge)),
+          ],
+      ],
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // CARTES (mobile / tablette étroite)
+  // ══════════════════════════════════════════════════════
+
+  Widget _listeCartes() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [for (final e in _impayes) _carteEleve(e)],
+    );
+  }
+
   Widget _carteEleve(ImpayeClasse eleve) {
-    return GestureDetector(
-      onTap: () => _voirFicheEleve(eleve),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(14),
-              border: const Border(left: BorderSide(color: _rouge, width: 4)),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
-              ],
+    return Material(
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => _voirFicheEleve(eleve),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border(
+              top: BorderSide(color: SSMPalette.bordure),
+              right: BorderSide(color: SSMPalette.bordure),
+              bottom: BorderSide(color: SSMPalette.bordure),
+              left: const BorderSide(color: SSMPalette.rouge, width: 3),
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        eleve.nomComplet,
-                        style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        eleve.matricule ?? '—',
-                        style: GoogleFonts.inter(fontSize: 11, color: _gris),
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Reste', style: GoogleFonts.inter(fontSize: 10, color: _gris)),
                     Text(
-                      _formatMontant(eleve.resteAPayer),
-                      style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: _rouge),
+                      eleve.nomComplet,
+                      style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      eleve.matricule ?? '—',
+                      style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte3),
                     ),
                   ],
                 ),
-                const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, color: _gris),
-              ],
-            ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Reste', style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
+                  Text(
+                    _formatMontant(eleve.resteAPayer),
+                    style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.rouge),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: SSMPalette.texte3),
+            ],
           ),
         ),
       ),

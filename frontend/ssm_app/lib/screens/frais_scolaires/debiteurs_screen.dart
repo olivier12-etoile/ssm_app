@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
@@ -7,15 +6,11 @@ import 'package:path_provider/path_provider.dart';
 import '../../models/dashboard_frais_model.dart';
 import '../../services/dashboard_frais_service.dart';
 import '../../services/classe_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import '../../widgets/whatsapp_rappel_helper.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 String _formatMontant(double m) {
   final entier = m.round();
@@ -26,6 +21,12 @@ String _formatMontant(double m) {
     buffer.write(texte[i]);
   }
   return '$buffer FCFA';
+}
+
+Color _couleurRetard(int jours) {
+  if (jours > 30) return SSMPalette.rouge;
+  if (jours > 0) return SSMPalette.ambre;
+  return SSMPalette.texte3;
 }
 
 class DebiteursScreen extends StatefulWidget {
@@ -89,7 +90,7 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
@@ -127,40 +128,42 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
         child: Column(
           children: [
-            _enTete(),
+            SSMSousEnTete(titre: 'Élèves débiteurs', onRetour: () => Navigator.pop(context)),
             _barreActions(),
             _barreFiltres(),
             _compteur(),
             Expanded(
               child: _chargement
-                  ? const Center(child: CircularProgressIndicator(color: _indigo))
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
                   : _erreur != null
                       ? _vueErreur()
                       : RefreshIndicator(
                           onRefresh: _charger,
+                          color: SSMPalette.indigo,
                           child: _debiteurs.isEmpty
                               ? ListView(
                                   padding: const EdgeInsets.all(40),
                                   children: [
-                                    const Icon(Icons.check_circle_outline, size: 56, color: _vert),
+                                    Icon(Icons.check_circle_outline, size: 56, color: SSMPalette.teal),
                                     const SizedBox(height: 12),
                                     Center(
                                       child: Text(
                                         'Aucun élève débiteur pour ce filtre',
-                                        style: GoogleFonts.inter(color: _texte),
+                                        style: GoogleFonts.inter(color: SSMPalette.texte2),
                                         textAlign: TextAlign.center,
                                       ),
                                     ),
                                   ],
                                 )
-                              : ListView.builder(
+                              : SingleChildScrollView(
                                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                                  itemCount: _debiteurs.length,
-                                  itemBuilder: (context, index) => _carteDebiteur(_debiteurs[index]),
+                                  child: LayoutBuilder(builder: (context, contraintes) {
+                                    return contraintes.maxWidth >= 760 ? _tableDebiteurs() : _listeCartes();
+                                  }),
                                 ),
                         ),
             ),
@@ -177,45 +180,17 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════
-  // EN-TÊTE
-  // ══════════════════════════════════════════════════════
-
-  Widget _enTete() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(colors: [_rouge, Color(0xFFEA580C)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Text(
-              'Élèves débiteurs',
-              style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -226,34 +201,35 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
 
   Widget _barreActions() {
     return Container(
-      color: const Color(0xFFFFF1F2),
+      color: SSMPalette.blanc,
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: _exportEnCours
           ? const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _rouge)),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.rouge)),
             )
           : Row(
               children: [
                 Expanded(
                   child: TextButton.icon(
                     onPressed: () => _exporter('excel'),
-                    icon: const Icon(Icons.table_chart, size: 18, color: _vert),
-                    label: Text('Exporter Excel', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                    icon: const Icon(Icons.table_chart, size: 18, color: SSMPalette.teal),
+                    label: Text('Exporter Excel', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                   ),
                 ),
                 Expanded(
                   child: TextButton.icon(
                     onPressed: () => _exporter('pdf'),
-                    icon: const Icon(Icons.picture_as_pdf, size: 18, color: _rouge),
-                    label: Text('Exporter PDF', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                    icon: const Icon(Icons.picture_as_pdf, size: 18, color: SSMPalette.rouge),
+                    label: Text('Exporter PDF', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                   ),
                 ),
                 Expanded(
                   child: TextButton.icon(
                     onPressed: () => _exporter('pdf'),
-                    icon: const Icon(Icons.print_outlined, size: 18, color: _indigo),
-                    label: Text('Imprimer', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                    icon: const Icon(Icons.print_outlined, size: 18, color: SSMPalette.indigo),
+                    label: Text('Imprimer', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                   ),
                 ),
               ],
@@ -262,19 +238,19 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
   }
 
   // ══════════════════════════════════════════════════════
-  // FILTRES
+  // FILTRES — style aligné sur le composant .search de la topbar
   // ══════════════════════════════════════════════════════
 
   Widget _barreFiltres() {
     return Container(
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Column(
         children: [
           Row(
             children: [
               Expanded(
-                child: _dropdownGlass<int?>(
+                child: _dropdown<int?>(
                   valeur: _filtreClasseId,
                   hint: 'Toutes les classes',
                   items: [
@@ -293,10 +269,10 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Uniquement sans paiement', style: GoogleFonts.inter(fontSize: 10, color: _texte)),
+                  Text('Uniquement sans paiement', style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte2)),
                   Switch(
                     value: _aucunPaiementUniquement,
-                    activeThumbColor: _rouge,
+                    activeThumbColor: SSMPalette.rouge,
                     onChanged: (v) {
                       setState(() => _aucunPaiementUniquement = v);
                       _charger();
@@ -308,14 +284,14 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
           ),
           Row(
             children: [
-              Text('Retard min. : ${_joursRetardMin.round()} j', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+              Text('Retard min. : ${_joursRetardMin.round()} j', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
               Expanded(
                 child: Slider(
                   value: _joursRetardMin,
                   min: 0,
                   max: 90,
                   divisions: 18,
-                  activeColor: _rouge,
+                  activeColor: SSMPalette.rouge,
                   label: '${_joursRetardMin.round()} jours',
                   onChanged: (v) => setState(() => _joursRetardMin = v),
                   onChangeEnd: (_) => _charger(),
@@ -348,19 +324,19 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: actif ? _indigo : const Color(0xFFF1F5F9),
-          borderRadius: BorderRadius.circular(50),
+          color: actif ? SSMPalette.indigo : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(SSMRayons.pilule),
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: actif ? Colors.white : _texte),
+          style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: actif ? Colors.white : SSMPalette.texte2),
         ),
       ),
     );
   }
 
-  Widget _dropdownGlass<T>({
+  Widget _dropdown<T>({
     required T valeur,
     required String hint,
     required List<DropdownMenuItem<T>> items,
@@ -369,17 +345,18 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(50),
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<T>(
           value: valeur,
           isDense: true,
           isExpanded: true,
-          icon: const Icon(Icons.expand_more, size: 16),
-          hint: Text(hint, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-          style: GoogleFonts.inter(fontSize: 12, color: _texte),
+          icon: const Icon(Icons.expand_more, size: 16, color: SSMPalette.texte3),
+          hint: Text(hint, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+          style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1),
           items: items,
           onChanged: onChanged,
         ),
@@ -394,122 +371,165 @@ class _DebiteursScreenState extends State<DebiteursScreen> {
   Widget _compteur() {
     return Container(
       width: double.infinity,
-      color: _rouge.withValues(alpha: 0.08),
+      color: SSMPalette.rougeClair,
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       child: Text(
         '${_debiteurs.length} élève(s) débiteur(s) — ${_formatMontant(_totalRestant)} restant',
-        style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _rouge),
+        style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.rouge),
         textAlign: TextAlign.center,
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  // CARTE DÉBITEUR
+  // TABLEAU (desktop large)
   // ══════════════════════════════════════════════════════
 
-  Widget _carteDebiteur(EleveDebiteur debiteur) {
-    final couleurRetard = debiteur.joursRetard > 30 ? _rouge : (debiteur.joursRetard > 0 ? _ambre : _gris);
-    final aTelephone = debiteur.telephoneParent != null && debiteur.telephoneParent!.isNotEmpty;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.75),
-            borderRadius: BorderRadius.circular(14),
-            border: Border(left: BorderSide(color: _rouge, width: 4)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          debiteur.nomComplet,
-                          style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            const Icon(Icons.class_outlined, size: 12, color: _gris),
-                            const SizedBox(width: 4),
-                            Text(debiteur.classe, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        _formatMontant(debiteur.montantRestant),
-                        style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: _rouge),
-                      ),
-                      const SizedBox(height: 4),
-                      _badge('${debiteur.joursRetard} j de retard', couleurRetard),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Icon(Icons.phone_outlined, size: 13, color: _gris),
-                  const SizedBox(width: 4),
-                  Text(
-                    aTelephone ? debiteur.telephoneParent! : 'Aucun numéro enregistré',
-                    style: GoogleFonts.inter(fontSize: 12, color: _texte),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: aTelephone ? () => _envoyerRappel(debiteur) : null,
-                      style: OutlinedButton.styleFrom(foregroundColor: _vert),
-                      icon: const Icon(Icons.chat_bubble_outline, size: 16),
-                      label: Text('Rappel WhatsApp', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _voirFicheEleve(debiteur),
-                      style: OutlinedButton.styleFrom(foregroundColor: _indigo),
-                      icon: const Icon(Icons.person_outline, size: 16),
-                      label: Text('Fiche élève', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+  Widget _tableDebiteurs() {
+    return SSMDataTable(
+      colonnes: const [
+        SSMDataColumn('Élève'),
+        SSMDataColumn('Classe'),
+        SSMDataColumn('Montant restant'),
+        SSMDataColumn('Retard'),
+        SSMDataColumn('Téléphone'),
+        SSMDataColumn('Actions'),
+      ],
+      lignes: [for (final d in _debiteurs) _ligneDebiteur(d)],
     );
   }
 
-  Widget _badge(String label, Color couleur) {
+  List<Widget> _ligneDebiteur(EleveDebiteur debiteur) {
+    final aTelephone = debiteur.telephoneParent != null && debiteur.telephoneParent!.isNotEmpty;
+    return [
+      Text(debiteur.nomComplet, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+      Text(debiteur.classe, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      Text(_formatMontant(debiteur.montantRestant), style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.rouge)),
+      SSMPill.couleur(label: '${debiteur.joursRetard} j', couleur: _couleurRetard(debiteur.joursRetard)),
+      Text(aTelephone ? debiteur.telephoneParent! : '—', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chat_bubble_outline, size: 18, color: SSMPalette.teal),
+            tooltip: 'Rappel WhatsApp',
+            onPressed: aTelephone ? () => _envoyerRappel(debiteur) : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_outline, size: 18, color: SSMPalette.indigo),
+            tooltip: 'Fiche élève',
+            onPressed: () => _voirFicheEleve(debiteur),
+          ),
+        ],
+      ),
+    ];
+  }
+
+  // ══════════════════════════════════════════════════════
+  // CARTES (mobile / tablette étroite)
+  // ══════════════════════════════════════════════════════
+
+  Widget _listeCartes() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [for (final d in _debiteurs) _carteDebiteur(d)],
+    );
+  }
+
+  Widget _carteDebiteur(EleveDebiteur debiteur) {
+    final aTelephone = debiteur.telephoneParent != null && debiteur.telephoneParent!.isNotEmpty;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text(label, style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur)),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border(
+          top: BorderSide(color: SSMPalette.bordure),
+          right: BorderSide(color: SSMPalette.bordure),
+          bottom: BorderSide(color: SSMPalette.bordure),
+          left: const BorderSide(color: SSMPalette.rouge, width: 3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(debiteur.nomComplet, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(Icons.class_outlined, size: 12, color: SSMPalette.texte3),
+                        const SizedBox(width: 4),
+                        Text(debiteur.classe, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    _formatMontant(debiteur.montantRestant),
+                    style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.rouge),
+                  ),
+                  const SizedBox(height: 4),
+                  SSMPill.couleur(label: '${debiteur.joursRetard} j de retard', couleur: _couleurRetard(debiteur.joursRetard)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(Icons.phone_outlined, size: 13, color: SSMPalette.texte3),
+              const SizedBox(width: 4),
+              Text(
+                aTelephone ? debiteur.telephoneParent! : 'Aucun numéro enregistré',
+                style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: aTelephone ? () => _envoyerRappel(debiteur) : null,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SSMPalette.teal,
+                    side: const BorderSide(color: SSMPalette.teal),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                  ),
+                  icon: const Icon(Icons.chat_bubble_outline, size: 16),
+                  label: Text('Rappel WhatsApp', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _voirFicheEleve(debiteur),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SSMPalette.indigo,
+                    side: const BorderSide(color: SSMPalette.indigo),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                  ),
+                  icon: const Icon(Icons.person_outline, size: 16),
+                  label: Text('Fiche élève', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

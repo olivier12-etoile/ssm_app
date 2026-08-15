@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/paiement_model.dart';
@@ -7,20 +6,16 @@ import '../../models/caisse_model.dart';
 import '../../services/paiement_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/caisse_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
 import '../../widgets/recu_pdf_viewer.dart';
-import '../../widgets/statut_financier_badge.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
+import '../../widgets/ssm/ssm_statut_financier_badge.dart';
 import '../../widgets/correction_paiement_dialog.dart';
 import 'nouveau_paiement_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 String _formatDateCourt(DateTime? d) =>
     d == null ? '—' : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
@@ -36,15 +31,18 @@ String _formatMontant(double m) {
   return '$buffer FCFA';
 }
 
+// Palette unique du statut financier (3 états dérivés côté client) : la
+// même que ssm_pill.paye/.partiel/.retard, pour rester cohérent avec le
+// badge 4-états (SSMStatutFinancierBadge) et le reste du module.
 Color _couleurStatut(String statut) {
   switch (statut) {
     case 'a_jour':
     case 'paye':
-      return _vert;
+      return SSMPalette.teal;
     case 'partiel':
-      return _ambre;
+      return SSMPalette.ambre;
     default:
-      return _rouge;
+      return SSMPalette.rouge;
   }
 }
 
@@ -61,6 +59,18 @@ String _libelleStatut(String statut) {
       return 'Aucun paiement';
     default:
       return statut;
+  }
+}
+
+SSMPill _pillStatut(String statut, {Key? key}) {
+  switch (statut) {
+    case 'a_jour':
+    case 'paye':
+      return SSMPill.paye(key: key, label: _libelleStatut(statut));
+    case 'partiel':
+      return SSMPill.partiel(key: key, label: _libelleStatut(statut));
+    default:
+      return SSMPill.retard(key: key, label: _libelleStatut(statut));
   }
 }
 
@@ -137,13 +147,13 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _vert),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -176,23 +186,38 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
     final motif = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Annuler ce paiement ?'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Annuler ce paiement ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Reçu ${paiement.numeroRecu ?? ''} — ${_formatMontant(paiement.montant)}',
-              style: GoogleFonts.jetBrainsMono(fontSize: 13, color: _texte),
+              style: GoogleFonts.jetBrainsMono(fontSize: 13, color: SSMPalette.texte2),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: motifController,
               maxLines: 2,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Motif de l\'annulation *',
-                border: OutlineInputBorder(),
+                labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+                ),
               ),
             ),
           ],
@@ -200,10 +225,10 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Retour'),
+            child: Text('Retour', style: GoogleFonts.inter(color: SSMPalette.texte2)),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
             onPressed: () {
               if (motifController.text.trim().isEmpty) return;
               Navigator.pop(context, motifController.text.trim());
@@ -236,13 +261,12 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
       floatingActionButton: _situation == null
           ? null
           : FloatingActionButton.extended(
               onPressed: () => _ouvrirNouveauPaiement(),
-              backgroundColor: _indigo,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+              backgroundColor: SSMPalette.indigo,
               icon: const Icon(Icons.add, color: Colors.white),
               label: Text(
                 'Nouveau paiement',
@@ -251,38 +275,60 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
             ),
       body: SafeArea(
         child: _chargement
-            ? const Center(child: CircularProgressIndicator(color: _indigo))
+            ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
             : _erreur != null
                 ? _vueErreur()
                 : RefreshIndicator(
                     onRefresh: _charger,
+                    color: SSMPalette.indigo,
                     child: ListView(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
                       children: [
-                        _enTete(),
+                        _entete(),
                         if (_statutFinancier != null) ...[
                           const SizedBox(height: 12),
                           Center(
-                            child: StatutFinancierBadge(
+                            child: SSMStatutFinancierBadge(
                               statut: _statutFinancier!.statut,
-                              taille: TailleBadgeStatut.large,
+                              taille: SSMTailleBadge.large,
                             ),
                           ),
                         ],
                         const SizedBox(height: 16),
                         _cartesResume(),
                         const SizedBox(height: 20),
-                        SSMSectionTitre(titre: 'Détail par frais'),
-                        if (_situation!.detailParFrais.isEmpty)
-                          _messageVide('Aucun frais scolaire applicable pour cet élève.')
-                        else
-                          ..._situation!.detailParFrais.map(_carteDetailFrais),
+                        SSMPanel(
+                          titre: 'Détail par frais',
+                          child: _situation!.detailParFrais.isEmpty
+                              ? _messageVide('Aucun frais scolaire applicable pour cet élève.')
+                              : Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    for (var i = 0; i < _situation!.detailParFrais.length; i++) ...[
+                                      if (i > 0) const SizedBox(height: 10),
+                                      _ligneDetailFrais(_situation!.detailParFrais[i]),
+                                    ],
+                                  ],
+                                ),
+                        ),
                         const SizedBox(height: 20),
-                        SSMSectionTitre(titre: 'Historique des paiements'),
-                        if (_situation!.historique.isEmpty)
-                          _messageVide('Aucun paiement enregistré.')
-                        else
-                          ..._situation!.historique.map(_cartePaiement),
+                        SSMPanel(
+                          titre: 'Historique des paiements',
+                          padding: EdgeInsets.zero,
+                          child: _situation!.historique.isEmpty
+                              ? _messageVide('Aucun paiement enregistré.')
+                              : SSMDataTable(
+                                  colonnes: const [
+                                    SSMDataColumn('Reçu'),
+                                    SSMDataColumn('Montant'),
+                                    SSMDataColumn('Mode'),
+                                    SSMDataColumn('Date'),
+                                    SSMDataColumn('Statut'),
+                                    SSMDataColumn('Actions'),
+                                  ],
+                                  lignes: [for (final p in _situation!.historique) _lignePaiement(p)],
+                                ),
+                        ),
                       ],
                     ),
                   ),
@@ -297,13 +343,13 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -314,8 +360,8 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
 
   Widget _messageVide(String message) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(child: Text(message, style: GoogleFonts.inter(color: _gris))),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(child: Text(message, style: GoogleFonts.inter(color: SSMPalette.texte3))),
     );
   }
 
@@ -323,158 +369,97 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
   // EN-TÊTE
   // ══════════════════════════════════════════════════════
 
-  Widget _enTete() {
+  Widget _entete() {
     final nomComplet = widget.eleveNomComplet ?? '${_situation!.eleveNom} ${_situation!.elevePrenom}';
 
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [_indigo, _teal],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Situation financière',
-                  style: GoogleFonts.inter(fontSize: 12, color: Colors.white.withValues(alpha: 0.7)),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  nomComplet,
-                  style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                ),
-                if (widget.classeNom != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.classeNom!,
-                    style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          SSMBadge(
-            label: _libelleStatut(_situation!.statutGlobal),
-            couleur: Colors.white,
-            icone: _situation!.statutGlobal == 'a_jour' ? Icons.check_circle : Icons.warning_amber,
-          ),
-        ],
-      ),
+    return SSMSousEnTete(
+      titre: nomComplet,
+      sousTitre: widget.classeNom ?? 'Situation financière',
+      onRetour: () => Navigator.pop(context),
+      actions: [_pillStatut(_situation!.statutGlobal)],
     );
   }
 
   Widget _cartesResume() {
     final couleur = _couleurStatut(_situation!.statutGlobal);
-    return Row(
-      children: [
-        Expanded(
-          child: SSMStatCard(
-            titre: 'Attendu',
-            valeur: _formatMontant(_situation!.montantAttendu),
-            icone: Icons.account_balance_wallet_outlined,
-            couleurIcone: _indigo,
-          ),
+    return LayoutBuilder(builder: (context, contraintes) {
+      final colonnes = contraintes.maxWidth >= 520 ? 3 : 1;
+      final cartes = [
+        SSMStatCard(icone: Icons.account_balance_wallet_outlined, couleur: SSMPalette.indigo, valeur: _formatMontant(_situation!.montantAttendu), label: 'Attendu'),
+        SSMStatCard(icone: Icons.payments_outlined, couleur: SSMPalette.teal, valeur: _formatMontant(_situation!.montantPaye), label: 'Payé'),
+        SSMStatCard(icone: Icons.error_outline, couleur: couleur, valeur: _formatMontant(_situation!.resteAPayer), label: 'Reste'),
+      ];
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: cartes.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: colonnes,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
+          mainAxisExtent: 108,
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: SSMStatCard(
-            titre: 'Payé',
-            valeur: _formatMontant(_situation!.montantPaye),
-            icone: Icons.payments_outlined,
-            couleurIcone: _teal,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: SSMStatCard(
-            titre: 'Reste',
-            valeur: _formatMontant(_situation!.resteAPayer),
-            icone: Icons.error_outline,
-            couleurIcone: couleur,
-          ),
-        ),
-      ],
-    );
+        itemBuilder: (context, i) => cartes[i],
+      );
+    });
   }
 
   // ══════════════════════════════════════════════════════
   // DÉTAIL PAR FRAIS
   // ══════════════════════════════════════════════════════
 
-  Widget _carteDetailFrais(DetailFrais detail) {
-    final couleur = _couleurStatut(detail.statut == 'paye' ? 'a_jour' : detail.statut);
+  Widget _ligneDetailFrais(DetailFrais detail) {
+    final statutNormalise = detail.statut == 'paye' ? 'a_jour' : detail.statut;
+    final couleur = _couleurStatut(statutNormalise);
 
-    return GestureDetector(
-      onTap: detail.reste > 0
-          ? () => _ouvrirNouveauPaiement(fraisScolaireIdPreselectionne: detail.fraisScolaireId)
-          : null,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(14),
-              border: Border(left: BorderSide(color: couleur, width: 4)),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        detail.nomFrais,
-                        style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: _texteFonce),
-                      ),
+    return Material(
+      color: detail.reste > 0 ? const Color(0xFFF9FAFB) : Colors.transparent,
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        onTap: detail.reste > 0 ? () => _ouvrirNouveauPaiement(fraisScolaireIdPreselectionne: detail.fraisScolaireId) : null,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      detail.nomFrais,
+                      style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                     ),
-                    _badge(_libelleStatut(detail.statut), couleur),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: detail.progression,
-                    minHeight: 8,
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    color: couleur,
                   ),
+                  _pillStatut(detail.statut),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: detail.progression,
+                  minHeight: 8,
+                  backgroundColor: const Color(0xFFF1F5F9),
+                  color: couleur,
                 ),
-                const SizedBox(height: 6),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
+              ),
+              const SizedBox(height: 6),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    '${_formatMontant(detail.montantPaye)} / ${_formatMontant(detail.montantDu)}',
+                    style: GoogleFonts.jetBrainsMono(fontSize: 12, color: SSMPalette.texte2),
+                  ),
+                  if (detail.reste > 0)
                     Text(
-                      '${_formatMontant(detail.montantPaye)} / ${_formatMontant(detail.montantDu)}',
-                      style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _texte),
+                      'Reste ${_formatMontant(detail.reste)}',
+                      style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: couleur),
                     ),
-                    if (detail.reste > 0)
-                      Text(
-                        'Reste ${_formatMontant(detail.reste)}',
-                        style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: couleur),
-                      ),
-                  ],
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -485,112 +470,59 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
   // HISTORIQUE DES PAIEMENTS
   // ══════════════════════════════════════════════════════
 
-  Widget _cartePaiement(Paiement paiement) {
+  List<Widget> _lignePaiement(Paiement paiement) {
     final estAnnule = paiement.estAnnule;
     final libelle = [paiement.fraisNom, paiement.echeanceLibelle].whereType<String>().join(' — ');
 
-    return Opacity(
-      opacity: estAnnule ? 0.6 : 1,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+    return [
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(paiement.numeroRecu ?? '—', style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          if (libelle.isNotEmpty)
+            Text(libelle, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3), maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (estAnnule && paiement.motifAnnulation != null)
+            Text('Motif : ${paiement.motifAnnulation}', style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.rouge, fontStyle: FontStyle.italic)),
+        ],
+      ),
+      Text(
+        _formatMontant(paiement.montant),
+        style: GoogleFonts.jetBrainsMono(
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          color: estAnnule ? SSMPalette.texte3 : SSMPalette.texte1,
+          decoration: estAnnule ? TextDecoration.lineThrough : null,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: (estAnnule ? _gris : _teal).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(paiement.modePaiement.icone, color: estAnnule ? _gris : _teal, size: 18),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        libelle.isEmpty ? paiement.modePaiement.libelle : libelle,
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${paiement.numeroRecu ?? '—'} · ${_formatDateCourt(paiement.datePaiement)}',
-                        style: GoogleFonts.inter(fontSize: 11, color: _gris),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  _formatMontant(paiement.montant),
-                  style: GoogleFonts.jetBrainsMono(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: estAnnule ? _gris : _texteFonce,
-                    decoration: estAnnule ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-              ],
+      ),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(paiement.modePaiement.icone, size: 15, color: estAnnule ? SSMPalette.texte3 : SSMPalette.teal),
+          const SizedBox(width: 5),
+          Text(paiement.modePaiement.libelle, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+        ],
+      ),
+      Text(_formatDateCourt(paiement.datePaiement), style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      estAnnule ? const SSMPill.retard(label: 'Annulé') : const SSMPill.paye(label: 'Validé'),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          RecuPdfViewer(paiementId: paiement.id!, numeroRecu: paiement.numeroRecu, compact: true),
+          if (_estDirecteur && !estAnnule) ...[
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: SSMPalette.indigo, size: 18),
+              tooltip: 'Corriger ce paiement',
+              onPressed: () => _corrigerPaiement(paiement),
             ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (estAnnule) _badge('Annulé', _rouge) else _badge(paiement.modePaiement.libelle, _indigo),
-                const Spacer(),
-                RecuPdfViewer(
-                  paiementId: paiement.id!,
-                  numeroRecu: paiement.numeroRecu,
-                  compact: true,
-                ),
-                if (_estDirecteur && !estAnnule) ...[
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined, color: _indigo),
-                    tooltip: 'Corriger ce paiement',
-                    onPressed: () => _corrigerPaiement(paiement),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.cancel_outlined, color: _rouge),
-                    tooltip: 'Annuler ce paiement',
-                    onPressed: () => _confirmerAnnulation(paiement),
-                  ),
-                ],
-              ],
+            IconButton(
+              icon: const Icon(Icons.cancel_outlined, color: SSMPalette.rouge, size: 18),
+              tooltip: 'Annuler ce paiement',
+              onPressed: () => _confirmerAnnulation(paiement),
             ),
-            if (estAnnule && paiement.motifAnnulation != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                'Motif : ${paiement.motifAnnulation}',
-                style: GoogleFonts.inter(fontSize: 11, color: _rouge, fontStyle: FontStyle.italic),
-              ),
-            ],
           ],
-        ),
+        ],
       ),
-    );
-  }
-
-  Widget _badge(String label, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: couleur.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, color: couleur),
-      ),
-    );
+    ];
   }
 }

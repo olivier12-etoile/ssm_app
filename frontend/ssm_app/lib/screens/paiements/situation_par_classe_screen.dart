@@ -1,21 +1,17 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import '../../models/rapport_paiement_model.dart';
 import '../../services/rapport_paiement_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'impayes_classe_screen.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+// Rouge foncé — 4ème état "en retard", plus sévère que "non réglé". Reprend
+// la même valeur que StatutFinancier.enRetard / ssm_statut_financier_badge.
+const Color _rougeFonce = Color(0xFF991B1B);
 
 String _formatMontant(double m) {
   final entier = m.round();
@@ -29,9 +25,9 @@ String _formatMontant(double m) {
 }
 
 Color _couleurReste(SituationClasse s) {
-  if (s.resteARecouvrer <= 0) return _vert;
+  if (s.resteARecouvrer <= 0) return SSMPalette.teal;
   final ratio = s.montantAttendu > 0 ? s.resteARecouvrer / s.montantAttendu : 1.0;
-  return ratio >= 0.3 ? _rouge : _ambre;
+  return ratio >= 0.3 ? SSMPalette.rouge : SSMPalette.ambre;
 }
 
 enum _TriSituation { reste, alphabetique }
@@ -92,7 +88,7 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
@@ -138,21 +134,22 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
   Future<void> _choisirExportConsolide() async {
     final format = await showModalBottomSheet<String>(
       context: context,
+      backgroundColor: SSMPalette.blanc,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 8),
-            Text('Exporter la vue consolidée', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce)),
+            Text('Exporter la vue consolidée', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
             const SizedBox(height: 8),
             ListTile(
-              leading: const Icon(Icons.picture_as_pdf_outlined, color: _rouge),
+              leading: const Icon(Icons.picture_as_pdf_outlined, color: SSMPalette.rouge),
               title: const Text('PDF'),
               onTap: () => Navigator.pop(context, 'pdf'),
             ),
             ListTile(
-              leading: const Icon(Icons.grid_on_outlined, color: _vert),
+              leading: const Icon(Icons.grid_on_outlined, color: SSMPalette.teal),
               title: const Text('Excel'),
               onTap: () => Navigator.pop(context, 'excel'),
             ),
@@ -178,71 +175,85 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text('Situation par classe'),
-        actions: [
-          PopupMenuButton<_TriSituation>(
-            icon: const Icon(Icons.sort),
-            tooltip: 'Trier',
-            onSelected: (valeur) => setState(() => _tri = valeur),
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: _TriSituation.reste, child: Text('Reste à recouvrer (décroissant)')),
-              PopupMenuItem(value: _TriSituation.alphabetique, child: Text('Ordre alphabétique')),
-            ],
-          ),
-        ],
-      ),
+      backgroundColor: SSMPalette.fond,
       body: SafeArea(
-        child: _chargement
-            ? const Center(child: CircularProgressIndicator(color: _indigo))
-            : _erreur != null
-                ? _vueErreur()
-                : RefreshIndicator(
-                    onRefresh: _charger,
-                    child: ListView(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _exportConsolideEnCours ? null : _choisirExportConsolide,
-                            icon: _exportConsolideEnCours
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Icon(Icons.ios_share, size: 18),
-                            label: const Text('Exporter vue consolidée'),
-                            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: 'Situation par classe',
+              onRetour: () => Navigator.pop(context),
+              actions: [
+                PopupMenuButton<_TriSituation>(
+                  icon: const Icon(Icons.sort, color: SSMPalette.texte2),
+                  tooltip: 'Trier',
+                  onSelected: (valeur) => setState(() => _tri = valeur),
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(value: _TriSituation.reste, child: Text('Reste à recouvrer (décroissant)')),
+                    PopupMenuItem(value: _TriSituation.alphabetique, child: Text('Ordre alphabétique')),
+                  ],
+                ),
+              ],
+            ),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _vueErreur()
+                      : RefreshIndicator(
+                          onRefresh: _charger,
+                          color: SSMPalette.indigo,
+                          child: ListView(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                            children: [
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton.icon(
+                                  onPressed: _exportConsolideEnCours ? null : _choisirExportConsolide,
+                                  icon: _exportConsolideEnCours
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Icon(Icons.ios_share, size: 18),
+                                  label: const Text('Exporter vue consolidée'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: SSMPalette.indigo,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              if (_situations.isEmpty)
+                                _messageVide('Aucune classe avec une situation financière calculable.')
+                              else
+                                LayoutBuilder(
+                                  builder: (context, contraintes) {
+                                    final colonnes = contraintes.maxWidth >= 900
+                                        ? 3
+                                        : contraintes.maxWidth >= 600
+                                            ? 2
+                                            : 1;
+                                    return GridView.count(
+                                      crossAxisCount: colonnes,
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      mainAxisSpacing: 14,
+                                      crossAxisSpacing: 14,
+                                      childAspectRatio: colonnes == 1 ? 1.55 : 1.15,
+                                      children: _situationsTriees.map(_carteClasse).toList(),
+                                    );
+                                  },
+                                ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        if (_situations.isEmpty)
-                          _messageVide('Aucune classe avec une situation financière calculable.')
-                        else
-                          LayoutBuilder(
-                            builder: (context, contraintes) {
-                              final colonnes = contraintes.maxWidth >= 900
-                                  ? 3
-                                  : contraintes.maxWidth >= 600
-                                      ? 2
-                                      : 1;
-                              return GridView.count(
-                                crossAxisCount: colonnes,
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                mainAxisSpacing: 14,
-                                crossAxisSpacing: 14,
-                                childAspectRatio: colonnes == 1 ? 1.55 : 1.15,
-                                children: _situationsTriees.map(_carteClasse).toList(),
-                              );
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -254,13 +265,13 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               child: const Text('Réessayer'),
             ),
           ],
@@ -272,12 +283,12 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
   Widget _messageVide(String message) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Center(child: Text(message, style: GoogleFonts.inter(color: _gris))),
+      child: Center(child: Text(message, style: GoogleFonts.inter(color: SSMPalette.texte3))),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  // Card glassmorphism par classe
+  // Card par classe — structure ✓/⚠/✕ conservée, habillage plat
   // ══════════════════════════════════════════════════════
 
   Widget _carteClasse(SituationClasse s) {
@@ -285,94 +296,86 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
     final exportPdfEnCours = _exportCarteEnCours == '${s.classeId}-pdf';
     final exportExcelEnCours = _exportCarteEnCours == '${s.classeId}-excel';
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 14, offset: const Offset(0, 4)),
-            ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            s.nomClasse,
+            style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                s.nomClasse,
-                style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 2),
-              Text('${s.totalEleves} élève(s)', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
-              const SizedBox(height: 10),
-              _lignePastille(Icons.check_circle, _vert, 'En règle', s.nombreEnRegle),
-              const SizedBox(height: 4),
-              _lignePastille(Icons.error, _ambre, 'Partiels', s.nombrePartiels),
-              const SizedBox(height: 4),
-              _lignePastille(Icons.cancel, _rouge, 'Non réglés', s.nombreNonRegles),
-              if (s.nombreEnRetard > 0) ...[
-                const SizedBox(height: 4),
-                _lignePastille(Icons.warning_amber_rounded, const Color(0xFF991B1B), 'En retard', s.nombreEnRetard),
+          const SizedBox(height: 2),
+          Text('${s.totalEleves} élève(s)', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
+          const SizedBox(height: 10),
+          _lignePastille(Icons.check_circle, SSMPalette.teal, 'En règle', s.nombreEnRegle),
+          const SizedBox(height: 4),
+          _lignePastille(Icons.error, SSMPalette.ambre, 'Partiels', s.nombrePartiels),
+          const SizedBox(height: 4),
+          _lignePastille(Icons.cancel, SSMPalette.rouge, 'Non réglés', s.nombreNonRegles),
+          if (s.nombreEnRetard > 0) ...[
+            const SizedBox(height: 4),
+            _lignePastille(Icons.warning_amber_rounded, _rougeFonce, 'En retard', s.nombreEnRetard),
+          ],
+          const Spacer(),
+          const SizedBox(height: 8),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: couleurReste.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(SSMRayons.moyen),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Reste à recouvrer', style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
+                Text(
+                  _formatMontant(s.resteARecouvrer),
+                  style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w700, color: couleurReste),
+                ),
               ],
-              const Spacer(),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: couleurReste.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Reste à recouvrer', style: GoogleFonts.inter(fontSize: 10, color: _gris)),
-                    Text(
-                      _formatMontant(s.resteARecouvrer),
-                      style: GoogleFonts.jetBrainsMono(fontSize: 16, fontWeight: FontWeight.w700, color: couleurReste),
-                    ),
-                  ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _voirImpayes(s),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SSMPalette.indigo,
+                    side: const BorderSide(color: SSMPalette.indigo),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                  ),
+                  child: const Text('Voir', style: TextStyle(fontSize: 12)),
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => _voirImpayes(s),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: _indigo,
-                        side: const BorderSide(color: _indigo),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      child: const Text('Voir', style: TextStyle(fontSize: 12)),
-                    ),
-                  ),
-                  const SizedBox(width: 6),
-                  _boutonExportIcone(
-                    icone: Icons.picture_as_pdf_outlined,
-                    couleur: _rouge,
-                    enCours: exportPdfEnCours,
-                    onTap: () => _exporterCarte(s, 'pdf'),
-                  ),
-                  const SizedBox(width: 6),
-                  _boutonExportIcone(
-                    icone: Icons.grid_on_outlined,
-                    couleur: _teal,
-                    enCours: exportExcelEnCours,
-                    onTap: () => _exporterCarte(s, 'excel'),
-                  ),
-                ],
+              const SizedBox(width: 6),
+              _boutonExportIcone(
+                icone: Icons.picture_as_pdf_outlined,
+                couleur: SSMPalette.rouge,
+                enCours: exportPdfEnCours,
+                onTap: () => _exporterCarte(s, 'pdf'),
+              ),
+              const SizedBox(width: 6),
+              _boutonExportIcone(
+                icone: Icons.grid_on_outlined,
+                couleur: SSMPalette.teal,
+                enCours: exportExcelEnCours,
+                onTap: () => _exporterCarte(s, 'excel'),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -383,7 +386,7 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
         Icon(icone, size: 14, color: couleur),
         const SizedBox(width: 6),
         Expanded(
-          child: Text('$label : $valeur', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+          child: Text('$label : $valeur', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
         ),
       ],
     );
@@ -404,6 +407,7 @@ class _SituationParClasseScreenState extends State<SituationParClasseScreen> {
           foregroundColor: couleur,
           side: BorderSide(color: couleur.withValues(alpha: 0.5)),
           padding: EdgeInsets.zero,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
         ),
         child: enCours
             ? SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: couleur))

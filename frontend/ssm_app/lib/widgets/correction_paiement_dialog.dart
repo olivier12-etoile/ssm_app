@@ -3,13 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/caisse_model.dart';
 import '../models/paiement_model.dart';
 import '../services/caisse_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _ambre = Color(0xFFD97706);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../theme/ssm_theme.dart';
 
 String _formatMontant(double m) {
   final entier = m.round();
@@ -26,6 +20,30 @@ String _formatMontant(double m) {
 String _formatDateCourt(DateTime? d) => d == null
     ? '—'
     : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
+InputDecoration _decorationChamp(String label, {String? hintText, String? suffixText}) {
+  return InputDecoration(
+    labelText: label,
+    hintText: hintText,
+    suffixText: suffixText,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    hintStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
 
 // Dialog de correction d'un paiement — réservé au directeur.
 // Affiche montant/mode actuels en lecture seule, permet de saisir un
@@ -132,7 +150,8 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: SSMPalette.blanc,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 440),
         child: Padding(
@@ -144,12 +163,12 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.edit_note, color: _indigo, size: 22),
+                    const Icon(Icons.edit_note, color: SSMPalette.indigo, size: 22),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Corriger le paiement',
-                        style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _texteFonce),
+                        style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                       ),
                     ),
                   ],
@@ -157,7 +176,7 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                 const SizedBox(height: 4),
                 Text(
                   'Reçu ${widget.paiement.numeroRecu ?? '—'}',
-                  style: GoogleFonts.inter(fontSize: 12, color: _gris),
+                  style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
                 ),
                 const SizedBox(height: 16),
 
@@ -165,8 +184,9 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(10),
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                    border: Border.all(color: SSMPalette.bordure),
                   ),
                   child: Row(
                     children: [
@@ -174,11 +194,11 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Montant actuel', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+                            Text('Montant actuel', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
                             const SizedBox(height: 2),
                             Text(
                               _formatMontant(widget.paiement.montant),
-                              style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce),
+                              style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
                             ),
                           ],
                         ),
@@ -187,11 +207,11 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Mode actuel', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+                            Text('Mode actuel', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
                             const SizedBox(height: 2),
                             Text(
                               widget.paiement.modePaiement.libelle,
-                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce),
+                              style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                             ),
                           ],
                         ),
@@ -201,25 +221,21 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                Text('Nouveau montant', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texte)),
-                const SizedBox(height: 6),
                 TextField(
                   controller: _montantController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w600),
-                  decoration: const InputDecoration(suffixText: 'FCFA', border: OutlineInputBorder()),
+                  style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                  decoration: _decorationChamp('Nouveau montant', suffixText: 'FCFA'),
                 ),
                 const SizedBox(height: 14),
 
-                Text('Nouveau mode de paiement (optionnel)', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texte)),
-                const SizedBox(height: 6),
                 DropdownButtonFormField<ModePaiement?>(
-                  value: _nouveauMode,
+                  initialValue: _nouveauMode,
                   isExpanded: true,
-                  decoration: const InputDecoration(border: OutlineInputBorder()),
+                  decoration: _decorationChamp('Nouveau mode de paiement (optionnel)'),
                   hint: Text(
                     'Garder « ${widget.paiement.modePaiement.libelle} »',
-                    style: GoogleFonts.inter(fontSize: 13, color: _gris),
+                    style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
                   ),
                   items: ModePaiement.values
                       .map((m) => DropdownMenuItem(value: m, child: Text(m.libelle, style: GoogleFonts.inter(fontSize: 14))))
@@ -228,34 +244,29 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                 ),
                 const SizedBox(height: 14),
 
-                Text('Motif de la correction *', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texte)),
-                const SizedBox(height: 6),
                 TextField(
                   controller: _motifController,
                   maxLines: 3,
-                  style: GoogleFonts.inter(fontSize: 14),
-                  decoration: const InputDecoration(
-                    hintText: 'Expliquez la raison de cette correction…',
-                    border: OutlineInputBorder(),
-                  ),
+                  style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+                  decoration: _decorationChamp('Motif de la correction *', hintText: 'Expliquez la raison de cette correction…'),
                 ),
                 const SizedBox(height: 12),
 
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: _ambre.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _ambre.withValues(alpha: 0.3)),
+                    color: SSMPalette.ambreClair,
+                    borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                    border: Border.all(color: SSMPalette.ambre.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: _ambre, size: 18),
+                      const Icon(Icons.info_outline, color: SSMPalette.ambre, size: 18),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Cette action sera tracée et visible dans l\'historique.',
-                          style: GoogleFonts.inter(fontSize: 12, color: _ambre, fontWeight: FontWeight.w600),
+                          style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.ambre, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -264,7 +275,7 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
 
                 if (_erreur != null) ...[
                   const SizedBox(height: 10),
-                  Text(_erreur!, style: GoogleFonts.inter(fontSize: 12, color: _rouge)),
+                  Text(_erreur!, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.rouge)),
                 ],
 
                 const SizedBox(height: 16),
@@ -273,13 +284,13 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(8),
-                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)),
+                      child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)),
                     ),
                   )
                 else if (_historique.isNotEmpty) ...[
                   Text(
                     'Corrections précédentes',
-                    style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce),
+                    style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.indigo),
                   ),
                   const SizedBox(height: 8),
                   ..._historique.map(_ligneHistorique),
@@ -291,12 +302,17 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
                   children: [
                     TextButton(
                       onPressed: _envoiEnCours ? null : () => Navigator.pop(context),
-                      child: const Text('Annuler'),
+                      child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                     ),
                     const SizedBox(width: 8),
                     ElevatedButton(
                       onPressed: _envoiEnCours ? null : _confirmer,
-                      style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SSMPalette.indigo,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                      ),
                       child: _envoiEnCours
                           ? const SizedBox(
                               width: 18,
@@ -320,9 +336,9 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.petit),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -332,17 +348,17 @@ class _CorrectionPaiementDialogState extends State<CorrectionPaiementDialog> {
               Expanded(
                 child: Text(
                   '${_formatMontant(c.ancienMontant)} → ${_formatMontant(c.nouveauMontant)}',
-                  style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w600, color: _texteFonce),
+                  style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                 ),
               ),
-              Text(_formatDateCourt(c.createdAt), style: GoogleFonts.inter(fontSize: 10, color: _gris)),
+              Text(_formatDateCourt(c.createdAt), style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
             ],
           ),
           const SizedBox(height: 3),
-          Text('Motif : ${c.motif}', style: GoogleFonts.inter(fontSize: 11, color: _texte)),
+          Text('Motif : ${c.motif}', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2)),
           if (c.corrigeParNom != null) ...[
             const SizedBox(height: 2),
-            Text('Par ${c.corrigeParNom}', style: GoogleFonts.inter(fontSize: 10, color: _gris)),
+            Text('Par ${c.corrigeParNom}', style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
           ],
         ],
       ),

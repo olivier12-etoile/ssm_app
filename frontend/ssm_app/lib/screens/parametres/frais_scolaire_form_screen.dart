@@ -4,14 +4,8 @@ import '../../models/frais_scolaire_model.dart';
 import '../../services/frais_scolaire_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _rouge = Color(0xFFDC2626);
-const Color _vert = Color(0xFF16A34A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 String _formatDateCourt(DateTime d) =>
     '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
@@ -254,201 +248,195 @@ class _FraisScolaireFormScreenState extends State<FraisScolaireFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text(
-          _modeEdition ? 'Modifier le frais' : 'Nouveau frais',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w700),
-        ),
-      ),
-      body: _chargementReferences
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              children: [
-                _titreSection('Informations générales'),
-                _champTexte(controller: _nomController, label: 'Nom du frais *', icone: Icons.badge),
-                const SizedBox(height: 12),
-                _champTexte(
-                  controller: _descriptionController,
-                  label: 'Description',
-                  icone: Icons.notes,
-                  maxLignes: 2,
-                ),
-                const SizedBox(height: 12),
-                _champTexte(
-                  controller: _montantController,
-                  label: 'Montant total (FCFA) *',
-                  icone: Icons.payments,
-                  clavierNumerique: true,
-                  onChanged: (_) => setState(() {}),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<int?>(
-                  initialValue: _classeId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Classe concernée',
-                    prefixIcon: Icon(Icons.class_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: [
-                    const DropdownMenuItem<int?>(value: null, child: Text('Toutes les classes')),
-                    ..._classes.map(
-                      (c) => DropdownMenuItem<int?>(value: c['id'] as int, child: Text(c['nom'] as String)),
-                    ),
-                  ],
-                  onChanged: (v) => setState(() => _classeId = v),
-                ),
-                const SizedBox(height: 12),
-                _champTexte(controller: _serieController, label: 'Série (optionnel)', icone: Icons.category),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<int>(
-                  initialValue: _anneeScolaireId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Année scolaire *',
-                    prefixIcon: Icon(Icons.calendar_month),
-                    border: OutlineInputBorder(),
-                  ),
-                  items: _annees
-                      .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _anneeScolaireId = v),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.event, color: _indigo),
-                  title: const Text('Date limite *'),
-                  subtitle: Text(_formatDateCourt(_dateLimite)),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _choisirDate(
-                    initial: _dateLimite,
-                    onChoisi: (d) => setState(() => _dateLimite = d),
-                  ),
-                ),
-                const Divider(height: 24),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: _indigo,
-                  value: _obligatoire,
-                  title: const Text('Frais obligatoire'),
-                  subtitle: Text(
-                    _obligatoire ? 'Concerne tous les élèves éligibles' : 'Facultatif',
-                    style: GoogleFonts.inter(fontSize: 12, color: _gris),
-                  ),
-                  onChanged: (v) => setState(() => _obligatoire = v),
-                ),
-                if (_modeEdition)
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    activeThumbColor: _vert,
-                    value: _actif,
-                    title: const Text('Frais actif'),
-                    onChanged: (v) => setState(() => _actif = v),
-                  ),
-                const SizedBox(height: 8),
-                _titreSection('Échéances'),
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(50),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(child: _boutonModePaiement('Paiement en une fois', !_paiementEnPlusieurs, () {
-                        setState(() => _paiementEnPlusieurs = false);
-                      })),
-                      Expanded(child: _boutonModePaiement('Plusieurs tranches', _paiementEnPlusieurs, () {
-                        setState(() {
-                          _paiementEnPlusieurs = true;
-                          if (_echeances.isEmpty) _ajouterEcheance();
-                        });
-                      })),
-                    ],
-                  ),
-                ),
-                if (_paiementEnPlusieurs) ...[
-                  const SizedBox(height: 12),
-                  ..._echeances.asMap().entries.map((entry) => _carteEcheance(entry.key, entry.value)),
-                  OutlinedButton.icon(
-                    onPressed: _ajouterEcheance,
-                    style: OutlinedButton.styleFrom(foregroundColor: _indigo),
-                    icon: const Icon(Icons.add),
-                    label: const Text('Ajouter une tranche'),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: (_echeancesValides ? _vert : _rouge).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: _modeEdition ? 'Modifier le frais' : 'Nouveau frais',
+              onRetour: () => Navigator.pop(context),
+            ),
+            Expanded(
+              child: _chargementReferences
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
                       children: [
-                        Icon(
-                          _echeancesValides ? Icons.check_circle : Icons.error_outline,
-                          size: 16,
-                          color: _echeancesValides ? _vert : _rouge,
+                        _titreSection('Informations générales'),
+                        _champTexte(controller: _nomController, label: 'Nom du frais *', icone: Icons.badge_outlined),
+                        const SizedBox(height: 12),
+                        _champTexte(
+                          controller: _descriptionController,
+                          label: 'Description',
+                          icone: Icons.notes_outlined,
+                          maxLignes: 2,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Somme des tranches : ${_sommeEcheances.toStringAsFixed(0)} FCFA / ${_montant.toStringAsFixed(0)} FCFA',
-                            style: GoogleFonts.jetBrainsMono(
-                              fontSize: 12,
-                              color: _echeancesValides ? _vert : _rouge,
+                        const SizedBox(height: 12),
+                        _champTexte(
+                          controller: _montantController,
+                          label: 'Montant total (FCFA) *',
+                          icone: Icons.payments_outlined,
+                          clavierNumerique: true,
+                          onChanged: (_) => setState(() {}),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int?>(
+                          initialValue: _classeId,
+                          isExpanded: true,
+                          decoration: _decorationChamp('Classe concernée', icone: Icons.class_outlined),
+                          items: [
+                            const DropdownMenuItem<int?>(value: null, child: Text('Toutes les classes')),
+                            ..._classes.map(
+                              (c) => DropdownMenuItem<int?>(value: c['id'] as int, child: Text(c['nom'] as String)),
                             ),
+                          ],
+                          onChanged: (v) => setState(() => _classeId = v),
+                        ),
+                        const SizedBox(height: 12),
+                        _champTexte(controller: _serieController, label: 'Série (optionnel)', icone: Icons.category_outlined),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<int>(
+                          initialValue: _anneeScolaireId,
+                          isExpanded: true,
+                          decoration: _decorationChamp('Année scolaire *', icone: Icons.calendar_month_outlined),
+                          items: _annees
+                              .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String)))
+                              .toList(),
+                          onChanged: (v) => setState(() => _anneeScolaireId = v),
+                        ),
+                        const SizedBox(height: 12),
+                        _ligneDate(
+                          titre: 'Date limite *',
+                          date: _dateLimite,
+                          onTap: () => _choisirDate(initial: _dateLimite, onChoisi: (d) => setState(() => _dateLimite = d)),
+                        ),
+                        const SizedBox(height: 20),
+                        Container(height: 1, color: SSMPalette.bordure),
+                        const SizedBox(height: 12),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          activeThumbColor: SSMPalette.indigo,
+                          value: _obligatoire,
+                          title: Text('Frais obligatoire', style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1)),
+                          subtitle: Text(
+                            _obligatoire ? 'Concerne tous les élèves éligibles' : 'Facultatif',
+                            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
+                          ),
+                          onChanged: (v) => setState(() => _obligatoire = v),
+                        ),
+                        if (_modeEdition)
+                          SwitchListTile(
+                            contentPadding: EdgeInsets.zero,
+                            activeThumbColor: SSMPalette.teal,
+                            value: _actif,
+                            title: Text('Frais actif', style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1)),
+                            onChanged: (v) => setState(() => _actif = v),
+                          ),
+                        const SizedBox(height: 8),
+                        _titreSection('Échéances'),
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                          child: Row(
+                            children: [
+                              Expanded(child: _boutonModePaiement('Paiement en une fois', !_paiementEnPlusieurs, () {
+                                setState(() => _paiementEnPlusieurs = false);
+                              })),
+                              Expanded(child: _boutonModePaiement('Plusieurs tranches', _paiementEnPlusieurs, () {
+                                setState(() {
+                                  _paiementEnPlusieurs = true;
+                                  if (_echeances.isEmpty) _ajouterEcheance();
+                                });
+                              })),
+                            ],
+                          ),
+                        ),
+                        if (_paiementEnPlusieurs) ...[
+                          const SizedBox(height: 12),
+                          ..._echeances.asMap().entries.map((entry) => _carteEcheance(entry.key, entry.value)),
+                          OutlinedButton.icon(
+                            onPressed: _ajouterEcheance,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: SSMPalette.indigo,
+                              side: const BorderSide(color: SSMPalette.indigo),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                            ),
+                            icon: const Icon(Icons.add),
+                            label: const Text('Ajouter une tranche'),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: (_echeancesValides ? SSMPalette.teal : SSMPalette.rouge).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  _echeancesValides ? Icons.check_circle : Icons.error_outline,
+                                  size: 16,
+                                  color: _echeancesValides ? SSMPalette.teal : SSMPalette.rouge,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Somme des tranches : ${_sommeEcheances.toStringAsFixed(0)} FCFA / ${_montant.toStringAsFixed(0)} FCFA',
+                                    style: GoogleFonts.jetBrainsMono(
+                                      fontSize: 12,
+                                      color: _echeancesValides ? SSMPalette.teal : SSMPalette.rouge,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 20),
+                        if (_erreur != null)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: SSMPalette.rougeClair,
+                              borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.warning_amber, color: SSMPalette.rouge, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.rouge)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: SSMPalette.indigo,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                            ),
+                            onPressed: _enregistrementEnCours ? null : _enregistrer,
+                            child: _enregistrementEnCours
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text('Enregistrer'),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-                const SizedBox(height: 20),
-                if (_erreur != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: _rouge.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber, color: _rouge, size: 18),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: _rouge)),
-                        ),
-                      ],
-                    ),
-                  ),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _indigo,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: _enregistrementEnCours ? null : _enregistrer,
-                    child: _enregistrementEnCours
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Enregistrer'),
-                  ),
-                ),
-              ],
             ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -459,16 +447,17 @@ class _FraisScolaireFormScreenState extends State<FraisScolaireFormScreen> {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: actif ? _indigo : Colors.transparent,
-          borderRadius: BorderRadius.circular(50),
+          color: actif ? SSMPalette.blanc : Colors.transparent,
+          borderRadius: BorderRadius.circular(SSMRayons.petit),
+          boxShadow: actif ? SSMOmbres.legere : null,
         ),
         child: Text(
           label,
           textAlign: TextAlign.center,
           style: GoogleFonts.inter(
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: actif ? Colors.white : _texte,
+            color: actif ? SSMPalette.indigo : SSMPalette.texte2,
           ),
         ),
       ),
@@ -480,9 +469,9 @@ class _FraisScolaireFormScreenState extends State<FraisScolaireFormScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -491,11 +480,11 @@ class _FraisScolaireFormScreenState extends State<FraisScolaireFormScreen> {
             children: [
               Text(
                 'Tranche ${index + 1}',
-                style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
+                style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.indigo),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: _rouge, size: 20),
+                icon: const Icon(Icons.delete_outline, color: SSMPalette.rouge, size: 20),
                 onPressed: () => _supprimerEcheance(index),
               ),
             ],
@@ -505,23 +494,54 @@ class _FraisScolaireFormScreenState extends State<FraisScolaireFormScreen> {
           _champTexte(
             controller: echeance.montantController,
             label: 'Montant (FCFA) *',
-            icone: Icons.payments,
+            icone: Icons.payments_outlined,
             clavierNumerique: true,
             dense: true,
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 8),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
+          _ligneDate(
+            titre: 'Échéance',
+            date: echeance.dateLimite,
+            onTap: () => _choisirDate(initial: echeance.dateLimite, onChoisi: (d) => setState(() => echeance.dateLimite = d)),
+            couleurIcone: SSMPalette.teal,
             dense: true,
-            leading: const Icon(Icons.event, color: _teal, size: 20),
-            title: Text('Échéance : ${_formatDateCourt(echeance.dateLimite)}', style: GoogleFonts.inter(fontSize: 13)),
-            onTap: () => _choisirDate(
-              initial: echeance.dateLimite,
-              onChoisi: (d) => setState(() => echeance.dateLimite = d),
-            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _ligneDate({
+    required String titre,
+    required DateTime date,
+    required VoidCallback onTap,
+    Color couleurIcone = SSMPalette.indigo,
+    bool dense = false,
+  }) {
+    return Material(
+      color: const Color(0xFFF9FAFB),
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: dense ? 10 : 14),
+          decoration: BoxDecoration(borderRadius: BorderRadius.circular(SSMRayons.moyen), border: Border.all(color: const Color(0xFFE5E7EB))),
+          child: Row(
+            children: [
+              Icon(Icons.event_outlined, size: dense ? 18 : 20, color: couleurIcone),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  '$titre : ${_formatDateCourt(date)}',
+                  style: GoogleFonts.inter(fontSize: dense ? 12 : 13, color: SSMPalette.texte1),
+                ),
+              ),
+              Icon(Icons.chevron_right, size: 18, color: SSMPalette.texte3),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -531,7 +551,30 @@ class _FraisScolaireFormScreenState extends State<FraisScolaireFormScreen> {
       padding: const EdgeInsets.only(bottom: 10, top: 4),
       child: Text(
         titre.toUpperCase(),
-        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4),
+        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4),
+      ),
+    );
+  }
+
+  InputDecoration _decorationChamp(String label, {IconData? icone, bool dense = false}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      prefixIcon: icone != null ? Icon(icone, size: dense ? 18 : 20, color: SSMPalette.texte3) : null,
+      isDense: dense,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
       ),
     );
   }
@@ -549,14 +592,11 @@ class _FraisScolaireFormScreenState extends State<FraisScolaireFormScreen> {
       controller: controller,
       maxLines: maxLignes,
       keyboardType: clavierNumerique ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
-      style: clavierNumerique ? GoogleFonts.jetBrainsMono(fontSize: 14) : GoogleFonts.inter(fontSize: 14),
+      style: clavierNumerique
+          ? GoogleFonts.jetBrainsMono(fontSize: 14, color: SSMPalette.texte1)
+          : GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
       onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icone, size: dense ? 18 : 22),
-        border: const OutlineInputBorder(),
-        isDense: dense,
-      ),
+      decoration: _decorationChamp(label, icone: icone, dense: dense),
     );
   }
 }
