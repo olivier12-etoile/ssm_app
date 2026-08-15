@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'config/theme_config.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/changement_mdp_screen.dart';
-import 'screens/dashboard/tableau_de_bord_screen.dart';
+import 'screens/dashboard/dashboard_directeur_screen.dart';
 import 'screens/directeur/gestion_utilisateurs_screen.dart';
 import 'screens/directeur/fiche_utilisateur_screen.dart';
 import 'screens/directeur/gestion_classes_screen.dart';
@@ -33,6 +33,8 @@ import 'screens/emploi_du_temps/emploi_du_temps_module_screen.dart';
 import 'screens/emploi_du_temps/parametrage_creneaux_screen.dart';
 import 'screens/secretaire/gestion_paiements_screen.dart';
 import 'screens/secretaire/liste_renvoi_screen.dart';
+import 'screens/paiements/gestion_caisse_screen.dart';
+import 'screens/paiements/rapports_paiements_screen.dart';
 import 'screens/secretaire/dashboard_secretaire_screen.dart';
 import 'screens/profil/profil_screen.dart';
 import 'screens/statistiques/statistiques_module_screen.dart';
@@ -57,7 +59,7 @@ class SSMApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/changer-mot-de-passe': (context) => const ChangementMdpScreen(),
-        '/tableau-de-bord': (context) => const TableauDeBordScreen(),
+        '/tableau-de-bord': (context) => const DashboardDirecteurScreen(),
         '/dashboard/enseignant': (context) => const DashboardEnseignantScreen(),
         '/dashboard/censeur': (context) => const DashboardCenseurScreen(),
         '/censeur/classe/absences': (context) {
@@ -187,6 +189,8 @@ class SSMApp extends StatelessWidget {
         },
         '/paiements': (context) => const GestionPaiementsScreen(),
         '/paiements/renvoi': (context) => const ListeRenvoiScreen(),
+        '/paiements/caisse': (context) => const GestionCaisseScreen(),
+        '/paiements/rapports': (context) => const RapportsPaiementsScreen(),
         '/profil': (context) => const ProfilScreen(),
         '/statistiques': (context) => const StatistiquesModuleScreen(),
         '/bulletins': (context) => const BulletinsModuleScreen(),
