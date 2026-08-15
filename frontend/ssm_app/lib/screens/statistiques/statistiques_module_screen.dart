@@ -7,6 +7,11 @@ import '../../models/statistique_generale_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/statistique_generale_service.dart';
+import 'inscriptions_detail_screen.dart';
+import 'paiements_detail_screen.dart';
+import 'pedagogique_detail_screen.dart';
+import 'centre_decision_screen.dart';
+import 'rapports_screen.dart';
 
 const Color _indigo = Color(0xFF1E3A8A);
 const Color _teal = Color(0xFF0D9488);
@@ -31,9 +36,9 @@ String _formatMontant(num valeur) {
 // ══════════════════════════════════════════════════════════
 // Point d'entrée unique du module Statistiques (même logique que
 // notes_module_screen.dart / emploi_du_temps_module_screen.dart) : tableau
-// de bord général, réservé au directeur/censeur — les 5 écrans détaillés
-// (inscriptions, paiements, résultats, centre de décision, rapports) sont
-// prévus pour la Phase 5 et simplement annoncés ici.
+// de bord général, réservé au directeur/censeur, avec navigation vers les 5
+// écrans détaillés déjà existants (inscriptions, paiements, résultats,
+// centre de décision, rapports).
 // ══════════════════════════════════════════════════════════
 class StatistiquesModuleScreen extends StatefulWidget {
   const StatistiquesModuleScreen({super.key});
@@ -212,10 +217,8 @@ class _StatistiquesModuleScreenState extends State<StatistiquesModuleScreen> {
     }
   }
 
-  void _ecranAVenir(String titre) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$titre — écran détaillé à venir (Phase 5).')),
-    );
+  void _ouvrir(Widget ecran) {
+    Navigator.push(context, MaterialPageRoute(builder: (_) => ecran));
   }
 
   @override
@@ -890,21 +893,42 @@ class _StatistiquesModuleScreenState extends State<StatistiquesModuleScreen> {
   }
 
   // ══════════════════════════════════════════════════════
-  // NAVIGATION VERS LES MODULES DÉTAILLÉS (PHASE 5)
+  // NAVIGATION VERS LES MODULES DÉTAILLÉS
   // ══════════════════════════════════════════════════════
 
   Widget _grilleNavigation() {
     final items = <_NavItem>[
-      const _NavItem('Inscriptions détaillées', Icons.groups_outlined, _indigo),
-      const _NavItem('Paiements détaillés', Icons.payments_outlined, _vert),
-      const _NavItem('Résultats pédagogiques', Icons.grade_outlined, _teal),
+      _NavItem(
+        'Inscriptions détaillées',
+        Icons.groups_outlined,
+        _indigo,
+        onTap: () => _ouvrir(InscriptionsDetailScreen(anneeScolaireId: _anneeId)),
+      ),
+      _NavItem(
+        'Paiements détaillés',
+        Icons.payments_outlined,
+        _vert,
+        onTap: () => _ouvrir(PaiementsDetailScreen(anneeScolaireId: _anneeId)),
+      ),
+      _NavItem(
+        'Résultats pédagogiques',
+        Icons.grade_outlined,
+        _teal,
+        onTap: () => _ouvrir(PedagogiqueDetailScreen(periodeId: _periodeId)),
+      ),
       _NavItem(
         'Centre de Décision',
         Icons.notifications_active_outlined,
         _rouge,
         badge: _nombreAlertes > 0 ? '$_nombreAlertes' : null,
+        onTap: () => _ouvrir(CentreDecisionScreen(anneeScolaireId: _anneeId, periodeId: _periodeId)),
       ),
-      const _NavItem('Rapports', Icons.picture_as_pdf_outlined, _ambre),
+      _NavItem(
+        'Rapports',
+        Icons.picture_as_pdf_outlined,
+        _ambre,
+        onTap: () => _ouvrir(const RapportsScreen()),
+      ),
     ];
 
     return LayoutBuilder(
@@ -929,7 +953,7 @@ class _StatistiquesModuleScreenState extends State<StatistiquesModuleScreen> {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: () => _ecranAVenir(item.titre),
+        onTap: item.onTap,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(14),
           child: BackdropFilter(
@@ -994,6 +1018,7 @@ class _NavItem {
   final IconData icone;
   final Color couleur;
   final String? badge;
+  final VoidCallback onTap;
 
-  const _NavItem(this.titre, this.icone, this.couleur, {this.badge});
+  const _NavItem(this.titre, this.icone, this.couleur, {this.badge, required this.onTap});
 }

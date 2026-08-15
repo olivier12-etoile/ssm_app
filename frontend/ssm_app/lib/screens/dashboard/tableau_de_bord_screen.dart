@@ -295,6 +295,7 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
 
                       _menuItemGlass(context, icone: Icons.sync, titre: 'Synchronisation', route: '/sync', routeActuelle: routeActuelle),
                       _menuItemGlass(context, icone: Icons.person, titre: 'Mon profil', route: '/profil', routeActuelle: routeActuelle),
+                      _menuItemGlass(context, icone: Icons.settings, titre: 'Paramètres', route: '/parametres', routeActuelle: routeActuelle),
                     ],
                   ),
                 ),

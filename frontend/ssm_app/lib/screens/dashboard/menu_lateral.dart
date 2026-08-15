@@ -191,6 +191,19 @@ class MenuLateral extends StatelessWidget {
                     route: '/profil',
                     routeActuelle: routeActuelle,
                   ),
+
+                  // Paramètres de l'école — tout le monde (ParametresModuleScreen
+                  // filtre lui-même les sections visibles selon le rôle : seuls
+                  // Utilisateurs & permissions et Actions avancées restent
+                  // réservés au directeur, le reste (Sécurité, Apparence,
+                  // Système, et un sous-ensemble Établissement/Scolarité/
+                  // Finance/Notifications) est ouvert à tous).
+                  _menuItem(context,
+                    icone: Icons.settings,
+                    titre: 'Paramètres',
+                    route: '/parametres',
+                    routeActuelle: routeActuelle,
+                  ),
                 ],
               ),
             ),

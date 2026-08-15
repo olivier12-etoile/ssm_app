@@ -35,10 +35,11 @@ import 'screens/secretaire/gestion_paiements_screen.dart';
 import 'screens/secretaire/liste_renvoi_screen.dart';
 import 'screens/secretaire/dashboard_secretaire_screen.dart';
 import 'screens/profil/profil_screen.dart';
-import 'screens/statistiques/statistiques_screen.dart';
+import 'screens/statistiques/statistiques_module_screen.dart';
 import 'screens/bulletins/bulletins_screen.dart';
 import 'screens/sync/sync_screen.dart';
-import 'screens/notifications/notifications_attente_screen.dart';
+import 'screens/notifications/notifications_module_screen.dart';
+import 'screens/parametres/parametres_module_screen.dart';
 
 void main() {
   runApp(const SSMApp());
@@ -187,10 +188,11 @@ class SSMApp extends StatelessWidget {
         '/paiements': (context) => const GestionPaiementsScreen(),
         '/paiements/renvoi': (context) => const ListeRenvoiScreen(),
         '/profil': (context) => const ProfilScreen(),
-        '/statistiques': (context) => const StatistiquesScreen(),
+        '/statistiques': (context) => const StatistiquesModuleScreen(),
         '/bulletins': (context) => const BulletinsScreen(),
         '/sync': (context) => const SyncScreen(),
-        '/notifications': (context) => const NotificationsAttenteScreen(),
+        '/notifications': (context) => const NotificationsModuleScreen(),
+        '/parametres': (context) => const ParametresModuleScreen(),
       },
       home: const LoginScreen(),
     );
