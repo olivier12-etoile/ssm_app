@@ -1,21 +1,14 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../services/annee_service.dart';
 import '../../services/statistique_detail_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 class _RapportDef {
   final String type; // slug attendu par l'API (/statistiques/rapports/{type})
@@ -47,7 +40,7 @@ const List<_RapportDef> _rapports = [
     titre: 'Inscriptions',
     description: 'Effectifs généraux, répartition par niveau, classe et sexe.',
     icone: Icons.groups_outlined,
-    couleur: _indigo,
+    couleur: SSMPalette.indigo,
     anneeRequise: true,
   ),
   _RapportDef(
@@ -55,7 +48,7 @@ const List<_RapportDef> _rapports = [
     titre: 'Financier',
     description: 'Résumé financier global et liste des élèves débiteurs.',
     icone: Icons.account_balance_wallet_outlined,
-    couleur: _teal,
+    couleur: SSMPalette.teal,
     anneeRequise: true,
   ),
   _RapportDef(
@@ -63,7 +56,7 @@ const List<_RapportDef> _rapports = [
     titre: 'Paiements',
     description: 'Paiements par classe, par niveau et recettes par mois.',
     icone: Icons.payments_outlined,
-    couleur: _vert,
+    couleur: SSMPalette.teal,
     anneeRequise: true,
   ),
   _RapportDef(
@@ -71,7 +64,7 @@ const List<_RapportDef> _rapports = [
     titre: 'Résultats',
     description: 'Résumé des résultats scolaires, par classe et par matière.',
     icone: Icons.grade_outlined,
-    couleur: _rouge,
+    couleur: SSMPalette.rouge,
     anneeRequise: true,
     periodeRequise: true,
   ),
@@ -89,15 +82,15 @@ const List<_RapportDef> _rapports = [
     titre: 'Élèves en difficulté',
     description: 'Liste des élèves sous le seuil de moyenne choisi.',
     icone: Icons.warning_amber_rounded,
-    couleur: _ambre,
+    couleur: SSMPalette.ambre,
     periodeRequise: true,
     seuilDisponible: true,
   ),
 ];
 
 // ══════════════════════════════════════════════════════════
-// Écran "Rapports" du module Statistiques (Phase 5) : génération PDF/Excel
-// des 6 rapports exposés par RapportStatistiqueController, avec filtres
+// Écran "Rapports" du module Statistiques : génération PDF/Excel des 6
+// rapports exposés par RapportStatistiqueController, avec filtres
 // contextuels (année, période, limite, seuil) avant génération.
 // ══════════════════════════════════════════════════════════
 class RapportsScreen extends StatefulWidget {
@@ -151,7 +144,7 @@ class _RapportsScreenState extends State<RapportsScreen> {
   }
 
   void _afficherErreur(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge));
   }
 
   Future<void> _ouvrirFiltres(_RapportDef def) async {
@@ -213,7 +206,6 @@ class _RapportsScreenState extends State<RapportsScreen> {
               Navigator.pop(context);
               OpenFile.open(chemin);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
             child: const Text('Ouvrir'),
           ),
         ],
@@ -224,42 +216,28 @@ class _RapportsScreenState extends State<RapportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: Text('Rapports', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          Positioned(top: -80, right: -60, child: _blob(size: 240, couleur: _indigo.withValues(alpha: 0.08))),
-          Positioned(bottom: -60, left: -60, child: _blob(size: 200, couleur: _teal.withValues(alpha: 0.10))),
-          SafeArea(
-            child: _chargementContexte
-                ? const Center(child: CircularProgressIndicator(color: _indigo))
-                : ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      Text(
-                        'Choisissez un rapport et un format ; les filtres pertinents (année, période...) vous seront demandés avant la génération.',
-                        style: GoogleFonts.inter(fontSize: 12, color: _texte),
-                      ),
-                      const SizedBox(height: 16),
-                      ..._rapports.map(_carteRapport),
-                    ],
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _blob({required double size, required Color couleur}) {
-    return IgnorePointer(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: couleur)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Rapports', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargementContexte
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        Text(
+                          'Choisissez un rapport et un format ; les filtres pertinents (année, période...) vous seront demandés avant la génération.',
+                          style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
+                        ),
+                        const SizedBox(height: 16),
+                        ..._rapports.map((def) => Padding(padding: const EdgeInsets.only(bottom: 14), child: _carteRapport(def))),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -267,70 +245,48 @@ class _RapportsScreenState extends State<RapportsScreen> {
   Widget _carteRapport(_RapportDef def) {
     final enCours = _typeEnCours == def.type;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.68),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-            boxShadow: [BoxShadow(color: _texteFonce.withValues(alpha: 0.06), blurRadius: 24, offset: const Offset(0, 8))],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SSMPanel(
+      titre: def.titre,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(color: def.couleur.withValues(alpha: 0.14), shape: BoxShape.circle),
-                    child: Icon(def.icone, color: def.couleur, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(def.titre, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-                        Text(def.description, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
-                      ],
-                    ),
-                  ),
-                ],
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(color: def.couleur.withValues(alpha: 0.14), shape: BoxShape.circle),
+                child: Icon(def.icone, color: def.couleur, size: 18),
               ),
-              const SizedBox(height: 12),
-              if (enCours)
-                const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 6), child: CircularProgressIndicator(strokeWidth: 2, color: _indigo)))
-              else
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _ouvrirFiltres(def),
-                        style: OutlinedButton.styleFrom(foregroundColor: _rouge, side: const BorderSide(color: _rouge)),
-                        icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
-                        label: Text('PDF', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: () => _ouvrirFiltres(def),
-                        style: OutlinedButton.styleFrom(foregroundColor: _vert, side: const BorderSide(color: _vert)),
-                        icon: const Icon(Icons.table_chart_outlined, size: 16),
-                        label: Text('Excel', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(def.description, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+              ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          if (enCours)
+            const Center(child: Padding(padding: EdgeInsets.symmetric(vertical: 6), child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)))
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                SSMQuickActionButton(
+                  icone: Icons.picture_as_pdf_outlined,
+                  label: 'PDF',
+                  variante: SSMActionVariante.gris,
+                  onTap: () => _ouvrirFiltres(def),
+                ),
+                SSMQuickActionButton(
+                  icone: Icons.table_chart_outlined,
+                  label: 'Excel',
+                  variante: SSMActionVariante.gris,
+                  onTap: () => _ouvrirFiltres(def),
+                ),
+              ],
+            ),
+        ],
       ),
     );
   }
@@ -391,14 +347,14 @@ class _FeuilleFiltresRapportState extends State<_FeuilleFiltresRapport> {
       maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) => Container(
-        decoration: const BoxDecoration(color: Color(0xFFF8FAFC), borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        decoration: const BoxDecoration(color: SSMPalette.fond, borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
         child: Column(
           children: [
             const SizedBox(height: 10),
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(2))),
+            Container(width: 40, height: 4, decoration: BoxDecoration(color: SSMPalette.bordure, borderRadius: BorderRadius.circular(2))),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text('Filtres — ${def.titre}', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce)),
+              child: Text('Filtres — ${def.titre}', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
             ),
             Expanded(
               child: ListView(
@@ -406,37 +362,35 @@ class _FeuilleFiltresRapportState extends State<_FeuilleFiltresRapport> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 children: [
                   if (def.anneeRequise) ...[
-                    Text('Année scolaire', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                    Text('Année scolaire', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                     const SizedBox(height: 4),
                     DropdownButtonFormField<int>(
-                      value: _anneeId,
+                      initialValue: _anneeId,
                       isExpanded: true,
-                      decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
                       items: widget.annees.map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String? ?? '—'))).toList(),
                       onChanged: (v) => setState(() => _anneeId = v),
                     ),
                     const SizedBox(height: 16),
                   ],
                   if (def.periodeRequise) ...[
-                    Text('Période', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                    Text('Période', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                     const SizedBox(height: 4),
                     DropdownButtonFormField<int>(
-                      value: _periodeId,
+                      initialValue: _periodeId,
                       isExpanded: true,
-                      decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
                       items: widget.periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String? ?? '—'))).toList(),
                       onChanged: (v) => setState(() => _periodeId = v),
                     ),
                     const SizedBox(height: 16),
                   ],
                   if (def.limiteDisponible) ...[
-                    Text('Nombre d\'élèves : ${_limite.round()}', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                    Slider(value: _limite, min: 5, max: 50, divisions: 9, activeColor: _indigo, onChanged: (v) => setState(() => _limite = v)),
+                    Text('Nombre d\'élèves : ${_limite.round()}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                    Slider(value: _limite, min: 5, max: 50, divisions: 9, activeColor: SSMPalette.indigo, onChanged: (v) => setState(() => _limite = v)),
                     const SizedBox(height: 8),
                   ],
                   if (def.seuilDisponible) ...[
-                    Text('Seuil de moyenne : ${_seuil.toStringAsFixed(0)}/20', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                    Slider(value: _seuil, min: 0, max: 15, divisions: 15, activeColor: _ambre, onChanged: (v) => setState(() => _seuil = v)),
+                    Text('Seuil de moyenne : ${_seuil.toStringAsFixed(0)}/20', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                    Slider(value: _seuil, min: 0, max: 15, divisions: 15, activeColor: SSMPalette.ambre, onChanged: (v) => setState(() => _seuil = v)),
                     const SizedBox(height: 8),
                   ],
                   if (filtresIncomplets)
@@ -444,7 +398,7 @@ class _FeuilleFiltresRapportState extends State<_FeuilleFiltresRapport> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         'Sélectionnez les filtres requis pour générer ce rapport.',
-                        style: GoogleFonts.inter(fontSize: 11, color: _rouge),
+                        style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.rouge),
                       ),
                     ),
                   const SizedBox(height: 20),
@@ -453,7 +407,7 @@ class _FeuilleFiltresRapportState extends State<_FeuilleFiltresRapport> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: filtresIncomplets ? null : () => Navigator.pop(context, _construireFiltres('pdf')),
-                          style: OutlinedButton.styleFrom(foregroundColor: _rouge, side: const BorderSide(color: _rouge)),
+                          style: OutlinedButton.styleFrom(foregroundColor: SSMPalette.rouge, side: const BorderSide(color: SSMPalette.rouge)),
                           icon: const Icon(Icons.picture_as_pdf_outlined, size: 16),
                           label: Text('Générer PDF', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                         ),
@@ -462,7 +416,7 @@ class _FeuilleFiltresRapportState extends State<_FeuilleFiltresRapport> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: filtresIncomplets ? null : () => Navigator.pop(context, _construireFiltres('excel')),
-                          style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white),
+                          style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.teal, foregroundColor: Colors.white),
                           icon: const Icon(Icons.table_chart_outlined, size: 16),
                           label: Text('Générer Excel', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                         ),

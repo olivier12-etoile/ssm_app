@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -11,15 +10,11 @@ import '../../services/annee_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/statistique_detail_service.dart';
 import '../../services/whatsapp_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _rouge = Color(0xFFDC2626);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 String _formatMontant(num m) {
   final entier = m.round();
@@ -33,15 +28,15 @@ String _formatMontant(num m) {
 }
 
 Color _couleurTaux(double taux) {
-  if (taux >= 80) return _vert;
-  if (taux >= 50) return _ambre;
-  return _rouge;
+  if (taux >= 80) return SSMPalette.teal;
+  if (taux >= 50) return SSMPalette.ambre;
+  return SSMPalette.rouge;
 }
 
 // ══════════════════════════════════════════════════════════
-// Écran détaillé "Paiements" du module Statistiques (Phase 5) : tableau par
-// classe (coloré selon le taux de recouvrement), recettes par mois, et
-// liste des élèves non en règle avec rappel WhatsApp / appel direct.
+// Écran détaillé "Paiements" du module Statistiques : tableau par classe
+// (coloré selon le taux de recouvrement), recettes par mois, et liste des
+// élèves non en règle avec rappel WhatsApp / appel direct.
 // ══════════════════════════════════════════════════════════
 class PaiementsDetailScreen extends StatefulWidget {
   final int? anneeScolaireId;
@@ -168,7 +163,7 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
   }
 
   void _afficherErreur(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge));
   }
 
   Future<void> _exporter(String format) async {
@@ -212,204 +207,132 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: Text('Paiements détaillés', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          Positioned(top: -80, right: -60, child: _blob(size: 240, couleur: _indigo.withValues(alpha: 0.08))),
-          Positioned(bottom: -60, left: -60, child: _blob(size: 200, couleur: _vert.withValues(alpha: 0.08))),
-          SafeArea(
-            child: RefreshIndicator(
-              onRefresh: () => Future.wait([_charger(), _chargerElevesNonEnRegle()]),
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Row(
-                    children: [
-                      Expanded(child: _selecteurAnnee()),
-                      const SizedBox(width: 10),
-                      if (_exportEnCours)
-                        const SizedBox(width: 40, height: 40, child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _indigo)))
-                      else
-                        PopupMenuButton<String>(
-                          icon: const Icon(Icons.download_outlined, color: _indigo),
-                          onSelected: _exporter,
-                          itemBuilder: (context) => const [
-                            PopupMenuItem(value: 'pdf', child: Text('Exporter en PDF')),
-                            PopupMenuItem(value: 'excel', child: Text('Exporter en Excel')),
-                          ],
-                        ),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: 'Paiements détaillés',
+              onRetour: () => Navigator.pop(context),
+              complement: _selecteurAnnee(),
+              actions: [
+                if (_exportEnCours)
+                  const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)),
+                  )
+                else
+                  PopupMenuButton<String>(
+                    icon: const Icon(Icons.download_outlined, color: SSMPalette.indigo),
+                    onSelected: _exporter,
+                    itemBuilder: (context) => const [
+                      PopupMenuItem(value: 'pdf', child: Text('Exporter en PDF')),
+                      PopupMenuItem(value: 'excel', child: Text('Exporter en Excel')),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  if (_chargementPrincipal && _erreur == null)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 80),
-                      child: Center(child: CircularProgressIndicator(color: _indigo)),
-                    )
-                  else if (_erreur != null)
-                    _carteErreur(_erreur!, () => Future.wait([_charger(), _chargerElevesNonEnRegle()]))
-                  else ...[
-                    _cartePaiementsParClasse(),
-                    const SizedBox(height: 16),
-                    _carteRecettesParMois(),
-                    const SizedBox(height: 16),
-                    _sectionElevesNonEnRegle(),
-                  ],
-                ],
-              ),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _blob({required double size, required Color couleur}) {
-    return IgnorePointer(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: couleur)),
+            Expanded(
+              child: _chargementPrincipal && _erreur == null
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _carteErreur(_erreur!, () => Future.wait([_charger(), _chargerElevesNonEnRegle()]))
+                      : RefreshIndicator(
+                          onRefresh: () => Future.wait([_charger(), _chargerElevesNonEnRegle()]),
+                          color: SSMPalette.indigo,
+                          child: ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              _cartePaiementsParClasse(),
+                              const SizedBox(height: 16),
+                              _carteRecettesParMois(),
+                              const SizedBox(height: 16),
+                              _sectionElevesNonEnRegle(),
+                            ],
+                          ),
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _selecteurAnnee() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-          ),
-          child: DropdownButtonFormField<int>(
-            value: _anneeId,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: 'Année scolaire',
-              labelStyle: GoogleFonts.inter(fontSize: 12, color: _texte),
-              isDense: true,
-              border: InputBorder.none,
-            ),
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
-            items: _annees
-                .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String? ?? '—')))
-                .toList(),
-            onChanged: _changerAnnee,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: _anneeId,
+          isDense: true,
+          icon: const Icon(Icons.expand_more, size: 16, color: SSMPalette.texte3),
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+          items: _annees
+              .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String? ?? '—')))
+              .toList(),
+          onChanged: _changerAnnee,
         ),
       ),
     );
   }
 
   Widget _carteErreur(String message, Future<void> Function() onReessayer) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
-        children: [
-          const Icon(Icons.error_outline, color: _rouge, size: 36),
-          const SizedBox(height: 10),
-          Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: onReessayer,
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-            child: const Text('Réessayer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _carteGlass({required Widget child, EdgeInsetsGeometry? padding}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-            boxShadow: [BoxShadow(color: _texteFonce.withValues(alpha: 0.06), blurRadius: 32, offset: const Offset(0, 8))],
-          ),
-          child: child,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 36),
+            const SizedBox(height: 10),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: onReessayer, child: const Text('Réessayer')),
+          ],
         ),
       ),
     );
   }
 
   Widget _etatVide(String message) {
-    return SizedBox(height: 80, child: Center(child: Text(message, style: GoogleFonts.inter(fontSize: 12, color: _texte))));
+    return SizedBox(height: 80, child: Center(child: Text(message, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2))));
   }
 
   // ── Tableau paiements par classe ─────────────────────────
 
   Widget _cartePaiementsParClasse() {
-    return _carteGlass(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Text('Paiements par classe', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          ),
-          const SizedBox(height: 10),
-          if (_parClasse.isEmpty)
-            _etatVide('Aucune donnée')
-          else
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowHeight: 34,
-                dataRowMinHeight: 44,
-                dataRowMaxHeight: 52,
-                columnSpacing: 20,
-                headingTextStyle: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _texte),
-                columns: const [
-                  DataColumn(label: Text('CLASSE')),
-                  DataColumn(label: Text('À JOUR')),
-                  DataColumn(label: Text('EN RETARD')),
-                  DataColumn(label: Text('RESTE À PAYER')),
-                  DataColumn(label: Text('TAUX')),
-                ],
-                rows: _parClasse.map((c) {
-                  final couleur = _couleurTaux(c.tauxRecouvrement);
-                  return DataRow(
-                    color: WidgetStateProperty.all(couleur.withValues(alpha: 0.06)),
-                    cells: [
-                      DataCell(Text(c.classe, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texteFonce))),
-                      DataCell(Text('${c.elevesAJour}', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _vert))),
-                      DataCell(Text('${c.elevesEnRetard}', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _rouge))),
-                      DataCell(Text(_formatMontant(c.resteAPayer), style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _texteFonce))),
-                      DataCell(
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(color: couleur.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(999)),
-                          child: Text(
-                            '${c.tauxRecouvrement.toStringAsFixed(0)}%',
-                            style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w700, color: couleur),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
+    return SSMPanel(
+      titre: 'Paiements par classe',
+      padding: EdgeInsets.zero,
+      child: _parClasse.isEmpty
+          ? Padding(padding: const EdgeInsets.all(16), child: _etatVide('Aucune donnée'))
+          : SSMDataTable(
+              colonnes: const [
+                SSMDataColumn('Classe'),
+                SSMDataColumn('À jour'),
+                SSMDataColumn('En retard'),
+                SSMDataColumn('Reste à payer'),
+                SSMDataColumn('Taux'),
+              ],
+              lignes: [
+                for (final c in _parClasse)
+                  [
+                    Text(c.classe, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                    Text('${c.elevesAJour}', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: SSMPalette.teal)),
+                    Text('${c.elevesEnRetard}', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: SSMPalette.rouge)),
+                    Text(
+                      _formatMontant(c.resteAPayer),
+                      style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _couleurTaux(c.tauxRecouvrement)),
+                    ),
+                    SSMPill.couleur(label: '${c.tauxRecouvrement.toStringAsFixed(0)}%', couleur: _couleurTaux(c.tauxRecouvrement)),
+                  ],
+              ],
             ),
-        ],
-      ),
     );
   }
 
@@ -420,16 +343,11 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
     final maxValeur = valeurs.isEmpty ? 0.0 : valeurs.reduce((a, b) => a > b ? a : b);
     final maxY = maxValeur <= 0 ? 100.0 : maxValeur * 1.25;
 
-    return _carteGlass(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Recettes par mois', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 14),
-          if (_parMois.isEmpty)
-            _etatVide('Aucune donnée')
-          else
-            SizedBox(
+    return SSMPanel(
+      titre: 'Recettes par mois',
+      child: _parMois.isEmpty
+          ? _etatVide('Aucune donnée')
+          : SizedBox(
               height: 200,
               child: BarChart(
                 BarChartData(
@@ -442,7 +360,7 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
                       tooltipMargin: 0,
                       tooltipPadding: EdgeInsets.zero,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                          BarTooltipItem(_formatMontant(rod.toY), GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: _texte)),
+                          BarTooltipItem(_formatMontant(rod.toY), GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w700, color: SSMPalette.texte2)),
                     ),
                   ),
                   barGroups: [
@@ -451,14 +369,14 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
                         x: i,
                         showingTooltipIndicators: const [0],
                         barRods: [
-                          BarChartRodData(toY: valeurs[i], width: 16, borderRadius: BorderRadius.circular(4), color: _vert),
+                          BarChartRodData(toY: valeurs[i], width: 16, borderRadius: BorderRadius.circular(4), color: SSMPalette.teal),
                         ],
                       ),
                   ],
                   gridData: FlGridData(
                     drawVerticalLine: false,
                     horizontalInterval: maxY / 4,
-                    getDrawingHorizontalLine: (v) => FlLine(color: _texteFonce.withValues(alpha: 0.04), strokeWidth: 1),
+                    getDrawingHorizontalLine: (v) => FlLine(color: SSMPalette.bordure, strokeWidth: 1),
                   ),
                   borderData: FlBorderData(show: false),
                   titlesData: FlTitlesData(
@@ -473,7 +391,7 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
                           if (i < 0 || i >= _parMois.length) return const SizedBox();
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
-                            child: Text(_parMois[i].mois, style: GoogleFonts.inter(fontSize: 9, color: _texte)),
+                            child: Text(_parMois[i].mois, style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte2)),
                           );
                         },
                       ),
@@ -482,32 +400,29 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
                 ),
               ),
             ),
-        ],
-      ),
     );
   }
 
   // ── Élèves non en règle ───────────────────────────────────
 
   Widget _sectionElevesNonEnRegle() {
-    return _carteGlass(
+    return SSMPanel(
+      titre: 'Élèves non en règle',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Élèves non en règle', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 12),
           _filtresElevesNonEnRegle(),
           const SizedBox(height: 12),
           if (_chargementEleves)
-            const Padding(padding: EdgeInsets.symmetric(vertical: 30), child: Center(child: CircularProgressIndicator(color: _indigo)))
+            const Padding(padding: EdgeInsets.symmetric(vertical: 30), child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)))
           else if (_elevesNonEnRegle.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
                 children: [
-                  const Icon(Icons.check_circle_outline, color: _vert, size: 36),
+                  const Icon(Icons.check_circle_outline, color: SSMPalette.teal, size: 36),
                   const SizedBox(height: 8),
-                  Text('Aucun élève non en règle pour ce filtre.', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                  Text('Aucun élève non en règle pour ce filtre.', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                 ],
               ),
             )
@@ -526,15 +441,19 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(50)),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF9FAFB),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<int?>(
                     value: _filtreClasseId,
                     isDense: true,
                     isExpanded: true,
-                    icon: const Icon(Icons.expand_more, size: 16),
-                    hint: Text('Toutes les classes', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                    style: GoogleFonts.inter(fontSize: 12, color: _texte),
+                    icon: const Icon(Icons.expand_more, size: 16, color: SSMPalette.texte3),
+                    hint: Text('Toutes les classes', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                    style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1),
                     items: [
                       const DropdownMenuItem<int?>(value: null, child: Text('Toutes les classes')),
                       ..._classes.map((c) => DropdownMenuItem<int?>(value: c['id'] as int, child: Text(c['nom'] as String))),
@@ -554,12 +473,8 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
                 style: GoogleFonts.inter(fontSize: 12),
                 decoration: InputDecoration(
                   hintText: 'Niveau',
-                  hintStyle: GoogleFonts.inter(fontSize: 12, color: _gris),
                   isDense: true,
-                  filled: true,
-                  fillColor: const Color(0xFFF1F5F9),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
                 ),
                 onSubmitted: (_) => _chargerElevesNonEnRegle(),
               ),
@@ -576,12 +491,8 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
                 style: GoogleFonts.inter(fontSize: 12),
                 decoration: InputDecoration(
                   hintText: 'Montant minimum restant (FCFA)',
-                  hintStyle: GoogleFonts.inter(fontSize: 12, color: _gris),
                   isDense: true,
-                  filled: true,
-                  fillColor: const Color(0xFFF1F5F9),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(50), borderSide: BorderSide.none),
                 ),
                 onSubmitted: (_) => _chargerElevesNonEnRegle(),
               ),
@@ -589,7 +500,7 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
             const SizedBox(width: 8),
             IconButton(
               onPressed: _chargerElevesNonEnRegle,
-              icon: const Icon(Icons.filter_alt_outlined, color: _indigo),
+              icon: const Icon(Icons.filter_alt_outlined, color: SSMPalette.indigo),
               tooltip: 'Appliquer les filtres',
             ),
           ],
@@ -598,6 +509,8 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
     );
   }
 
+  // Style aligné sur _carteDebiteur (debiteurs_screen.dart déjà migré) :
+  // fond blanc, bordure gauche colorée, montant + pill, actions en bas.
   Widget _carteEleveNonEnRegle(EleveNonEnRegle eleve) {
     final aTelephone = eleve.telephoneParent != null && eleve.telephoneParent!.isNotEmpty;
 
@@ -605,46 +518,56 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.75),
-        borderRadius: BorderRadius.circular(12),
-        border: const Border(left: BorderSide(color: _rouge, width: 4)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border(
+          top: BorderSide(color: SSMPalette.bordure),
+          right: BorderSide(color: SSMPalette.bordure),
+          bottom: BorderSide(color: SSMPalette.bordure),
+          left: const BorderSide(color: SSMPalette.rouge, width: 3),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(eleve.nomComplet, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce)),
+                    Text(eleve.nomComplet, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
                     const SizedBox(height: 2),
-                    Text(eleve.classe, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                    Text(eleve.classe, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                   ],
                 ),
               ),
-              Text(_formatMontant(eleve.resteAPayer), style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: _rouge)),
+              Text(_formatMontant(eleve.resteAPayer), style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.rouge)),
             ],
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.phone_outlined, size: 13, color: _gris),
+              const Icon(Icons.phone_outlined, size: 13, color: SSMPalette.texte3),
               const SizedBox(width: 4),
               Text(
                 aTelephone ? eleve.telephoneParent! : 'Aucun numéro enregistré',
-                style: GoogleFonts.inter(fontSize: 12, color: _texte),
+                style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: aTelephone ? () => _appeler(eleve.telephoneParent!) : null,
-                  style: OutlinedButton.styleFrom(foregroundColor: _indigo),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SSMPalette.indigo,
+                    side: const BorderSide(color: SSMPalette.indigo),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                  ),
                   icon: const Icon(Icons.call_outlined, size: 15),
                   label: Text('Appeler', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
@@ -653,7 +576,11 @@ class _PaiementsDetailScreenState extends State<PaiementsDetailScreen> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: aTelephone ? () => _envoyerWhatsApp(eleve) : null,
-                  style: OutlinedButton.styleFrom(foregroundColor: _vert),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: SSMPalette.teal,
+                    side: const BorderSide(color: SSMPalette.teal),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                  ),
                   icon: const Icon(Icons.chat_bubble_outline, size: 15),
                   label: Text('WhatsApp', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
                 ),

@@ -1,21 +1,16 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../models/statistique_detail_model.dart';
 import '../../services/annee_service.dart';
 import '../../services/statistique_detail_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _rouge = Color(0xFFDC2626);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 // ══════════════════════════════════════════════════════════
-// Écran détaillé "Inscriptions" du module Statistiques (Phase 5) : évolution
+// Écran détaillé "Inscriptions" du module Statistiques : évolution
 // pluriannuelle, répartition par niveau (avec sous-répartition garçons /
 // filles) et par classe, pour une année scolaire choisie.
 // ══════════════════════════════════════════════════════════
@@ -109,122 +104,77 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: Text('Inscriptions détaillées', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          Positioned(top: -80, right: -60, child: _blob(size: 240, couleur: _indigo.withValues(alpha: 0.08))),
-          Positioned(bottom: -60, left: -60, child: _blob(size: 200, couleur: _teal.withValues(alpha: 0.10))),
-          SafeArea(
-            child: RefreshIndicator(
-              onRefresh: _charger,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  _selecteurAnnee(),
-                  const SizedBox(height: 20),
-                  if (_chargement && _erreur == null)
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 80),
-                      child: Center(child: CircularProgressIndicator(color: _indigo)),
-                    )
-                  else if (_erreur != null)
-                    _carteErreur(_erreur!, _charger)
-                  else ...[
-                    _carteEvolution(),
-                    const SizedBox(height: 16),
-                    _carteRepartitionNiveau(),
-                    const SizedBox(height: 16),
-                    _carteRepartitionClasse(),
-                  ],
-                ],
-              ),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: 'Inscriptions détaillées',
+              onRetour: () => Navigator.pop(context),
+              complement: _selecteurAnnee(),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _blob({required double size, required Color couleur}) {
-    return IgnorePointer(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: couleur)),
+            Expanded(
+              child: _chargement && _erreur == null
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _carteErreur(_erreur!, _charger)
+                      : RefreshIndicator(
+                          onRefresh: _charger,
+                          color: SSMPalette.indigo,
+                          child: ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              _carteEvolution(),
+                              const SizedBox(height: 16),
+                              _carteRepartitionNiveau(),
+                              const SizedBox(height: 16),
+                              _carteRepartitionClasse(),
+                            ],
+                          ),
+                        ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _selecteurAnnee() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-          ),
-          child: DropdownButtonFormField<int>(
-            value: _anneeId,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: 'Année scolaire',
-              labelStyle: GoogleFonts.inter(fontSize: 12, color: _texte),
-              isDense: true,
-              border: InputBorder.none,
-            ),
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
-            items: _annees
-                .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String? ?? '—')))
-                .toList(),
-            onChanged: _changerAnnee,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: _anneeId,
+          isDense: true,
+          icon: const Icon(Icons.expand_more, size: 16, color: SSMPalette.texte3),
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+          items: _annees
+              .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String? ?? '—')))
+              .toList(),
+          onChanged: _changerAnnee,
         ),
       ),
     );
   }
 
   Widget _carteErreur(String message, Future<void> Function() onReessayer) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Column(
-        children: [
-          const Icon(Icons.error_outline, color: _rouge, size: 36),
-          const SizedBox(height: 10),
-          Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
-          const SizedBox(height: 12),
-          ElevatedButton(
-            onPressed: onReessayer,
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-            child: const Text('Réessayer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _carteGlass({required Widget child, EdgeInsetsGeometry? padding}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: padding ?? const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-            boxShadow: [BoxShadow(color: _texteFonce.withValues(alpha: 0.06), blurRadius: 32, offset: const Offset(0, 8))],
-          ),
-          child: child,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 36),
+            const SizedBox(height: 10),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
+            const SizedBox(height: 12),
+            ElevatedButton(onPressed: onReessayer, child: const Text('Réessayer')),
+          ],
         ),
       ),
     );
@@ -236,17 +186,16 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
     final maxValeur = _evolution.isEmpty ? 0 : _evolution.map((e) => e.total).reduce((a, b) => a > b ? a : b);
     final maxY = maxValeur <= 0 ? 10.0 : maxValeur * 1.2;
 
-    return _carteGlass(
+    return SSMPanel(
+      titre: 'Évolution des effectifs',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Évolution des effectifs', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 4),
           Text(
             "Total des élèves inscrits sur les dernières années scolaires de l'établissement.",
-            style: GoogleFonts.inter(fontSize: 11, color: _texte),
+            style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           if (_evolution.isEmpty)
             _etatVide('Aucune donnée')
           else
@@ -259,7 +208,7 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
                   gridData: FlGridData(
                     drawVerticalLine: false,
                     horizontalInterval: maxY / 4,
-                    getDrawingHorizontalLine: (v) => FlLine(color: _texteFonce.withValues(alpha: 0.03), strokeWidth: 1),
+                    getDrawingHorizontalLine: (v) => FlLine(color: SSMPalette.bordure, strokeWidth: 1),
                   ),
                   borderData: FlBorderData(show: false),
                   titlesData: FlTitlesData(
@@ -274,7 +223,7 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
                           if (i < 0 || i >= _evolution.length) return const SizedBox();
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
-                            child: Text(_evolution[i].annee, style: GoogleFonts.inter(fontSize: 10, color: _texte)),
+                            child: Text(_evolution[i].annee, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte2)),
                           );
                         },
                       ),
@@ -282,7 +231,7 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
                   ),
                   lineTouchData: LineTouchData(
                     touchTooltipData: LineTouchTooltipData(
-                      getTooltipColor: (_) => _indigo,
+                      getTooltipColor: (_) => SSMPalette.indigo,
                       getTooltipItems: (spots) =>
                           spots.map((s) => LineTooltipItem(s.y.toStringAsFixed(0), const TextStyle(color: Colors.white, fontSize: 11))).toList(),
                     ),
@@ -291,18 +240,18 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
                     LineChartBarData(
                       spots: [for (var i = 0; i < _evolution.length; i++) FlSpot(i.toDouble(), _evolution[i].total.toDouble())],
                       isCurved: true,
-                      color: _indigo,
+                      color: SSMPalette.indigo,
                       barWidth: 3,
                       dotData: FlDotData(
                         getDotPainter: (spot, percent, bar, index) =>
-                            FlDotCirclePainter(radius: 4, color: _indigo, strokeWidth: 2, strokeColor: Colors.white),
+                            FlDotCirclePainter(radius: 4, color: SSMPalette.indigo, strokeWidth: 2, strokeColor: Colors.white),
                       ),
                       belowBarData: BarAreaData(
                         show: true,
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [_indigo.withValues(alpha: 0.15), _indigo.withValues(alpha: 0.0)],
+                          colors: [SSMPalette.indigo.withValues(alpha: 0.15), SSMPalette.indigo.withValues(alpha: 0.0)],
                         ),
                       ),
                     ),
@@ -321,18 +270,13 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
     final maxValeur = _parNiveau.isEmpty ? 0 : _parNiveau.map((n) => n.total).reduce((a, b) => a > b ? a : b);
     final maxY = maxValeur <= 0 ? 10.0 : maxValeur * 1.3;
 
-    return _carteGlass(
+    return SSMPanel(
+      titre: 'Répartition par niveau',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Répartition par niveau', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-              Row(children: [_legende(_indigo, 'Garçons'), const SizedBox(width: 10), _legende(_teal, 'Filles')]),
-            ],
-          ),
-          const SizedBox(height: 14),
+          Row(children: [_legende(SSMPalette.indigo, 'Garçons'), const SizedBox(width: 12), _legende(SSMPalette.teal, 'Filles')]),
+          const SizedBox(height: 12),
           if (_parNiveau.isEmpty)
             _etatVide('Aucune donnée')
           else
@@ -349,7 +293,7 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
                       tooltipMargin: 0,
                       tooltipPadding: EdgeInsets.zero,
                       getTooltipItem: (group, groupIndex, rod, rodIndex) =>
-                          BarTooltipItem(rod.toY.round().toString(), GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: _texte)),
+                          BarTooltipItem(rod.toY.round().toString(), GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w700, color: SSMPalette.texte2)),
                     ),
                   ),
                   barGroups: [
@@ -359,15 +303,15 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
                         barsSpace: 4,
                         showingTooltipIndicators: const [0, 1],
                         barRods: [
-                          BarChartRodData(toY: _parNiveau[i].garcons.toDouble(), width: 12, color: _indigo, borderRadius: BorderRadius.circular(4)),
-                          BarChartRodData(toY: _parNiveau[i].filles.toDouble(), width: 12, color: _teal, borderRadius: BorderRadius.circular(4)),
+                          BarChartRodData(toY: _parNiveau[i].garcons.toDouble(), width: 12, color: SSMPalette.indigo, borderRadius: BorderRadius.circular(4)),
+                          BarChartRodData(toY: _parNiveau[i].filles.toDouble(), width: 12, color: SSMPalette.teal, borderRadius: BorderRadius.circular(4)),
                         ],
                       ),
                   ],
                   gridData: FlGridData(
                     drawVerticalLine: false,
                     horizontalInterval: maxY / 4,
-                    getDrawingHorizontalLine: (v) => FlLine(color: _texteFonce.withValues(alpha: 0.04), strokeWidth: 1),
+                    getDrawingHorizontalLine: (v) => FlLine(color: SSMPalette.bordure, strokeWidth: 1),
                   ),
                   borderData: FlBorderData(show: false),
                   titlesData: FlTitlesData(
@@ -383,7 +327,7 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
                           if (i < 0 || i >= _parNiveau.length) return const SizedBox();
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
-                            child: Text(_parNiveau[i].niveau, style: GoogleFonts.inter(fontSize: 10, color: _texte)),
+                            child: Text(_parNiveau[i].niveau, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte2)),
                           );
                         },
                       ),
@@ -400,30 +344,21 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
   // ── Répartition par classe ───────────────────────────────
 
   Widget _carteRepartitionClasse() {
-    return _carteGlass(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Répartition par classe', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 14),
-          if (_parClasse.isEmpty)
-            _etatVide('Aucune classe')
-          else
-            ..._parClasse.map((c) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(c.classe, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
-                      ),
-                      Text('${c.total}', style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: _indigo)),
-                      const SizedBox(width: 4),
-                      Text('élève(s)', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
-                    ],
-                  ),
-                )),
-        ],
-      ),
+    return SSMPanel(
+      titre: 'Répartition par classe',
+      padding: EdgeInsets.zero,
+      child: _parClasse.isEmpty
+          ? Padding(padding: const EdgeInsets.all(16), child: _etatVide('Aucune classe'))
+          : SSMDataTable(
+              colonnes: const [SSMDataColumn('Classe'), SSMDataColumn('Effectif')],
+              lignes: [
+                for (final c in _parClasse)
+                  [
+                    Text(c.classe, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                    Text('${c.total}', style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+                  ],
+              ],
+            ),
     );
   }
 
@@ -433,12 +368,12 @@ class _InscriptionsDetailScreenState extends State<InscriptionsDetailScreen> {
       children: [
         Container(width: 8, height: 8, decoration: BoxDecoration(color: couleur, shape: BoxShape.circle)),
         const SizedBox(width: 6),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: _texte)),
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2)),
       ],
     );
   }
 
   Widget _etatVide(String message) {
-    return SizedBox(height: 100, child: Center(child: Text(message, style: GoogleFonts.inter(fontSize: 12, color: _texte))));
+    return SizedBox(height: 100, child: Center(child: Text(message, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2))));
   }
 }

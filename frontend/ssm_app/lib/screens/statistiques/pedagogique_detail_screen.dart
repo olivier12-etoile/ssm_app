@@ -1,30 +1,26 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/statistique_detail_model.dart';
 import '../../services/annee_service.dart';
 import '../../services/statistique_detail_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _fond = Color(0xFFEFF6FF);
 const List<Color> _couleursMedaille = [Color(0xFFD4AF37), Color(0xFFA8A8A8), Color(0xFFB08D57)];
 
 Color _couleurMoyenne(double? moyenne) {
-  if (moyenne == null) return _gris;
-  if (moyenne >= 14) return _vert;
-  if (moyenne >= 10) return _teal;
-  return _rouge;
+  if (moyenne == null) return SSMPalette.texte3;
+  if (moyenne >= 14) return SSMPalette.teal;
+  if (moyenne >= 10) return SSMPalette.indigo;
+  return SSMPalette.rouge;
 }
 
 // ══════════════════════════════════════════════════════════
-// Écran détaillé "Résultats pédagogiques" du module Statistiques (Phase 5) :
-// 4 onglets (par matière, par enseignant, par classe, classements) pour une
+// Écran détaillé "Résultats pédagogiques" du module Statistiques : 4
+// onglets (par matière, par enseignant, par classe, classements) pour une
 // période choisie.
 // ══════════════════════════════════════════════════════════
 class PedagogiqueDetailScreen extends StatefulWidget {
@@ -37,8 +33,8 @@ class PedagogiqueDetailScreen extends StatefulWidget {
   State<PedagogiqueDetailScreen> createState() => _PedagogiqueDetailScreenState();
 }
 
-class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> {
+  late int _ongletActif = widget.initialTabIndex;
 
   List<dynamic> _periodes = [];
   int? _periodeId;
@@ -57,14 +53,7 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this, initialIndex: widget.initialTabIndex);
     _initialiser();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _initialiser() async {
@@ -151,92 +140,94 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: Text('Résultats pédagogiques', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
-          tabs: const [
-            Tab(text: 'Par matière'),
-            Tab(text: 'Par enseignant'),
-            Tab(text: 'Par classe'),
-            Tab(text: 'Classements'),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: 'Résultats pédagogiques',
+              onRetour: () => Navigator.pop(context),
+              complement: _selecteurPeriode(),
+            ),
+            _barreOnglets(),
+            Expanded(
+              child: _chargement && _erreur == null
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _carteErreur(_erreur!, _charger)
+                      : IndexedStack(
+                          index: _ongletActif,
+                          sizing: StackFit.expand,
+                          children: [
+                            _ongletMatiere(),
+                            _ongletEnseignant(),
+                            _ongletClasse(),
+                            _ongletClassements(),
+                          ],
+                        ),
+            ),
           ],
         ),
-      ),
-      body: Stack(
-        children: [
-          Positioned(top: -80, right: -60, child: _blob(size: 240, couleur: _indigo.withValues(alpha: 0.08))),
-          Positioned(bottom: -60, left: -60, child: _blob(size: 200, couleur: _teal.withValues(alpha: 0.10))),
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(padding: const EdgeInsets.all(16), child: _selecteurPeriode()),
-                Expanded(
-                  child: _chargement && _erreur == null
-                      ? const Center(child: CircularProgressIndicator(color: _indigo))
-                      : _erreur != null
-                          ? _carteErreur(_erreur!, _charger)
-                          : TabBarView(
-                              controller: _tabController,
-                              children: [
-                                _ongletMatiere(),
-                                _ongletEnseignant(),
-                                _ongletClasse(),
-                                _ongletClassements(),
-                              ],
-                            ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _blob({required double size, required Color couleur}) {
-    return IgnorePointer(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: couleur)),
       ),
     );
   }
 
   Widget _selecteurPeriode() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-          ),
-          child: DropdownButtonFormField<int>(
-            value: _periodeId,
-            isExpanded: true,
-            decoration: InputDecoration(
-              labelText: 'Période',
-              labelStyle: GoogleFonts.inter(fontSize: 12, color: _texte),
-              isDense: true,
-              border: InputBorder.none,
-            ),
-            style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
-            items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String? ?? '—'))).toList(),
-            onChanged: _changerPeriode,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: _periodeId,
+          isDense: true,
+          icon: const Icon(Icons.expand_more, size: 16, color: SSMPalette.texte3),
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+          items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String? ?? '—'))).toList(),
+          onChanged: _changerPeriode,
+        ),
+      ),
+    );
+  }
+
+  // Onglets stylés comme des pilules (indigo actif) — même pattern que
+  // _boutonTri de debiteurs_screen.dart, pour rester cohérent.
+  Widget _barreOnglets() {
+    const libelles = ['Par matière', 'Par enseignant', 'Par classe', 'Classements'];
+    return Container(
+      color: SSMPalette.blanc,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var i = 0; i < libelles.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              _boutonOnglet(libelles[i], i),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _boutonOnglet(String label, int index) {
+    final actif = _ongletActif == index;
+    return GestureDetector(
+      onTap: () => setState(() => _ongletActif = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: actif ? SSMPalette.indigo : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(SSMRayons.pilule),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: actif ? Colors.white : SSMPalette.texte2),
         ),
       ),
     );
@@ -249,15 +240,11 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 36),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 36),
             const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: onReessayer,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-              child: const Text('Réessayer'),
-            ),
+            ElevatedButton(onPressed: onReessayer, child: const Text('Réessayer')),
           ],
         ),
       ),
@@ -267,27 +254,20 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
   Widget _etatVide(String message) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
-      child: Center(child: Text(message, style: GoogleFonts.inter(fontSize: 12, color: _texte))),
+      child: Center(child: Text(message, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2))),
     );
   }
 
-  Widget _carteGlass({required Widget child}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.72),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-            boxShadow: [BoxShadow(color: _texteFonce.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 4))],
-          ),
-          child: child,
-        ),
+  Widget _carteBlanche({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
+      child: child,
     );
   }
 
@@ -299,18 +279,19 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
     if (_parMatiere.isEmpty) return _etatVide('Aucune note saisie pour cette période.');
     return RefreshIndicator(
       onRefresh: _charger,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: _parMatiere.map((m) {
           final couleur = _couleurMoyenne(m.moyenneGenerale);
-          return _carteGlass(
+          return _carteBlanche(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text(m.matiere, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce))),
+                    Expanded(child: Text(m.matiere, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.texte1))),
                     Text(
                       m.moyenneGenerale != null ? '${m.moyenneGenerale!.toStringAsFixed(1)}/20' : '—',
                       style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: couleur),
@@ -343,18 +324,19 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
     if (_parEnseignant.isEmpty) return _etatVide('Aucun enseignant trouvé pour cette période.');
     return RefreshIndicator(
       onRefresh: _charger,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: _parEnseignant.map((e) {
-          return _carteGlass(
+          return _carteBlanche(
             child: Row(
               children: [
                 CircleAvatar(
                   radius: 18,
-                  backgroundColor: _indigo.withValues(alpha: 0.15),
+                  backgroundColor: SSMPalette.indigoClair,
                   child: Text(
                     e.nom.isNotEmpty ? e.nom[0].toUpperCase() : '?',
-                    style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: _indigo),
+                    style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -362,7 +344,7 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(e.nom, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: _texteFonce)),
+                      Text(e.nom, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
                       const SizedBox(height: 4),
                       Wrap(
                         spacing: 14,
@@ -395,18 +377,19 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
     if (_parClasse.isEmpty) return _etatVide('Aucune classe trouvée pour cette période.');
     return RefreshIndicator(
       onRefresh: _charger,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: _parClasse.map((c) {
           final couleur = _couleurMoyenne(c.moyenneGenerale);
-          return _carteGlass(
+          return _carteBlanche(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: Text(c.classe, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce))),
+                    Expanded(child: Text(c.classe, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.texte1))),
                     Text(
                       c.moyenneGenerale != null ? '${c.moyenneGenerale!.toStringAsFixed(1)}/20' : '—',
                       style: GoogleFonts.jetBrainsMono(fontSize: 15, fontWeight: FontWeight.w700, color: couleur),
@@ -414,8 +397,8 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
                   ],
                 ),
                 const SizedBox(height: 8),
-                if (c.meilleurEleve != null) _lignePersonne(Icons.emoji_events_outlined, 'Meilleur élève', c.meilleurEleve!, _vert),
-                if (c.dernierEleve != null) _lignePersonne(Icons.trending_down, 'Dernier élève', c.dernierEleve!, _rouge),
+                if (c.meilleurEleve != null) _lignePersonne(Icons.emoji_events_outlined, 'Meilleur élève', c.meilleurEleve!, SSMPalette.teal),
+                if (c.dernierEleve != null) _lignePersonne(Icons.trending_down, 'Dernier élève', c.dernierEleve!, SSMPalette.rouge),
                 const SizedBox(height: 4),
                 _mini('Taux de réussite', '${c.tauxReussite.toStringAsFixed(0)}%'),
               ],
@@ -433,8 +416,8 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
         children: [
           Icon(icone, size: 14, color: couleur),
           const SizedBox(width: 6),
-          Text('$label : ', style: GoogleFonts.inter(fontSize: 11, color: _texte)),
-          Expanded(child: Text(valeur, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: _texteFonce))),
+          Text('$label : ', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2)),
+          Expanded(child: Text(valeur, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: SSMPalette.texte1))),
         ],
       ),
     );
@@ -447,23 +430,30 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
   Widget _ongletClassements() {
     return RefreshIndicator(
       onRefresh: _charger,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Top 10 classes', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 10),
-          if (_meilleuresClasses.isEmpty)
-            _etatVide('Aucun classement disponible.')
-          else
-            ..._meilleuresClasses.asMap().entries.map((entry) => _carteRangClasse(entry.key, entry.value)),
-          const SizedBox(height: 24),
-          Text('Top 10 élèves', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 10),
-          if (_meilleursEleves.isEmpty)
-            _etatVide('Aucun classement disponible.')
-          else
-            ..._meilleursEleves.map(_carteRangEleve),
-          const SizedBox(height: 24),
+          SSMPanel(
+            titre: 'Top 10 classes',
+            padding: EdgeInsets.zero,
+            child: _meilleuresClasses.isEmpty
+                ? Padding(padding: const EdgeInsets.all(16), child: _etatVide('Aucun classement disponible.'))
+                : Column(
+                    children: [
+                      for (final entry in _meilleuresClasses.asMap().entries) _ligneRangClasse(entry.key, entry.value),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: 16),
+          SSMPanel(
+            titre: 'Top 10 élèves',
+            padding: EdgeInsets.zero,
+            child: _meilleursEleves.isEmpty
+                ? Padding(padding: const EdgeInsets.all(16), child: _etatVide('Aucun classement disponible.'))
+                : Column(children: [for (final e in _meilleursEleves) _ligneRangEleve(e)]),
+          ),
+          const SizedBox(height: 16),
           _sectionDifficulte(),
         ],
       ),
@@ -471,27 +461,30 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
   }
 
   Widget _badgeRang(int rang) {
-    final couleur = rang <= 3 ? _couleursMedaille[rang - 1] : _gris;
+    final estMedaille = rang <= 3;
+    final couleur = estMedaille ? _couleursMedaille[rang - 1] : SSMPalette.texte3;
     return Container(
       width: 28,
       height: 28,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: couleur.withValues(alpha: 0.15), shape: BoxShape.circle),
-      child: rang <= 3
+      child: estMedaille
           ? Icon(Icons.emoji_events, size: 15, color: couleur)
           : Text('$rang', style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.w700, color: couleur)),
     );
   }
 
-  Widget _carteRangClasse(int index, StatClasse c) {
+  Widget _ligneRangClasse(int index, StatClasse c) {
     final rang = index + 1;
     final couleur = _couleurMoyenne(c.moyenneGenerale);
-    return _carteGlass(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: SSMPalette.bordure))),
       child: Row(
         children: [
           _badgeRang(rang),
           const SizedBox(width: 12),
-          Expanded(child: Text(c.classe, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce))),
+          Expanded(child: Text(c.classe, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1))),
           Text(
             c.moyenneGenerale != null ? '${c.moyenneGenerale!.toStringAsFixed(1)}/20' : '—',
             style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: couleur),
@@ -501,9 +494,11 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
     );
   }
 
-  Widget _carteRangEleve(EleveClassement e) {
+  Widget _ligneRangEleve(EleveClassement e) {
     final couleur = _couleurMoyenne(e.moyenne);
-    return _carteGlass(
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: const BoxDecoration(border: Border(top: BorderSide(color: SSMPalette.bordure))),
       child: Row(
         children: [
           _badgeRang(e.rang),
@@ -512,8 +507,8 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(e.nomComplet, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
-                Text(e.classe, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+                Text(e.nomComplet, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                Text(e.classe, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
               ],
             ),
           ),
@@ -527,51 +522,68 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
   }
 
   Widget _sectionDifficulte() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Élèves en difficulté', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-            Text('Seuil : ${_seuilDifficulte.toStringAsFixed(0)}/20', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _rouge)),
-          ],
-        ),
-        Slider(
-          value: _seuilDifficulte,
-          min: 0,
-          max: 15,
-          divisions: 15,
-          activeColor: _rouge,
-          label: '${_seuilDifficulte.toStringAsFixed(0)}/20',
-          onChanged: (v) => setState(() => _seuilDifficulte = v),
-          onChangeEnd: (_) => _rechargerDifficulte(),
-        ),
-        if (_elevesEnDifficulte.isEmpty)
-          _etatVide('Aucun élève sous ce seuil.')
-        else
-          ..._elevesEnDifficulte.map((e) => _carteGlass(
-                child: Row(
-                  children: [
-                    const Icon(Icons.warning_amber_rounded, color: _rouge, size: 18),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(e.nomComplet, style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
-                          Text(e.classe, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
-                        ],
-                      ),
-                    ),
+    return SSMPanel(
+      titre: 'Élèves en difficulté',
+      padding: EdgeInsets.zero,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Seuil de moyenne', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                Text('${_seuilDifficulte.toStringAsFixed(0)}/20', style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.rouge)),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Slider(
+              value: _seuilDifficulte,
+              min: 0,
+              max: 15,
+              divisions: 15,
+              activeColor: SSMPalette.rouge,
+              label: '${_seuilDifficulte.toStringAsFixed(0)}/20',
+              onChanged: (v) => setState(() => _seuilDifficulte = v),
+              onChangeEnd: (_) => _rechargerDifficulte(),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+            child: _elevesEnDifficulte.isEmpty
+                ? const SSMAlertItem(
+                    type: SSMAlerteType.succes,
+                    icone: Icons.check_circle_outline,
+                    titre: 'Aucun élève sous ce seuil',
+                    sousTitre: "Tous les élèves ont une moyenne au-dessus du seuil choisi.",
+                  )
+                : SSMAlertItem(
+                    type: SSMAlerteType.avertissement,
+                    icone: Icons.warning_amber_rounded,
+                    titre: '${_elevesEnDifficulte.length} élève(s) en difficulté',
+                    sousTitre: 'Moyenne sous le seuil de ${_seuilDifficulte.toStringAsFixed(0)}/20 pour la période sélectionnée.',
+                  ),
+          ),
+          if (_elevesEnDifficulte.isNotEmpty)
+            SSMDataTable(
+              colonnes: const [SSMDataColumn('Élève'), SSMDataColumn('Classe'), SSMDataColumn('Moyenne')],
+              lignes: [
+                for (final e in _elevesEnDifficulte)
+                  [
+                    Text(e.nomComplet, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                    Text(e.classe, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                     Text(
                       e.moyenne != null ? '${e.moyenne!.toStringAsFixed(1)}/20' : '—',
-                      style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: _rouge),
+                      style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.rouge),
                     ),
                   ],
-                ),
-              )),
-      ],
+              ],
+            ),
+        ],
+      ),
     );
   }
 
@@ -579,8 +591,8 @@ class _PedagogiqueDetailScreenState extends State<PedagogiqueDetailScreen> with 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(valeur, style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _texteFonce)),
-        Text(label, style: GoogleFonts.inter(fontSize: 10, color: _gris)),
+        Text(valeur, style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+        Text(label, style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
       ],
     );
   }

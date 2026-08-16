@@ -1,35 +1,27 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/statistique_detail_model.dart';
 import '../../services/annee_service.dart';
 import '../../services/statistique_detail_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import '../notes/analyse_performance_screen.dart';
 import 'paiements_detail_screen.dart';
 import 'pedagogique_detail_screen.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _bleuInfo = Color(0xFF0284C7);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFEFF6FF);
-
-Color _couleurType(String type) {
+SSMAlerteType _typeAlerte(String type) {
   switch (type) {
     case 'danger':
-      return _rouge;
+      return SSMAlerteType.danger;
     case 'warning':
-      return _ambre;
+      return SSMAlerteType.avertissement;
     default:
-      return _bleuInfo;
+      return SSMAlerteType.succes;
   }
 }
 
-IconData _iconeType(String type) {
+IconData _iconeAlerte(String type) {
   switch (type) {
     case 'danger':
       return Icons.error_outline;
@@ -40,10 +32,23 @@ IconData _iconeType(String type) {
   }
 }
 
+Color _couleurAlerte(String type) {
+  switch (type) {
+    case 'danger':
+      return SSMPalette.rouge;
+    case 'warning':
+      return SSMPalette.ambre;
+    default:
+      return SSMPalette.teal;
+  }
+}
+
 // ══════════════════════════════════════════════════════════
-// "Centre de Décision" du module Statistiques (Phase 5) : liste des alertes
+// "Centre de Décision" du module Statistiques : liste des alertes
 // actionnables générées par CentreDecisionService (backend), avec
 // navigation contextuelle vers l'écran concerné selon `routeAction`.
+// Même composant SSMAlertItem que le panneau "Alertes importantes" du
+// tableau de bord directeur, pour une cohérence totale.
 // ══════════════════════════════════════════════════════════
 class CentreDecisionScreen extends StatefulWidget {
   final int? anneeScolaireId;
@@ -206,43 +211,30 @@ class _CentreDecisionScreenState extends State<CentreDecisionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: Text('Centre de Décision', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: Stack(
-        children: [
-          Positioned(top: -80, right: -60, child: _blob(size: 240, couleur: _indigo.withValues(alpha: 0.08))),
-          Positioned(bottom: -60, left: -60, child: _blob(size: 200, couleur: _teal.withValues(alpha: 0.10))),
-          SafeArea(
-            child: RefreshIndicator(
-              onRefresh: _charger,
-              child: _chargement && _erreur == null
-                  ? const Center(child: CircularProgressIndicator(color: _indigo))
-                  : _erreur != null
-                      ? _vueErreur()
-                      : _alertes.isEmpty
-                          ? _vueOk()
-                          : ListView.builder(
-                              padding: const EdgeInsets.all(16),
-                              itemCount: _alertes.length,
-                              itemBuilder: (context, index) => _carteAlerte(_alertes[index]),
-                            ),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Centre de Décision', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _charger,
+                color: SSMPalette.indigo,
+                child: _chargement && _erreur == null
+                    ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                    : _erreur != null
+                        ? _vueErreur()
+                        : _alertes.isEmpty
+                            ? _vueOk()
+                            : ListView.builder(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: _alertes.length,
+                                itemBuilder: (context, index) => _carteAlerte(_alertes[index]),
+                              ),
+              ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _blob({required double size, required Color couleur}) {
-    return IgnorePointer(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(width: size, height: size, decoration: BoxDecoration(shape: BoxShape.circle, color: couleur)),
+          ],
+        ),
       ),
     );
   }
@@ -251,34 +243,37 @@ class _CentreDecisionScreenState extends State<CentreDecisionScreen> {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 80),
       children: [
-        const Icon(Icons.error_outline, color: _rouge, size: 40),
+        const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(_erreur ?? '', textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+          child: Text(_erreur ?? '', textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
         ),
         const SizedBox(height: 16),
-        Center(
-          child: ElevatedButton(
-            onPressed: _charger,
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-            child: const Text('Réessayer'),
-          ),
-        ),
+        Center(child: ElevatedButton(onPressed: _charger, child: const Text('Réessayer'))),
       ],
     );
   }
 
+  // État vide "clair" : grand check central sur fond teal léger, signal
+  // immédiat qu'aucune action n'est requise.
   Widget _vueOk() {
     return ListView(
       padding: const EdgeInsets.symmetric(vertical: 100),
       children: [
-        const Icon(Icons.check_circle, color: _vert, size: 64),
-        const SizedBox(height: 16),
+        Center(
+          child: Container(
+            width: 88,
+            height: 88,
+            decoration: const BoxDecoration(color: SSMPalette.tealClair, shape: BoxShape.circle),
+            child: const Icon(Icons.check_circle, color: SSMPalette.teal, size: 48),
+          ),
+        ),
+        const SizedBox(height: 20),
         Text(
           'Tout est en ordre ✓',
           textAlign: TextAlign.center,
-          style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: _texteFonce),
+          style: GoogleFonts.sora(fontSize: 19, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
         ),
         const SizedBox(height: 8),
         Padding(
@@ -286,7 +281,7 @@ class _CentreDecisionScreenState extends State<CentreDecisionScreen> {
           child: Text(
             "Aucune alerte active pour l'année et la période sélectionnées.",
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(fontSize: 13, color: _texte),
+            style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
           ),
         ),
       ],
@@ -294,56 +289,41 @@ class _CentreDecisionScreenState extends State<CentreDecisionScreen> {
   }
 
   Widget _carteAlerte(Alerte alerte) {
-    final couleur = _couleurType(alerte.type);
+    final couleur = _couleurAlerte(alerte.type);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.75),
-            borderRadius: BorderRadius.circular(14),
-            border: Border(left: BorderSide(color: couleur, width: 4)),
-            boxShadow: [BoxShadow(color: _texteFonce.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 4))],
-          ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(SSMRayons.petit + 2),
+          onTap: () => _gererAction(alerte),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(color: couleur.withValues(alpha: 0.14), shape: BoxShape.circle),
-                    child: Icon(_iconeType(alerte.type), color: couleur, size: 19),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(alerte.titre, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce)),
-                        const SizedBox(height: 4),
-                        Text(alerte.description, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                      ],
+                    child: SSMAlertItem(
+                      type: _typeAlerte(alerte.type),
+                      icone: _iconeAlerte(alerte.type),
+                      titre: alerte.titre,
+                      sousTitre: alerte.description,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(alerte.valeurFormatee, style: GoogleFonts.jetBrainsMono(fontSize: 18, fontWeight: FontWeight.w700, color: couleur)),
+                  const SizedBox(width: 10),
+                  Text(alerte.valeurFormatee, style: GoogleFonts.jetBrainsMono(fontSize: 17, fontWeight: FontWeight.w700, color: couleur)),
                 ],
               ),
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: OutlinedButton.icon(
-                  onPressed: () => _gererAction(alerte),
-                  style: OutlinedButton.styleFrom(foregroundColor: couleur, side: BorderSide(color: couleur)),
-                  icon: const Icon(Icons.arrow_forward, size: 15),
-                  label: Text(alerte.action, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+              Padding(
+                padding: const EdgeInsets.only(top: 4, right: 4),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${alerte.action} →',
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: couleur),
+                  ),
                 ),
               ),
             ],
