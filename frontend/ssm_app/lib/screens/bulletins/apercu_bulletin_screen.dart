@@ -8,12 +8,13 @@ import '../../models/bulletin_model.dart';
 import '../../models/parametre_ecole_model.dart';
 import '../../services/bulletin_service.dart';
 import '../../services/parametre_ecole_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import '../../widgets/correction_bulletin_dialog.dart';
 
 const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
 const Color _rouge = Color(0xFFDC2626);
 const Color _gris = Color(0xFF94A3B8);
 const Color _texte = Color(0xFF334155);
@@ -31,17 +32,26 @@ Color _depuisHex(String? hex, Color repli) {
 // ══════════════════════════════════════════════════════════
 // Prévisualisation complète d'un bulletin avant/après validation.
 //
-// Important — pourquoi pas de tableau "matières" natif ici : aucun
-// endpoint backend ne renvoie un Bulletin unique avec ses bulletin_details
-// (GET /bulletins/{id} n'existe pas ; seuls génération/régénération/
-// correction renvoient le bulletin complet, juste après l'action). On
-// affiche donc le résumé déjà connu (rang, moyenne, statut, décision,
-// absences/retards — transmis par l'écran appelant via [resume], ou
-// récupéré après une correction) et on s'appuie sur le PDF officiel
-// (déjà 100% fidèle au brief) pour le détail par matière, exactement
-// comme recu_pdf_viewer.dart le fait déjà pour les reçus de paiement :
-// téléchargement puis ouverture avec le lecteur PDF par défaut de
-// l'appareil (aucun lecteur PDF intégré dans ce projet).
+// IMPORTANT — seul l'écran AUTOUR du bulletin (bandeau de navigation,
+// badge de statut, barre d'actions) est migré vers le design system
+// flat/clean de l'application (SSMSousEnTete, SSMPill, SSMQuickActionButton).
+// La zone d'affichage du bulletin lui-même (en-tête école, infos élève,
+// récap, décision, présence, appréciation, aperçu PDF) reste pilotée par
+// l'identité visuelle propre de l'école (logo, couleurs définies dans
+// Paramètres → Identité visuelle) — c'est un document officiel, pas un
+// écran de gestion, voir CLAUDE.md "Marque blanche". Son style n'est donc
+// pas modifié ici.
+//
+// Pourquoi pas de tableau "matières" natif ici : aucun endpoint backend ne
+// renvoie un Bulletin unique avec ses bulletin_details (GET /bulletins/{id}
+// n'existe pas ; seuls génération/régénération/correction renvoient le
+// bulletin complet, juste après l'action). On affiche donc le résumé déjà
+// connu (rang, moyenne, statut, décision, absences/retards — transmis par
+// l'écran appelant via [resume], ou récupéré après une correction) et on
+// s'appuie sur le PDF officiel (déjà 100% fidèle au brief) pour le détail
+// par matière, exactement comme recu_pdf_viewer.dart le fait déjà pour les
+// reçus de paiement : téléchargement puis ouverture avec le lecteur PDF par
+// défaut de l'appareil (aucun lecteur PDF intégré dans ce projet).
 // ══════════════════════════════════════════════════════════
 class ApercuBulletinScreen extends StatefulWidget {
   final int bulletinId;
@@ -158,12 +168,12 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
 
   void _afficherErreur(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge));
   }
 
   void _afficherSucces(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _vert));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.teal));
   }
 
   @override
@@ -171,51 +181,62 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
     final bulletin = _bulletin;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text('Aperçu du bulletin', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _couleurPrimaire,
-        foregroundColor: Colors.white,
-        actions: [
-          if (bulletin != null && bulletin.estValideOuVerrouille)
-            const Padding(
-              padding: EdgeInsets.only(right: 12),
-              child: Center(child: _BadgeValide()),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: 'Aperçu du bulletin',
+              sousTitre: bulletin?.nomEleve,
+              onRetour: () => Navigator.pop(context),
+              actions: bulletin != null && bulletin.estValideOuVerrouille
+                  ? [
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12, top: 10),
+                        child: SSMPill.couleur(label: '✓ Validé', couleur: SSMPalette.teal),
+                      ),
+                    ]
+                  : null,
             ),
-        ],
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      children: [
+                        _enTeteEcole(),
+                        const SizedBox(height: 16),
+                        if (bulletin != null) _carteInfosEleve(bulletin) else _carteBulletinMinimal(),
+                        if (bulletin != null) ...[
+                          const SizedBox(height: 16),
+                          _carteRecap(bulletin),
+                          if (bulletin.decisionConseil != null) ...[
+                            const SizedBox(height: 16),
+                            _carteDecision(bulletin),
+                          ],
+                          const SizedBox(height: 16),
+                          _cartePresence(bulletin),
+                          if (!bulletin.appreciationGenerale.isNullOuVide) ...[
+                            const SizedBox(height: 16),
+                            _carteAppreciation(bulletin),
+                          ],
+                        ],
+                        const SizedBox(height: 16),
+                        _carteApercuPdf(),
+                        const SizedBox(height: 20),
+                        _barreActions(bulletin),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
-      body: _chargement
-          ? Center(child: CircularProgressIndicator(color: _couleurPrimaire))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              children: [
-                _enTeteEcole(),
-                const SizedBox(height: 16),
-                if (bulletin != null) _carteInfosEleve(bulletin) else _carteBulletinMinimal(),
-                if (bulletin != null) ...[
-                  const SizedBox(height: 16),
-                  _carteRecap(bulletin),
-                  if (bulletin.decisionConseil != null) ...[
-                    const SizedBox(height: 16),
-                    _carteDecision(bulletin),
-                  ],
-                  const SizedBox(height: 16),
-                  _cartePresence(bulletin),
-                  if (!bulletin.appreciationGenerale.isNullOuVide) ...[
-                    const SizedBox(height: 16),
-                    _carteAppreciation(bulletin),
-                  ],
-                ],
-                const SizedBox(height: 16),
-                _carteApercuPdf(),
-                const SizedBox(height: 20),
-                _barreActions(bulletin),
-              ],
-            ),
     );
   }
 
-  // ── En-tête école (logo, nom, couleurs identité visuelle) ────
+  // ── Zone d'affichage du bulletin — identité visuelle de l'école,
+  // volontairement non migrée vers le thème indigo/teal/amber (voir
+  // commentaire d'en-tête du fichier). ────────────────────────────
 
   Widget _enTeteEcole() {
     final nom = _etablissement?.nomOfficiel ?? _etablissement?.nomCourt ?? 'Établissement';
@@ -278,8 +299,6 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
     );
   }
 
-  // ── Infos élève ───────────────────────────────────────────
-
   Widget _carteInfosEleve(Bulletin b) {
     return _carteGlass(
       child: Column(
@@ -313,8 +332,6 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
     );
   }
 
-  // ── Moyenne / rang / statut ────────────────────────────────
-
   Widget _carteRecap(Bulletin b) {
     return _carteGlass(
       child: Row(
@@ -345,11 +362,19 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
                 ),
               Text('/ ${b.effectifClasse}', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
               const SizedBox(height: 8),
-              SSMBadge(label: b.statut.libelle, couleur: b.statut.couleur),
+              _badgeStatut(b),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _badgeStatut(Bulletin b) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+      decoration: BoxDecoration(color: b.statut.couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
+      child: Text(b.statut.libelle, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500, color: b.statut.couleur)),
     );
   }
 
@@ -370,7 +395,7 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
     return _carteGlass(
       child: Row(
         children: [
-          _statPresence('Absences justifiées', b.absencesJustifiees, _vert),
+          _statPresence('Absences justifiées', b.absencesJustifiees, const Color(0xFF16A34A)),
           _statPresence('Absences non justifiées', b.absencesNonJustifiees, _rouge),
           _statPresence('Retards', b.retards, Colors.orange),
         ],
@@ -403,8 +428,6 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
     );
   }
 
-  // ── PDF officiel (détail par matière complet) ────────────────
-
   Widget _carteApercuPdf() {
     return _carteGlass(
       child: Column(
@@ -412,7 +435,7 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.picture_as_pdf, color: _rouge),
+              const Icon(Icons.picture_as_pdf, color: _rouge),
               const SizedBox(width: 8),
               Text('Bulletin PDF complet', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce)),
             ],
@@ -425,64 +448,17 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _telechargementApercu ? null : () => _telechargerEtOuvrir(officiel: false),
-              style: OutlinedButton.styleFrom(foregroundColor: _couleurPrimaire, side: BorderSide(color: _couleurPrimaire)),
-              icon: _telechargementApercu
-                  ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _couleurPrimaire))
-                  : const Icon(Icons.visibility_outlined, size: 18),
-              label: const Text("Ouvrir l'aperçu PDF"),
-            ),
+            child: _telechargementApercu
+                ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _indigo)))
+                : SSMQuickActionButton(
+                    icone: Icons.visibility_outlined,
+                    label: "Ouvrir l'aperçu PDF",
+                    variante: SSMActionVariante.primaire,
+                    onTap: () => _telechargerEtOuvrir(officiel: false),
+                  ),
           ),
         ],
       ),
-    );
-  }
-
-  // ── Barre d'actions ───────────────────────────────────────
-
-  Widget _barreActions(Bulletin? bulletin) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            if (bulletin != null && bulletin.statut == StatutBulletin.valide)
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _ouvrirCorrection,
-                  style: OutlinedButton.styleFrom(foregroundColor: _couleurPrimaire, side: BorderSide(color: _couleurPrimaire)),
-                  icon: const Icon(Icons.edit_outlined, size: 18),
-                  label: const Text('Demander une correction'),
-                ),
-              ),
-            if (bulletin != null && bulletin.statut == StatutBulletin.valide) const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _telechargementOfficiel ? null : () => _telechargerEtOuvrir(officiel: true),
-                style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white),
-                icon: _telechargementOfficiel
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.download_outlined, size: 18),
-                label: const Text('Télécharger PDF'),
-              ),
-            ),
-          ],
-        ),
-        if (bulletin != null && bulletin.statut == StatutBulletin.genere) ...[
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _validationEnCours ? null : _validerBulletin,
-              style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
-              icon: _validationEnCours
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.verified_outlined),
-              label: const Text('Valider ce bulletin'),
-            ),
-          ),
-        ],
-      ],
     );
   }
 
@@ -506,24 +482,52 @@ class _ApercuBulletinScreenState extends State<ApercuBulletinScreen> {
       ),
     );
   }
-}
 
-class _BadgeValide extends StatelessWidget {
-  const _BadgeValide();
+  // ── Barre d'actions — chrome, design system ─────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(999)),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle, color: Colors.white, size: 14),
-          const SizedBox(width: 4),
-          Text('Validé', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white)),
+  Widget _barreActions(Bulletin? bulletin) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            if (bulletin != null && bulletin.statut == StatutBulletin.valide) ...[
+              Expanded(
+                child: SSMQuickActionButton(
+                  icone: Icons.edit_outlined,
+                  label: 'Demander une correction',
+                  variante: SSMActionVariante.gris,
+                  onTap: _ouvrirCorrection,
+                ),
+              ),
+              const SizedBox(width: 10),
+            ],
+            Expanded(
+              child: _telechargementOfficiel
+                  ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.teal)))
+                  : SSMQuickActionButton(
+                      icone: Icons.download_outlined,
+                      label: 'Télécharger PDF',
+                      variante: SSMActionVariante.teal,
+                      onTap: () => _telechargerEtOuvrir(officiel: true),
+                    ),
+            ),
+          ],
+        ),
+        if (bulletin != null && bulletin.statut == StatutBulletin.genere) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: _validationEnCours
+                ? const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.teal)))
+                : SSMQuickActionButton(
+                    icone: Icons.verified_outlined,
+                    label: 'Valider ce bulletin',
+                    variante: SSMActionVariante.teal,
+                    onTap: _validerBulletin,
+                  ),
+          ),
         ],
-      ),
+      ],
     );
   }
 }

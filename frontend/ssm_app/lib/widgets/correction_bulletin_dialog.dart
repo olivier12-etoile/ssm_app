@@ -3,13 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/bulletin_model.dart';
 import '../models/historique_statistique_bulletin_model.dart';
 import '../services/historique_statistique_bulletin_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _ambre = Color(0xFFD97706);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+import '../theme/ssm_theme.dart';
+import 'ssm/ssm_alert_item.dart';
+import 'ssm/ssm_quick_action_button.dart';
 
 enum _ChampCorrigeable {
   decisionConseil('decision_conseil', 'Décision du conseil'),
@@ -217,13 +213,14 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
   }
 
   void _afficherErreur(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge));
   }
 
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: SSMPalette.blanc,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand + 8)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 460, maxHeight: 680),
         child: Padding(
@@ -236,9 +233,9 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
                 children: [
                   Expanded(
                     child: Text('Demander une correction',
-                        style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: _texteFonce)),
+                        style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
                   ),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  IconButton(icon: const Icon(Icons.close, color: SSMPalette.texte2), onPressed: () => Navigator.pop(context)),
                 ],
               ),
               Flexible(
@@ -249,7 +246,7 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
                       DropdownButtonFormField<_ChampCorrigeable>(
                         value: _champ,
                         isExpanded: true,
-                        decoration: const InputDecoration(labelText: 'Champ à corriger', border: OutlineInputBorder(), isDense: true),
+                        decoration: const InputDecoration(labelText: 'Champ à corriger', isDense: true),
                         hint: const Text('Choisir un champ'),
                         items: [
                           for (final c in _ChampCorrigeable.values)
@@ -263,7 +260,7 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
                         DropdownButtonFormField<BulletinDetail>(
                           value: _matiere,
                           isExpanded: true,
-                          decoration: const InputDecoration(labelText: 'Matière', border: OutlineInputBorder(), isDense: true),
+                          decoration: const InputDecoration(labelText: 'Matière', isDense: true),
                           hint: const Text('Choisir une matière'),
                           items: widget.bulletin.details
                               .map((d) => DropdownMenuItem(value: d, child: Text(d.nomMatiere)))
@@ -276,12 +273,12 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(color: _gris.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                          decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                           child: Row(
                             children: [
-                              Text('Valeur actuelle : ', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                              Text('Valeur actuelle : ', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                               Text(_ancienneValeur(),
-                                  style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _texteFonce)),
+                                  style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
                             ],
                           ),
                         ),
@@ -295,50 +292,37 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
                         decoration: const InputDecoration(
                           labelText: 'Motif de la correction *',
                           hintText: 'Obligatoire — ex: erreur de saisie initiale',
-                          border: OutlineInputBorder(),
                           alignLabelWithHint: true,
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: _ambre.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: _ambre.withValues(alpha: 0.3)),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.info_outline, color: _ambre, size: 16),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Cette correction sera enregistrée dans l\'historique et recalculera automatiquement la moyenne et le rang si nécessaire.',
-                                style: GoogleFonts.inter(fontSize: 11, color: _texte),
-                              ),
-                            ),
-                          ],
-                        ),
+                      const SSMAlertItem(
+                        type: SSMAlerteType.danger,
+                        icone: Icons.warning_amber_rounded,
+                        titre: 'Correction tracée',
+                        sousTitre:
+                            'Cette correction sera enregistrée dans l\'historique et recalculera automatiquement la moyenne et le rang si nécessaire.',
                       ),
                       const SizedBox(height: 16),
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: _envoiEnCours ? null : _confirmer,
-                          style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
-                          child: _envoiEnCours
-                              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                              : const Text('Confirmer la correction'),
-                        ),
+                        child: _envoiEnCours
+                            ? const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)))
+                            : SSMQuickActionButton(
+                                icone: Icons.check,
+                                label: 'Confirmer la correction',
+                                variante: SSMActionVariante.primaire,
+                                onTap: _confirmer,
+                              ),
                       ),
                       if (_historique.isNotEmpty || _chargementHistorique) ...[
                         const SizedBox(height: 20),
-                        const Divider(),
+                        const Divider(color: SSMPalette.bordure),
                         const SizedBox(height: 8),
-                        Text('Historique des corrections', style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: _texteFonce)),
+                        Text('Historique des corrections', style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
                         const SizedBox(height: 8),
                         if (_chargementHistorique)
-                          const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2)))
+                          const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)))
                         else
                           ..._historique.map(_ligneHistorique),
                       ],
@@ -359,7 +343,7 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
         return DropdownButtonFormField<DecisionConseil>(
           value: _decisionChoisie,
           isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Nouvelle décision', border: OutlineInputBorder(), isDense: true),
+          decoration: const InputDecoration(labelText: 'Nouvelle décision', isDense: true),
           items: DecisionConseil.values.map((d) => DropdownMenuItem(value: d, child: Text(d.libelle))).toList(),
           onChanged: (v) => setState(() => _decisionChoisie = v),
         );
@@ -367,7 +351,7 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
         return TextField(
           controller: _texteController,
           maxLines: 3,
-          decoration: const InputDecoration(labelText: 'Nouvelle appréciation', border: OutlineInputBorder(), alignLabelWithHint: true),
+          decoration: const InputDecoration(labelText: 'Nouvelle appréciation', alignLabelWithHint: true),
         );
       case _ChampCorrigeable.absencesJustifiees:
       case _ChampCorrigeable.absencesNonJustifiees:
@@ -375,14 +359,14 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
         return TextField(
           controller: _nombreController,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Nouvelle valeur', border: OutlineInputBorder(), isDense: true),
+          decoration: const InputDecoration(labelText: 'Nouvelle valeur', isDense: true),
         );
       case _ChampCorrigeable.noteMatiere:
         return TextField(
           controller: _nombreController,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           style: GoogleFonts.jetBrainsMono(),
-          decoration: const InputDecoration(labelText: 'Nouvelle note (/20)', border: OutlineInputBorder(), isDense: true),
+          decoration: const InputDecoration(labelText: 'Nouvelle note (/20)', isDense: true),
         );
     }
   }
@@ -391,18 +375,18 @@ class _CorrectionBulletinDialogState extends State<CorrectionBulletinDialog> {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(color: _gris.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(_libelleChampHistorique(c.champModifie), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: _texteFonce)),
+          Text(_libelleChampHistorique(c.champModifie), style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
           const SizedBox(height: 2),
           Text('${c.ancienneValeur ?? '—'} → ${c.nouvelleValeur ?? '—'}',
-              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: _texte)),
+              style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte2)),
           const SizedBox(height: 2),
-          Text('Motif : ${c.motif}', style: GoogleFonts.inter(fontSize: 11, color: _texte, fontStyle: FontStyle.italic)),
+          Text('Motif : ${c.motif}', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2, fontStyle: FontStyle.italic)),
           const SizedBox(height: 2),
-          Text('Par ${c.demandePar} · ${_formatDate(c.createdAt)}', style: GoogleFonts.inter(fontSize: 10, color: _gris)),
+          Text('Par ${c.demandePar} · ${_formatDate(c.createdAt)}', style: GoogleFonts.inter(fontSize: 10, color: SSMPalette.texte3)),
         ],
       ),
     );

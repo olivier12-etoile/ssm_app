@@ -5,16 +5,13 @@ import '../../services/annee_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/bulletin_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'liste_bulletins_classe_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 // ══════════════════════════════════════════════════════════
 // Génération d'un lot de bulletins (classe entière) ou d'un bulletin
@@ -193,18 +190,20 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Générer les bulletins ?'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Générer les bulletins ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: Text(
           malgreBlocages
               ? '${_elevesPrets.length} élève(s) prêt(s) sur $total seront générés. '
                   '${_elevesBloques.length} élève(s) resteront bloqué(s) (voir raisons ci-dessous).'
               : 'Les bulletins seront générés pour les $total élève(s) de la classe.',
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
             child: const Text('Générer'),
           ),
         ],
@@ -262,47 +261,59 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
 
   void _afficherErreur(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge));
   }
 
   void _afficherSucces(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _vert));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.teal));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text('Génération de bulletins', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: _chargementListes
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _carteSelecteurs(),
-                const SizedBox(height: 16),
-                _boutonVerifier(),
-                const SizedBox(height: 16),
-                if (_verificationEnCours) const Center(child: CircularProgressIndicator(color: _indigo)),
-                if (_statuts != null) ..._blocVerification(),
-                if (_generationEnCours) _blocGenerationEnCours(),
-                if (_resume != null) ..._blocResume(),
-                const SizedBox(height: 28),
-                const Divider(),
-                const SizedBox(height: 12),
-                Text('Génération individuelle', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce)),
-                const SizedBox(height: 4),
-                Text('Recherchez un élève par nom, prénom ou matricule.', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
-                const SizedBox(height: 12),
-                _blocRechercheIndividuelle(),
-                const SizedBox(height: 24),
-              ],
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Génération de bulletins', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargementListes
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                      children: [
+                        _carteSelecteurs(),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: SSMQuickActionButton(
+                            icone: Icons.fact_check_outlined,
+                            label: 'Vérifier avant génération',
+                            variante: SSMActionVariante.primaire,
+                            onTap: (_classeId == null || _periodeId == null || _verificationEnCours) ? null : _verifier,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        if (_verificationEnCours) const Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+                        if (_statuts != null) ..._blocVerification(),
+                        if (_generationEnCours) _blocGenerationEnCours(),
+                        if (_resume != null) ..._blocResume(),
+                        const SizedBox(height: 28),
+                        const Divider(),
+                        const SizedBox(height: 12),
+                        Text('Génération individuelle', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+                        const SizedBox(height: 4),
+                        Text('Recherchez un élève par nom, prénom ou matricule.', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                        const SizedBox(height: 12),
+                        _blocRechercheIndividuelle(),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
             ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -312,16 +323,16 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _gris.withValues(alpha: 0.2)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         children: [
           DropdownButtonFormField<int>(
             value: _classeId,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Classe', prefixIcon: Icon(Icons.class_outlined), border: OutlineInputBorder(), isDense: true),
+            decoration: const InputDecoration(labelText: 'Classe', prefixIcon: Icon(Icons.class_outlined), isDense: true),
             hint: const Text('Choisir une classe'),
             items: _classes.map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['nom'] as String))).toList(),
             onChanged: _changerClasse,
@@ -330,24 +341,12 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
           DropdownButtonFormField<int>(
             value: _periodeId,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Période', prefixIcon: Icon(Icons.segment), border: OutlineInputBorder(), isDense: true),
+            decoration: const InputDecoration(labelText: 'Période', prefixIcon: Icon(Icons.segment), isDense: true),
             hint: const Text('Choisir une période'),
             items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
             onChanged: _changerPeriode,
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _boutonVerifier() {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: (_classeId == null || _periodeId == null || _verificationEnCours) ? null : _verifier,
-        style: OutlinedButton.styleFrom(foregroundColor: _indigo, side: const BorderSide(color: _indigo), padding: const EdgeInsets.symmetric(vertical: 14)),
-        icon: const Icon(Icons.fact_check_outlined),
-        label: Text('Vérifier avant génération', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
       ),
     );
   }
@@ -361,93 +360,77 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
     final dejaGeneres = _elevesDejaGeneres;
 
     return [
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: bloques.isEmpty ? _vert.withValues(alpha: 0.08) : _ambre.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: (bloques.isEmpty ? _vert : _ambre).withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(bloques.isEmpty ? Icons.check_circle_outline : Icons.warning_amber_outlined,
-                color: bloques.isEmpty ? _vert : _ambre),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                bloques.isEmpty
-                    ? '${statuts.length} élève(s) — tous prêts (${dejaGeneres.length} déjà généré(s)).'
-                    : '${bloques.length} élève(s) bloqué(s) sur ${statuts.length}, ${prets.length} prêt(s), ${dejaGeneres.length} déjà généré(s).',
-                style: GoogleFonts.inter(fontSize: 12, color: _texte),
-              ),
-            ),
-          ],
-        ),
+      SSMAlertItem(
+        type: bloques.isEmpty ? SSMAlerteType.succes : SSMAlerteType.avertissement,
+        icone: bloques.isEmpty ? Icons.check_circle_outline : Icons.warning_amber_outlined,
+        titre: bloques.isEmpty ? 'Tous les élèves sont prêts' : '${bloques.length} élève(s) bloqué(s)',
+        sousTitre: bloques.isEmpty
+            ? '${statuts.length} élève(s) — ${dejaGeneres.length} déjà généré(s).'
+            : '${bloques.length} bloqué(s) sur ${statuts.length}, ${prets.length} prêt(s), ${dejaGeneres.length} déjà généré(s).',
       ),
       const SizedBox(height: 10),
-      ...statuts.map(_ligneStatutEleve),
+      ...bloques.map((s) => Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: SSMAlertItem(
+              type: SSMAlerteType.danger,
+              icone: Icons.cancel_outlined,
+              titre: s.nom,
+              sousTitre: s.raisonBlocage ?? 'Blocage inconnu',
+            ),
+          )),
+      ...[...prets, ...dejaGeneres].map(_ligneStatutPret),
       const SizedBox(height: 12),
       if (bloques.isEmpty)
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: prets.isEmpty ? null : () => _genererClasse(malgreBlocages: false),
-            style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
-            icon: const Icon(Icons.auto_awesome),
-            label: Text('Générer les bulletins de la classe', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          child: SSMQuickActionButton(
+            icone: Icons.auto_awesome,
+            label: 'Générer les bulletins de la classe',
+            variante: SSMActionVariante.primaire,
+            onTap: prets.isEmpty ? null : () => _genererClasse(malgreBlocages: false),
           ),
         )
       else ...[
         SizedBox(
           width: double.infinity,
-          child: ElevatedButton.icon(
-            onPressed: null,
-            style: ElevatedButton.styleFrom(backgroundColor: _gris, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
-            icon: const Icon(Icons.block),
-            label: const Text('Génération complète impossible — élèves bloqués'),
+          child: SSMQuickActionButton(
+            icone: Icons.block,
+            label: 'Génération complète impossible — élèves bloqués',
+            variante: SSMActionVariante.gris,
           ),
         ),
         const SizedBox(height: 8),
         if (prets.isNotEmpty)
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _genererClasse(malgreBlocages: true),
-              style: OutlinedButton.styleFrom(foregroundColor: _ambre, side: const BorderSide(color: _ambre), padding: const EdgeInsets.symmetric(vertical: 14)),
-              icon: const Icon(Icons.playlist_add_check),
-              label: Text('Générer quand même pour les ${prets.length} élève(s) prêt(s)', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+            child: SSMQuickActionButton(
+              icone: Icons.playlist_add_check,
+              label: 'Générer quand même pour les ${prets.length} élève(s) prêt(s)',
+              variante: SSMActionVariante.ambre,
+              onTap: () => _genererClasse(malgreBlocages: true),
             ),
           ),
       ],
     ];
   }
 
-  Widget _ligneStatutEleve(StatutGenerationEleve s) {
-    final pret = s.genere || s.raisonBlocage == null;
+  Widget _ligneStatutPret(StatutGenerationEleve s) {
     return Container(
       margin: const EdgeInsets.only(bottom: 6),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border(left: BorderSide(color: pret ? _vert : _rouge, width: 4)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Row(
         children: [
-          Icon(s.genere ? Icons.check_circle : (pret ? Icons.check_circle_outline : Icons.cancel_outlined),
-              color: pret ? _vert : _rouge, size: 18),
-          const SizedBox(width: 10),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(s.nom, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
-                if (s.genere)
-                  Text('Bulletin déjà généré', style: GoogleFonts.inter(fontSize: 11, color: _gris))
-                else if (s.raisonBlocage != null)
-                  Text(s.raisonBlocage!, style: GoogleFonts.inter(fontSize: 11, color: _rouge)),
-              ],
-            ),
+            child: Text(s.nom, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          ),
+          SSMPill.couleur(
+            label: s.genere ? 'Déjà généré' : 'Prêt',
+            couleur: s.genere ? SSMPalette.indigo : SSMPalette.teal,
           ),
         ],
       ),
@@ -460,11 +443,11 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
       padding: const EdgeInsets.symmetric(vertical: 20),
       child: Column(
         children: [
-          const CircularProgressIndicator(color: _indigo),
+          const CircularProgressIndicator(color: SSMPalette.indigo),
           const SizedBox(height: 12),
           Text(
             total > 0 ? 'Génération en cours pour $total élève(s)...' : 'Génération en cours...',
-            style: GoogleFonts.inter(color: _texte),
+            style: GoogleFonts.inter(color: SSMPalette.texte2),
           ),
         ],
       ),
@@ -477,40 +460,37 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
     final r = _resume!;
     return [
       const SizedBox(height: 8),
-      Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(12)),
+      SSMPanel(
+        titre: 'Résultat de la génération',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Résultat de la génération', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-            const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.check_circle, color: _vert, size: 16),
+                const Icon(Icons.check_circle, color: SSMPalette.teal, size: 16),
                 const SizedBox(width: 6),
-                Text('${r.nombreReussis} réussi(s)', style: GoogleFonts.inter(fontSize: 13, color: _texte)),
+                Text('${r.nombreReussis} réussi(s)', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
                 const SizedBox(width: 16),
-                Icon(Icons.cancel, color: _rouge, size: 16),
+                const Icon(Icons.cancel, color: SSMPalette.rouge, size: 16),
                 const SizedBox(width: 6),
-                Text('${r.nombreEchecs} échec(s)', style: GoogleFonts.inter(fontSize: 13, color: _texte)),
+                Text('${r.nombreEchecs} échec(s)', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
               ],
             ),
             if (r.echecs.isNotEmpty) ...[
               const SizedBox(height: 10),
               ...r.echecs.map((e) => Padding(
                     padding: const EdgeInsets.only(bottom: 4),
-                    child: Text('• ${e.nom} : ${e.raison ?? '—'}', style: GoogleFonts.inter(fontSize: 12, color: _rouge)),
+                    child: Text('• ${e.nom} : ${e.raison ?? '—'}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.rouge)),
                   )),
             ],
             const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _voirBulletinsGeneres,
-                style: ElevatedButton.styleFrom(backgroundColor: _teal, foregroundColor: Colors.white),
-                icon: const Icon(Icons.list_alt),
-                label: const Text('Voir les bulletins générés'),
+              child: SSMQuickActionButton(
+                icone: Icons.list_alt,
+                label: 'Voir les bulletins générés',
+                variante: SSMActionVariante.teal,
+                onTap: _voirBulletinsGeneres,
               ),
             ),
           ],
@@ -533,19 +513,17 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
                 decoration: const InputDecoration(
                   hintText: 'Nom, prénom ou matricule',
                   prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
                   isDense: true,
                 ),
                 onSubmitted: (_) => _rechercherEleves(),
               ),
             ),
             const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _rechercheEnCours ? null : _rechercherEleves,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-              child: _rechercheEnCours
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.search),
+            SSMQuickActionButton(
+              icone: Icons.search,
+              label: 'Rechercher',
+              variante: SSMActionVariante.primaire,
+              onTap: _rechercheEnCours ? null : _rechercherEleves,
             ),
           ],
         ),
@@ -556,26 +534,31 @@ class _GenerationBulletinScreenState extends State<GenerationBulletinScreen> {
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: _gris.withValues(alpha: 0.2))),
+            decoration: BoxDecoration(
+              color: SSMPalette.blanc,
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
+              border: Border.all(color: SSMPalette.bordure),
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${e['nom']} ${e['prenom']}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
+                      Text('${e['nom']} ${e['prenom']}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
                       if (e['matricule'] != null)
-                        Text('Matricule : ${e['matricule']}', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+                        Text('Matricule : ${e['matricule']}', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
                     ],
                   ),
                 ),
-                OutlinedButton(
-                  onPressed: (enCours || _periodeId == null) ? null : () => _genererIndividuel(eleveId),
-                  style: OutlinedButton.styleFrom(foregroundColor: _indigo, side: const BorderSide(color: _indigo)),
-                  child: enCours
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _indigo))
-                      : const Text('Générer son bulletin'),
-                ),
+                enCours
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo))
+                    : SSMQuickActionButton(
+                        icone: Icons.description_outlined,
+                        label: 'Générer son bulletin',
+                        variante: SSMActionVariante.teal,
+                        onTap: _periodeId == null ? null : () => _genererIndividuel(eleveId),
+                      ),
               ],
             ),
           );

@@ -5,29 +5,30 @@ import '../../models/historique_statistique_bulletin_model.dart';
 import '../../services/annee_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/historique_statistique_bulletin_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _ambre = Color(0xFFD97706);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
+// Teinte dérivée de SSMPalette.teal pour distinguer la meilleure tranche de
+// moyennes (16-20) de la tranche 14-16 — même principe que le rouge foncé
+// de SSMStatutFinancierBadge (état supplémentaire dérivé de la palette de
+// base plutôt qu'une couleur totalement nouvelle).
+const Color _tealFonce = Color(0xFF0F766E);
 
 Color _couleurTranche(String tranche) {
   switch (tranche) {
     case '< 10':
-      return _rouge;
+      return SSMPalette.rouge;
     case '10-12':
-      return _ambre;
+      return SSMPalette.ambre;
     case '12-14':
       return Colors.orange;
     case '14-16':
-      return _teal;
+      return SSMPalette.teal;
     default: // '16-20'
-      return _vert;
+      return _tealFonce;
   }
 }
 
@@ -194,39 +195,43 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text('Statistiques des bulletins', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: _chargementListes
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _carteSelecteurs(),
-                const SizedBox(height: 16),
-                if (_chargementStats)
-                  const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: _indigo)))
-                else if (_erreur != null)
-                  Center(child: Text(_erreur!, style: GoogleFonts.inter(color: _rouge)))
-                else if (_statistique != null) ...[
-                  _grilleResume(_statistique!),
-                  const SizedBox(height: 20),
-                  _carteDistribution(),
-                ] else
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text('Sélectionnez une classe et une période.', style: GoogleFonts.inter(color: _gris)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Statistiques des bulletins', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargementListes
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _carteSelecteurs(),
+                        const SizedBox(height: 16),
+                        if (_chargementStats)
+                          const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: SSMPalette.indigo)))
+                        else if (_erreur != null)
+                          Center(child: Text(_erreur!, style: GoogleFonts.inter(color: SSMPalette.rouge)))
+                        else if (_statistique != null) ...[
+                          _grilleResume(_statistique!),
+                          const SizedBox(height: 20),
+                          _carteDistribution(),
+                        ] else
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text('Sélectionnez une classe et une période.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        _carteComparaison(),
+                        const SizedBox(height: 24),
+                      ],
                     ),
-                  ),
-                const SizedBox(height: 24),
-                _carteComparaison(),
-                const SizedBox(height: 24),
-              ],
             ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -234,9 +239,9 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _gris.withValues(alpha: 0.2)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Row(
         children: [
@@ -244,7 +249,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
             child: DropdownButtonFormField<int>(
               value: _classeId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Classe', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(labelText: 'Classe', isDense: true),
               items: _classes.map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['nom'] as String))).toList(),
               onChanged: _changerClasse,
             ),
@@ -254,7 +259,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
             child: DropdownButtonFormField<int>(
               value: _periodeId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Période', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(labelText: 'Période', isDense: true),
               items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
               onChanged: _changerPeriode,
             ),
@@ -265,63 +270,59 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
   }
 
   Widget _grilleResume(StatistiqueClasseBulletin s) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.5,
-      children: [
-        SSMStatCard(titre: 'Effectif', valeur: '${s.effectif}', icone: Icons.groups_outlined, couleurIcone: _indigo),
-        SSMStatCard(
-          titre: 'Moyenne de classe',
-          valeur: s.moyenneClasse != null ? '${s.moyenneClasse!.toStringAsFixed(2)}/20' : '—',
-          icone: Icons.functions,
-          couleurIcone: _teal,
+    final cartes = <Widget>[
+      SSMStatCard(icone: Icons.groups_outlined, couleur: SSMPalette.indigo, valeur: '${s.effectif}', label: 'Effectif'),
+      SSMStatCard(
+        icone: Icons.functions,
+        couleur: SSMPalette.teal,
+        valeur: s.moyenneClasse != null ? '${s.moyenneClasse!.toStringAsFixed(2)}/20' : '—',
+        label: 'Moyenne de classe',
+      ),
+      SSMStatCard(
+        icone: Icons.trending_up,
+        couleur: _tealFonce,
+        valeur: s.meilleureMoyenne != null ? '${s.meilleureMoyenne!.toStringAsFixed(2)}/20' : '—',
+        label: 'Meilleure moyenne',
+      ),
+      SSMStatCard(
+        icone: Icons.trending_down,
+        couleur: SSMPalette.rouge,
+        valeur: s.plusFaibleMoyenne != null ? '${s.plusFaibleMoyenne!.toStringAsFixed(2)}/20' : '—',
+        label: 'Plus faible moyenne',
+      ),
+      SSMStatCard(icone: Icons.check_circle_outline, couleur: SSMPalette.teal, valeur: '${s.nombreAuDessusDe10}', label: 'Moyenne ≥ 10'),
+      SSMStatCard(icone: Icons.cancel_outlined, couleur: SSMPalette.rouge, valeur: '${s.nombreEnDessousDe10}', label: 'Moyenne < 10'),
+      SSMStatCard(icone: Icons.emoji_events_outlined, couleur: SSMPalette.ambre, valeur: '${s.tauxReussite.toStringAsFixed(1)}%', label: 'Taux de réussite'),
+    ];
+
+    return LayoutBuilder(builder: (context, contraintes) {
+      final colonnes = contraintes.maxWidth >= 900 ? 3 : (contraintes.maxWidth >= 560 ? 2 : 1);
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: cartes.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: colonnes,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 118,
         ),
-        SSMStatCard(
-          titre: 'Meilleure moyenne',
-          valeur: s.meilleureMoyenne != null ? '${s.meilleureMoyenne!.toStringAsFixed(2)}/20' : '—',
-          icone: Icons.trending_up,
-          couleurIcone: _vert,
-        ),
-        SSMStatCard(
-          titre: 'Plus faible moyenne',
-          valeur: s.plusFaibleMoyenne != null ? '${s.plusFaibleMoyenne!.toStringAsFixed(2)}/20' : '—',
-          icone: Icons.trending_down,
-          couleurIcone: _rouge,
-        ),
-        SSMStatCard(titre: 'Moyenne ≥ 10', valeur: '${s.nombreAuDessusDe10}', icone: Icons.check_circle_outline, couleurIcone: _vert),
-        SSMStatCard(titre: 'Moyenne < 10', valeur: '${s.nombreEnDessousDe10}', icone: Icons.cancel_outlined, couleurIcone: _rouge),
-        SSMStatCard(
-          titre: 'Taux de réussite',
-          valeur: '${s.tauxReussite.toStringAsFixed(1)}%',
-          icone: Icons.emoji_events_outlined,
-          couleurIcone: _ambre,
-        ),
-      ],
-    );
+        itemBuilder: (context, i) => cartes[i],
+      );
+    });
   }
 
   Widget _carteDistribution() {
     if (_distribution.isEmpty) {
-      return Center(child: Text('Aucune donnée de distribution.', style: GoogleFonts.inter(color: _gris)));
+      return Center(child: Text('Aucune donnée de distribution.', style: GoogleFonts.inter(color: SSMPalette.texte3)));
     }
     final maxY = (_distribution.map((d) => d.nombre).fold<int>(0, (a, b) => a > b ? a : b)) * 1.3;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _gris.withValues(alpha: 0.2)),
-      ),
+    return SSMPanel(
+      titre: 'Distribution des moyennes',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Distribution des moyennes', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 16),
           SizedBox(
             height: 200,
             child: BarChart(
@@ -331,7 +332,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
                 barTouchData: BarTouchData(
                   enabled: true,
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => _indigo,
+                    getTooltipColor: (_) => SSMPalette.indigo,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) => BarTooltipItem(
                       '${rod.toY.toInt()} élève(s)',
                       const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
@@ -354,7 +355,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
                 ],
                 gridData: FlGridData(
                   drawVerticalLine: false,
-                  getDrawingHorizontalLine: (v) => FlLine(color: _texteFonce.withValues(alpha: 0.04), strokeWidth: 1),
+                  getDrawingHorizontalLine: (v) => FlLine(color: SSMPalette.texte1.withValues(alpha: 0.04), strokeWidth: 1),
                 ),
                 borderData: FlBorderData(show: false),
                 titlesData: FlTitlesData(
@@ -364,7 +365,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 30,
-                      getTitlesWidget: (value, meta) => Text('${value.toInt()}', style: GoogleFonts.inter(fontSize: 9, color: _gris)),
+                      getTitlesWidget: (value, meta) => Text('${value.toInt()}', style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte3)),
                     ),
                   ),
                   bottomTitles: AxisTitles(
@@ -376,7 +377,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
                         if (i < 0 || i >= _distribution.length) return const SizedBox();
                         return Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: Text(_distribution[i].tranche, style: GoogleFonts.inter(fontSize: 9, color: _texte)),
+                          child: Text(_distribution[i].tranche, style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte2)),
                         );
                       },
                     ),
@@ -395,7 +396,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
                 children: [
                   Container(width: 10, height: 10, decoration: BoxDecoration(color: _couleurTranche(d.tranche), shape: BoxShape.circle)),
                   const SizedBox(width: 4),
-                  Text('${d.tranche} (${d.nombre})', style: GoogleFonts.inter(fontSize: 11, color: _texte)),
+                  Text('${d.tranche} (${d.nombre})', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2)),
                 ],
               );
             }).toList(),
@@ -408,19 +409,12 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
   // ── Comparaison entre périodes ─────────────────────────────
 
   Widget _carteComparaison() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _gris.withValues(alpha: 0.2)),
-      ),
+    return SSMPanel(
+      titre: 'Comparaison entre périodes',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Comparaison entre périodes', style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-          const SizedBox(height: 4),
-          Text('Nécessite une classe sélectionnée ci-dessus.', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+          Text('Nécessite une classe sélectionnée ci-dessus.', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -428,7 +422,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
                 child: DropdownButtonFormField<int>(
                   value: _periodeComparaison1,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Période 1', border: OutlineInputBorder(), isDense: true),
+                  decoration: const InputDecoration(labelText: 'Période 1', isDense: true),
                   items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
                   onChanged: (v) => setState(() => _periodeComparaison1 = v),
                 ),
@@ -438,7 +432,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
                 child: DropdownButtonFormField<int>(
                   value: _periodeComparaison2,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Période 2', border: OutlineInputBorder(), isDense: true),
+                  decoration: const InputDecoration(labelText: 'Période 2', isDense: true),
                   items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
                   onChanged: (v) => setState(() => _periodeComparaison2 = v),
                 ),
@@ -448,18 +442,18 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: (_classeId == null || _chargementComparaison) ? null : _comparer,
-              style: OutlinedButton.styleFrom(foregroundColor: _indigo, side: const BorderSide(color: _indigo)),
-              icon: _chargementComparaison
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _indigo))
-                  : const Icon(Icons.compare_arrows, size: 18),
-              label: const Text('Comparer'),
-            ),
+            child: _chargementComparaison
+                ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)))
+                : SSMQuickActionButton(
+                    icone: Icons.compare_arrows,
+                    label: 'Comparer',
+                    variante: SSMActionVariante.primaire,
+                    onTap: _classeId == null ? null : _comparer,
+                  ),
           ),
           if (_erreurComparaison != null) ...[
             const SizedBox(height: 8),
-            Text(_erreurComparaison!, style: GoogleFonts.inter(fontSize: 12, color: _rouge)),
+            Text(_erreurComparaison!, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.rouge)),
           ],
           if (_comparaison != null) ...[
             const SizedBox(height: 14),
@@ -473,9 +467,9 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
   Widget _resultatComparaison(ComparaisonPeriodesBulletin c) {
     final evolution = c.evolutionMoyenneClasse;
     final couleur = switch (c.progression) {
-      'hausse' => _vert,
-      'baisse' => _rouge,
-      _ => _gris,
+      'hausse' => SSMPalette.teal,
+      'baisse' => SSMPalette.rouge,
+      _ => SSMPalette.texte3,
     };
     final icone = switch (c.progression) {
       'hausse' => Icons.arrow_upward,
@@ -485,7 +479,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
 
     return Container(
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(SSMRayons.grand)),
       child: Row(
         children: [
           Icon(icone, color: couleur),
@@ -496,7 +490,7 @@ class _StatistiquesBulletinsScreenState extends State<StatistiquesBulletinsScree
               children: [
                 Text(
                   '${c.periode1.moyenneClasse?.toStringAsFixed(2) ?? '—'}/20  →  ${c.periode2.moyenneClasse?.toStringAsFixed(2) ?? '—'}/20',
-                  style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce),
+                  style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
                 ),
                 const SizedBox(height: 2),
                 Text(

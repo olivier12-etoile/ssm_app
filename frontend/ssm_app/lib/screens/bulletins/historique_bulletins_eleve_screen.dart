@@ -3,19 +3,16 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/bulletin_model.dart';
 import '../../models/historique_statistique_bulletin_model.dart';
 import '../../services/historique_statistique_bulletin_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'apercu_bulletin_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _rouge = Color(0xFFDC2626);
 
 // ══════════════════════════════════════════════════════════
 // Historique complet des bulletins d'un élève, groupé Année scolaire →
-// Périodes (structure arborescente du brief) — accessible depuis l'onglet
-// "Bulletins" de la fiche élève (module Élèves).
+// Périodes (structure arborescente du brief, ssm_panel imbriqués) —
+// accessible depuis l'onglet "Bulletins" de la fiche élève (module Élèves).
 // ══════════════════════════════════════════════════════════
 class HistoriqueBulletinsEleveScreen extends StatefulWidget {
   final int eleveId;
@@ -95,20 +92,24 @@ class _HistoriqueBulletinsEleveScreenState extends State<HistoriqueBulletinsElev
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          widget.nomEleve != null ? 'Bulletins — ${widget.nomEleve}' : 'Historique des bulletins',
-          style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: widget.nomEleve != null ? 'Bulletins — ${widget.nomEleve}' : 'Historique des bulletins',
+              onRetour: () => Navigator.pop(context),
+            ),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _vueErreur()
+                      : RefreshIndicator(onRefresh: _charger, color: SSMPalette.indigo, child: _corps()),
+            ),
+          ],
         ),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _erreur != null
-              ? _vueErreur()
-              : RefreshIndicator(onRefresh: _charger, child: _corps()),
     );
   }
 
@@ -119,15 +120,11 @@ class _HistoriqueBulletinsEleveScreenState extends State<HistoriqueBulletinsElev
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-              child: const Text('Réessayer'),
-            ),
+            ElevatedButton(onPressed: _charger, child: const Text('Réessayer')),
           ],
         ),
       ),
@@ -141,7 +138,7 @@ class _HistoriqueBulletinsEleveScreenState extends State<HistoriqueBulletinsElev
         children: [
           Padding(
             padding: const EdgeInsets.all(40),
-            child: Center(child: Text('Aucun bulletin disponible pour cet élève.', style: GoogleFonts.inter(color: _gris))),
+            child: Center(child: Text('Aucun bulletin disponible pour cet élève.', style: GoogleFonts.inter(color: SSMPalette.texte3))),
           ),
         ],
       );
@@ -154,19 +151,11 @@ class _HistoriqueBulletinsEleveScreenState extends State<HistoriqueBulletinsElev
         final periodes = entree.value;
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
-          child: Theme(
-            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-            child: ExpansionTile(
-              initiallyExpanded: groupes.keys.first == nomAnnee,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              collapsedShape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: _gris.withValues(alpha: 0.2)),
-              ),
-              backgroundColor: Colors.white,
-              collapsedBackgroundColor: Colors.white,
-              title: Text(nomAnnee, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce)),
-              subtitle: Text('${periodes.length} période(s)', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+          child: SSMPanel(
+            titre: nomAnnee,
+            padding: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: periodes.map(_lignePeriode).toList(),
             ),
           ),
@@ -180,24 +169,25 @@ class _HistoriqueBulletinsEleveScreenState extends State<HistoriqueBulletinsElev
       color: Colors.transparent,
       child: InkWell(
         onTap: () => _ouvrirApercu(h),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
           child: Row(
             children: [
               Expanded(
-                child: Text(h.nomPeriode ?? 'Période', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce)),
+                child: Text(h.nomPeriode ?? 'Période', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
               ),
               if (h.rang != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 10),
-                  child: Text('Rang ${h.rang}', style: GoogleFonts.inter(fontSize: 12, color: _gris)),
+                  child: Text('Rang ${h.rang}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
                 ),
               Text('${h.moyenneGenerale.toStringAsFixed(2)}/20',
-                  style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: _texteFonce)),
+                  style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
               const SizedBox(width: 10),
-              SSMBadge(label: h.statut.libelle, couleur: h.statut.couleur),
+              SSMPill.couleur(label: h.statut.libelle, couleur: h.statut.couleur),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: _gris, size: 18),
+              const Icon(Icons.chevron_right, color: SSMPalette.texte3, size: 18),
             ],
           ),
         ),

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/utilisateur.dart';
@@ -7,42 +6,27 @@ import '../../services/auth_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/bulletin_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_page_scaffold.dart';
+import '../../widgets/ssm/ssm_sidebar.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
 import 'generation_bulletin_screen.dart';
 import 'validation_bulletins_screen.dart';
 import 'historique_recherche_bulletins_screen.dart';
 import 'statistiques_bulletins_screen.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-
-// Marque blanche (voir CLAUDE.md "Marque blanche") : convertit la couleur
-// hexadécimale de l'école (ex: "#1E3A8A") en Color, avec repli sur la
-// couleur par défaut du design system si absente/invalide.
-Color _depuisHex(String? hex, Color repli) {
-  if (hex == null || hex.isEmpty) return repli;
-  try {
-    return Color(int.parse(hex.replaceAll('#', '0xFF')));
-  } catch (_) {
-    return repli;
-  }
-}
-
 // ══════════════════════════════════════════════════════════
 // Point d'entrée unique du module Bulletins (même logique que
-// notes_module_screen.dart / parametres_module_screen.dart) : sélecteurs
-// année/période, résumé de génération de l'école, liste des classes avec
-// statut de génération, puis navigation vers la génération détaillée
-// (generation_bulletin_screen.dart), la validation en attente
-// (validation_bulletins_screen.dart), l'historique/recherche
-// (historique_recherche_bulletins_screen.dart) et les statistiques
-// (statistiques_bulletins_screen.dart).
+// notes_module_screen.dart) : sélecteurs année/période, résumé de
+// génération de l'école, liste des classes avec statut de génération, puis
+// navigation vers la génération détaillée (generation_bulletin_screen.dart),
+// la validation en attente (validation_bulletins_screen.dart),
+// l'historique/recherche (historique_recherche_bulletins_screen.dart) et
+// les statistiques (statistiques_bulletins_screen.dart).
 // ══════════════════════════════════════════════════════════
 class BulletinsModuleScreen extends StatefulWidget {
   const BulletinsModuleScreen({super.key});
@@ -67,9 +51,6 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
   List<dynamic> _classes = [];
   final Map<int, List<StatutGenerationEleve>> _statutParClasse = {};
   bool _chargementClasses = false;
-
-  Color get _couleurPrimaire => _depuisHex(_utilisateur?.couleurPrimaire, _indigo);
-  Color get _couleurSecondaire => _depuisHex(_utilisateur?.couleurSecondaire, _teal);
 
   @override
   void initState() {
@@ -209,25 +190,9 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
 
   // ── Navigation ────────────────────────────────────────
 
-  String get _routeDashboardPrincipal {
-    switch (_utilisateur?.role) {
-      case 'enseignant':
-        return '/dashboard/enseignant';
-      case 'censeur':
-        return '/dashboard/censeur';
-      case 'secretaire':
-        return '/dashboard/secretaire';
-      default: // directeur, comptable, super_admin
-        return '/tableau-de-bord';
-    }
-  }
-
-  void _retour() {
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacementNamed(context, _routeDashboardPrincipal);
-    }
+  void _naviguer(BuildContext context, String route) {
+    if (route == '/bulletins') return;
+    Navigator.pushNamed(context, route);
   }
 
   void _ouvrirGeneration({int? classeId}) {
@@ -280,126 +245,179 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
   void _afficherErreur(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: _rouge),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
+  }
+
+  // ── Navigation latérale, adaptée au rôle connecté (voir notes_module_screen.dart) ──
+  List<SSMNavSection> _sections() {
+    final role = _utilisateur?.role;
+
+    if (role == 'enseignant') {
+      return [
+        const SSMNavSection(titre: 'Principal', items: [
+          SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/dashboard/enseignant'),
+        ]),
+        SSMNavSection(titre: 'Mes classes', items: [
+          const SSMNavItem(icone: Icons.grade_outlined, label: 'Notes & évaluations', route: '/notes'),
+          const SSMNavItem(icone: Icons.event_busy_outlined, label: 'Saisie des absences', route: '/enseignant/absences'),
+          const SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Mon emploi du temps', route: '/emploi-du-temps'),
+        ]),
+        const SSMNavSection(titre: 'Général', items: [
+          SSMNavItem(icone: Icons.sync_outlined, label: 'Synchronisation', route: '/sync'),
+          SSMNavItem(icone: Icons.person_outline, label: 'Mon profil', route: '/profil'),
+          SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres', route: '/parametres'),
+        ]),
+      ];
+    }
+
+    if (role == 'censeur') {
+      return [
+        const SSMNavSection(titre: 'Principal', items: [
+          SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/dashboard/censeur'),
+        ]),
+        const SSMNavSection(titre: 'Pédagogie', items: [
+          SSMNavItem(icone: Icons.grade_outlined, label: 'Notes & évaluations', route: '/notes'),
+          SSMNavItem(icone: Icons.description_outlined, label: 'Bulletins', route: '/bulletins'),
+          SSMNavItem(icone: Icons.event_busy_outlined, label: 'Saisie des absences', route: '/enseignant/absences'),
+          SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Emplois du temps', route: '/emploi-du-temps'),
+        ]),
+        const SSMNavSection(titre: 'Général', items: [
+          SSMNavItem(icone: Icons.sync_outlined, label: 'Synchronisation', route: '/sync'),
+          SSMNavItem(icone: Icons.person_outline, label: 'Mon profil', route: '/profil'),
+          SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres', route: '/parametres'),
+        ]),
+      ];
+    }
+
+    // Directeur, secrétaire, comptable, super_admin : même structure que le
+    // dashboard directeur.
+    return [
+      const SSMNavSection(titre: 'Principal', items: [
+        SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/tableau-de-bord'),
+        SSMNavItem(icone: Icons.people_outline, label: 'Élèves', route: '/directeur/eleves'),
+        SSMNavItem(icone: Icons.price_change_outlined, label: 'Frais scolaires', route: '/directeur/frais'),
+        SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Emploi du temps', route: '/emploi-du-temps'),
+        SSMNavItem(icone: Icons.description_outlined, label: 'Bulletins PDF', route: '/bulletins'),
+      ]),
+      const SSMNavSection(titre: 'Pilotage', items: [
+        SSMNavItem(icone: Icons.grade_outlined, label: 'Notes & évaluations', route: '/notes'),
+        SSMNavItem(icone: Icons.bar_chart_outlined, label: 'Statistiques', route: '/statistiques'),
+        SSMNavItem(icone: Icons.notifications_outlined, label: 'Notifications', route: '/notifications'),
+        SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
+      ]),
+    ];
+  }
+
+  String _libelleRole(String? role) {
+    switch (role) {
+      case 'directeur':
+        return 'Directeur';
+      case 'censeur':
+        return 'Censeur';
+      case 'secretaire':
+        return 'Secrétaire';
+      case 'enseignant':
+        return 'Enseignant';
+      case 'comptable':
+        return 'Comptable';
+      case 'super_admin':
+        return 'Super admin';
+      default:
+        return role ?? '';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        leading: IconButton(icon: const Icon(Icons.arrow_back), onPressed: _retour),
-        title: Text('Bulletins', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _couleurPrimaire,
-        foregroundColor: Colors.white,
-      ),
-      body: _chargement
-          ? Center(child: CircularProgressIndicator(color: _couleurPrimaire))
-          : _erreur != null
-              ? _vueErreur()
-              : RefreshIndicator(
-                  onRefresh: _chargerDonneesPeriode,
-                  child: Stack(
-                    children: [
-                      Positioned(top: -80, right: -60, child: _blob(size: 260, couleur: _couleurPrimaire.withValues(alpha: 0.08))),
-                      Positioned(bottom: -60, left: -60, child: _blob(size: 200, couleur: _couleurSecondaire.withValues(alpha: 0.10))),
-                      ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          _carteSelecteurs(),
-                          const SizedBox(height: 16),
-                          _grilleResume(),
-                          const SizedBox(height: 16),
-                          _boutonGenerer(),
-                          const SizedBox(height: 16),
-                          _boutonsNavigation(),
-                          const SizedBox(height: 20),
-                          SSMSectionTitre(titre: 'Classes'),
-                          _listeClasses(),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+    if (_chargement) {
+      return const Scaffold(backgroundColor: SSMPalette.fond, body: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)));
+    }
+
+    if (_utilisateur == null) {
+      return Scaffold(backgroundColor: SSMPalette.fond, body: _vueErreur('Impossible de charger votre profil. Reconnectez-vous.'));
+    }
+
+    return SSMPageScaffold(
+      nomEcole: _utilisateur?.codeEcole ?? 'Mon établissement',
+      codeEcole: _utilisateur?.codeEcole ?? '—',
+      nomUtilisateur: _utilisateur?.nom ?? '…',
+      role: _libelleRole(_utilisateur?.role),
+      sections: _sections(),
+      routeActuelle: '/bulletins',
+      onNavigate: (route) => _naviguer(context, route),
+      onProfilTap: () => Navigator.pushNamed(context, '/profil'),
+      breadcrumb: 'Accueil',
+      breadcrumbActuel: 'Bulletins',
+      child: _erreur != null ? _vueErreur(_erreur!) : _corps(),
     );
   }
 
-  Widget _vueErreur() {
+  Widget _vueErreur(String message) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _couleurPrimaire, foregroundColor: Colors.white),
-              child: const Text('Réessayer'),
-            ),
+            ElevatedButton(onPressed: _charger, child: const Text('Réessayer')),
           ],
         ),
       ),
     );
   }
 
-  Widget _blob({required double size, required Color couleur}) {
-    return IgnorePointer(
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: couleur),
-        ),
-      ),
-    );
-  }
-
-  Widget _carteGlass({required Widget child}) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-            boxShadow: [
-              BoxShadow(color: _texteFonce.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 5)),
-            ],
+  Widget _corps() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _carteSelecteurs(),
+        const SizedBox(height: 16),
+        _grilleResume(),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: SSMQuickActionButton(
+            icone: Icons.auto_awesome,
+            label: 'Générer des bulletins',
+            variante: SSMActionVariante.primaire,
+            onTap: () => _ouvrirGeneration(),
           ),
-          child: child,
         ),
-      ),
+        const SizedBox(height: 12),
+        _boutonsNavigation(),
+        const SizedBox(height: 20),
+        SSMPanel(
+          titre: 'Classes',
+          padding: EdgeInsets.zero,
+          child: _listeClasses(),
+        ),
+      ],
     );
   }
 
   // ── Sélecteurs année/période ────────────────────────────
 
   Widget _carteSelecteurs() {
-    return _carteGlass(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
       child: Row(
         children: [
           Expanded(
             child: DropdownButtonFormField<int>(
               value: _anneeId,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Année scolaire',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: _annees
-                  .map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String)))
-                  .toList(),
+              decoration: const InputDecoration(labelText: 'Année scolaire', isDense: true),
+              items: _annees.map((a) => DropdownMenuItem<int>(value: a['id'] as int, child: Text(a['libelle'] as String))).toList(),
               onChanged: _changerAnnee,
             ),
           ),
@@ -408,14 +426,8 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
             child: DropdownButtonFormField<int>(
               value: _periodeId,
               isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Période',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-              items: _periodes
-                  .map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String)))
-                  .toList(),
+              decoration: const InputDecoration(labelText: 'Période', isDense: true),
+              items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
               onChanged: _periodes.isEmpty ? null : _changerPeriode,
             ),
           ),
@@ -428,110 +440,72 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
 
   Widget _grilleResume() {
     if (_chargementResume) {
-      return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+      return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: SSMPalette.indigo)));
     }
     final r = _resume;
     if (r == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('Choisissez une année et une période pour voir le résumé.', style: GoogleFonts.inter(color: _gris)),
+          child: Text('Choisissez une année et une période pour voir le résumé.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
         ),
       );
     }
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 10,
-      crossAxisSpacing: 10,
-      childAspectRatio: 1.5,
-      children: [
-        SSMStatCard(
-          titre: 'Bulletins générés',
-          valeur: '${r.bulletinsGeneres}',
-          icone: Icons.description_outlined,
-          couleurIcone: _couleurPrimaire,
+    final cartes = <Widget>[
+      SSMStatCard(icone: Icons.description_outlined, couleur: SSMPalette.indigo, valeur: '${r.bulletinsGeneres}', label: 'Bulletins générés'),
+      SSMStatCard(icone: Icons.verified_outlined, couleur: SSMPalette.teal, valeur: '${r.bulletinsValides}', label: 'Validés'),
+      SSMStatCard(icone: Icons.hourglass_bottom, couleur: SSMPalette.ambre, valeur: '${r.bulletinsEnAttente}', label: 'En attente de validation'),
+      SSMStatCard(icone: Icons.class_outlined, couleur: SSMPalette.teal, valeur: '${r.classesConcernees}', label: 'Classes concernées'),
+      SSMStatCard(icone: Icons.error_outline, couleur: SSMPalette.rouge, valeur: '${r.bulletinsNonGeneres}', label: 'Non générés'),
+      SSMStatCard(icone: Icons.groups_outlined, couleur: SSMPalette.texte1, valeur: '${r.effectifTotal}', label: 'Effectif total'),
+    ];
+
+    return LayoutBuilder(builder: (context, contraintes) {
+      final colonnes = contraintes.maxWidth >= 900 ? 3 : (contraintes.maxWidth >= 560 ? 2 : 1);
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: cartes.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: colonnes,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 118,
         ),
-        SSMStatCard(
-          titre: 'Validés',
-          valeur: '${r.bulletinsValides}',
-          icone: Icons.verified_outlined,
-          couleurIcone: _vert,
-        ),
-        SSMStatCard(
-          titre: 'En attente de validation',
-          valeur: '${r.bulletinsEnAttente}',
-          icone: Icons.hourglass_bottom,
-          couleurIcone: _ambre,
-        ),
-        SSMStatCard(
-          titre: 'Classes concernées',
-          valeur: '${r.classesConcernees}',
-          icone: Icons.class_outlined,
-          couleurIcone: _teal,
-        ),
-        SSMStatCard(
-          titre: 'Non générés',
-          valeur: '${r.bulletinsNonGeneres}',
-          icone: Icons.error_outline,
-          couleurIcone: _rouge,
-        ),
-        SSMStatCard(
-          titre: 'Effectif total',
-          valeur: '${r.effectifTotal}',
-          icone: Icons.groups_outlined,
-          couleurIcone: _texteFonce,
-        ),
-      ],
-    );
+        itemBuilder: (context, i) => cartes[i],
+      );
+    });
   }
 
-  // ── Actions ───────────────────────────────────────────────
-
-  Widget _boutonGenerer() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: () => _ouvrirGeneration(),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _couleurPrimaire,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-        ),
-        icon: const Icon(Icons.auto_awesome),
-        label: Text('Générer des bulletins', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-      ),
-    );
-  }
+  // ── Navigation rapide ───────────────────────────────────────
 
   Widget _boutonsNavigation() {
     return Row(
       children: [
         Expanded(
-          child: SSMActionRapide(
+          child: SSMQuickActionButton(
             icone: Icons.playlist_add_check,
             label: 'Validation en attente',
-            couleur: _ambre,
+            variante: SSMActionVariante.ambre,
             onTap: _ouvrirValidation,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: SSMActionRapide(
+          child: SSMQuickActionButton(
             icone: Icons.history,
             label: 'Historique & Recherche',
-            couleur: _couleurSecondaire,
+            variante: SSMActionVariante.teal,
             onTap: _ouvrirHistoriqueRecherche,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: SSMActionRapide(
+          child: SSMQuickActionButton(
             icone: Icons.bar_chart,
             label: 'Statistiques',
-            couleur: _couleurPrimaire,
+            variante: SSMActionVariante.gris,
             onTap: _ouvrirStatistiques,
           ),
         ),
@@ -543,66 +517,45 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
 
   Widget _listeClasses() {
     if (_chargementClasses) {
-      return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+      return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator(color: SSMPalette.indigo)));
     }
     if (_classes.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Text('Aucune classe pour cette année scolaire.', style: GoogleFonts.inter(color: _gris)),
+        padding: const EdgeInsets.all(16),
+        child: Text('Aucune classe pour cette année scolaire.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
       );
     }
 
-    return Column(
-      children: _classes.map((c) {
-        final classeId = c['id'] as int;
-        final nom = c['nom'] as String? ?? '—';
-        final statuts = _statutParClasse[classeId] ?? const [];
-        final total = statuts.length;
-        final genCount = statuts.where((s) => s.genere).length;
+    return SSMDataTable(
+      colonnes: const [
+        SSMDataColumn('Classe'),
+        SSMDataColumn('Effectif'),
+        SSMDataColumn('Statut'),
+      ],
+      onLigneTap: (i) => _ouvrirGeneration(classeId: _classes[i]['id'] as int),
+      lignes: [
+        for (final c in _classes)
+          () {
+            final classeId = c['id'] as int;
+            final nom = c['nom'] as String? ?? '—';
+            final statuts = _statutParClasse[classeId] ?? const [];
+            final total = statuts.length;
+            final genCount = statuts.where((s) => s.genere).length;
 
-        final (label, couleur) = switch ((total, genCount)) {
-          (0, _) => ('Aucun élève', _gris),
-          (_, 0) => ('Non commencé', _gris),
-          (var t, var g) when g == t => ('Terminé', _vert),
-          _ => ('En cours $genCount/$total', _ambre),
-        };
+            final (label, couleur) = switch ((total, genCount)) {
+              (0, _) => ('Aucun élève', SSMPalette.texte3),
+              (_, 0) => ('Non commencé', SSMPalette.texte3),
+              (var t, var g) when g == t => ('Terminé', SSMPalette.teal),
+              _ => ('En cours $genCount/$total', SSMPalette.ambre),
+            };
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _ouvrirGeneration(classeId: classeId),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _gris.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(color: couleur.withValues(alpha: 0.14), shape: BoxShape.circle),
-                      child: Icon(Icons.class_outlined, color: couleur, size: 18),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(nom, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce)),
-                    ),
-                    SSMBadge(label: label, couleur: couleur),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: _gris, size: 20),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
+            return [
+              Text(nom, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+              Text('$total', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: SSMPalette.texte2)),
+              SSMPill.couleur(label: label, couleur: couleur),
+            ];
+          }(),
+      ],
     );
   }
 }

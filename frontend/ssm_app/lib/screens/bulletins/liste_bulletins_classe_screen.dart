@@ -6,16 +6,12 @@ import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../models/bulletin_model.dart';
 import '../../services/bulletin_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'apercu_bulletin_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 class ListeBulletinsClasseScreen extends StatefulWidget {
   final int classeId;
@@ -100,13 +96,18 @@ class _ListeBulletinsClasseScreenState extends State<ListeBulletinsClasseScreen>
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Valider tous les bulletins ?'),
-        content: Text('${_bulletins.length} bulletin(s) seront validés officiellement pour cette classe et cette période.'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Valider tous les bulletins ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+        content: Text(
+          '${_bulletins.length} bulletin(s) seront validés officiellement pour cette classe et cette période.',
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.teal, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white),
             child: const Text('Valider'),
           ),
         ],
@@ -119,7 +120,7 @@ class _ListeBulletinsClasseScreenState extends State<ListeBulletinsClasseScreen>
       final nombre = await BulletinService.validerClasse(classeId: widget.classeId, periodeId: widget.periodeId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$nombre bulletin(s) validé(s)'), backgroundColor: _vert),
+        SnackBar(content: Text('$nombre bulletin(s) validé(s)'), backgroundColor: SSMPalette.teal),
       );
       await _charger();
     } catch (e) {
@@ -131,7 +132,7 @@ class _ListeBulletinsClasseScreenState extends State<ListeBulletinsClasseScreen>
 
   void _afficherErreur(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge));
   }
 
   void _ouvrirApercu(Bulletin b) {
@@ -144,35 +145,42 @@ class _ListeBulletinsClasseScreenState extends State<ListeBulletinsClasseScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text('Bulletins de la classe', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-      ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _erreur != null
-              ? _vueErreur()
-              : RefreshIndicator(
-                  onRefresh: _charger,
-                  child: ListView(
-                    padding: const EdgeInsets.all(16),
-                    children: [
-                      _boutonsHaut(),
-                      const SizedBox(height: 16),
-                      if (_bulletins.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 40),
-                          child: Center(
-                            child: Text('Aucun bulletin généré pour cette classe et cette période.', style: GoogleFonts.inter(color: _gris)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Bulletins de la classe', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _vueErreur()
+                      : RefreshIndicator(
+                          onRefresh: _charger,
+                          color: SSMPalette.indigo,
+                          child: ListView(
+                            padding: const EdgeInsets.all(16),
+                            children: [
+                              _boutonsHaut(),
+                              const SizedBox(height: 16),
+                              if (_bulletins.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 40),
+                                  child: Center(
+                                    child: Text('Aucun bulletin généré pour cette classe et cette période.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                                  ),
+                                )
+                              else
+                                LayoutBuilder(builder: (context, contraintes) {
+                                  return contraintes.maxWidth >= 620 ? _tableauBulletins() : _listeCartes();
+                                }),
+                            ],
                           ),
-                        )
-                      else
-                        ..._bulletins.map(_ligneBulletin),
-                    ],
-                  ),
-                ),
+                        ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -183,15 +191,11 @@ class _ListeBulletinsClasseScreenState extends State<ListeBulletinsClasseScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _charger,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-              child: const Text('Réessayer'),
-            ),
+            ElevatedButton(onPressed: _charger, child: const Text('Réessayer')),
           ],
         ),
       ),
@@ -204,25 +208,25 @@ class _ListeBulletinsClasseScreenState extends State<ListeBulletinsClasseScreen>
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: (_bulletins.isEmpty || _telechargementZip) ? null : _telechargerZip,
-                style: OutlinedButton.styleFrom(foregroundColor: _indigo, side: const BorderSide(color: _indigo)),
-                icon: _telechargementZip
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _indigo))
-                    : const Icon(Icons.folder_zip_outlined, size: 18),
-                label: const Text('Télécharger tous (ZIP)'),
-              ),
+              child: _telechargementZip
+                  ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)))
+                  : SSMQuickActionButton(
+                      icone: Icons.folder_zip_outlined,
+                      label: 'Télécharger tous (ZIP)',
+                      variante: SSMActionVariante.primaire,
+                      onTap: _bulletins.isEmpty ? null : _telechargerZip,
+                    ),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: (_bulletins.isEmpty || _telechargementGlobal) ? null : _telechargerRecapitulatif,
-                style: OutlinedButton.styleFrom(foregroundColor: _teal, side: const BorderSide(color: _teal)),
-                icon: _telechargementGlobal
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _teal))
-                    : const Icon(Icons.summarize_outlined, size: 18),
-                label: const Text('Récapitulatif classe'),
-              ),
+              child: _telechargementGlobal
+                  ? const Center(child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.teal)))
+                  : SSMQuickActionButton(
+                      icone: Icons.summarize_outlined,
+                      label: 'Récapitulatif classe',
+                      variante: SSMActionVariante.teal,
+                      onTap: _bulletins.isEmpty ? null : _telechargerRecapitulatif,
+                    ),
             ),
           ],
         ),
@@ -230,69 +234,92 @@ class _ListeBulletinsClasseScreenState extends State<ListeBulletinsClasseScreen>
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _validationEnCours ? null : _validerTous,
-              style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14)),
-              icon: _validationEnCours
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.verified_outlined),
-              label: const Text('Valider tous les bulletins'),
-            ),
+            child: _validationEnCours
+                ? const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.teal)))
+                : SSMQuickActionButton(
+                    icone: Icons.verified_outlined,
+                    label: 'Valider tous les bulletins',
+                    variante: SSMActionVariante.teal,
+                    onTap: _validerTous,
+                  ),
           ),
         ],
       ],
     );
   }
 
-  Widget _ligneBulletin(Bulletin b) {
+  // ── Tableau (desktop large) ────────────────────────────────
+
+  Widget _tableauBulletins() {
+    return SSMDataTable(
+      colonnes: const [
+        SSMDataColumn('Rang'),
+        SSMDataColumn('Élève'),
+        SSMDataColumn('Moyenne'),
+        SSMDataColumn('Statut'),
+      ],
+      onLigneTap: (i) => _ouvrirApercu(_bulletins[i]),
+      lignes: [
+        for (final b in _bulletins)
+          [
+            Text(b.rang != null ? '${b.rang}${b.rangExAequo ? ' ex' : ''}' : '—',
+                style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+            Text(b.nomEleve ?? 'Élève #${b.eleveId}', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+            Text('${b.moyenneGenerale.toStringAsFixed(2)}/20', style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+            SSMPill.couleur(label: b.statut.libelle, couleur: b.statut.couleur),
+          ],
+      ],
+    );
+  }
+
+  // ── Cartes (mobile / tablette étroite) ─────────────────────
+
+  Widget _listeCartes() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [for (final b in _bulletins) _carteBulletin(b)],
+    );
+  }
+
+  Widget _carteBulletin(Bulletin b) {
     final rangAffiche = b.rang != null ? '${b.rang}${b.rangExAequo ? ' ex' : ''}' : '—';
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _ouvrirApercu(b),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: (b.rang != null && b.rang! <= 3) ? Colors.amber.withValues(alpha: 0.5) : _gris.withValues(alpha: 0.2)),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: (b.rang != null && b.rang! <= 3) ? Colors.amber : _indigo.withValues(alpha: 0.1),
-                  child: Text(
-                    rangAffiche,
-                    style: GoogleFonts.jetBrainsMono(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: (b.rang != null && b.rang! <= 3) ? Colors.white : _indigo,
-                    ),
-                  ),
+    return Material(
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => _ouvrirApercu(b),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: SSMPalette.bordure),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(color: SSMPalette.indigo.withValues(alpha: 0.1), shape: BoxShape.circle),
+                alignment: Alignment.center,
+                child: Text(rangAffiche, style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  b.nomEleve ?? 'Élève #${b.eleveId}',
+                  style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    b.nomEleve ?? 'Élève #${b.eleveId}',
-                    style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                Text(
-                  '${b.moyenneGenerale.toStringAsFixed(2)}/20',
-                  style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: _texteFonce),
-                ),
-                const SizedBox(width: 10),
-                SSMBadge(label: b.statut.libelle, couleur: b.statut.couleur),
-                const SizedBox(width: 4),
-                const Icon(Icons.chevron_right, color: _gris, size: 18),
-              ],
-            ),
+              ),
+              Text('${b.moyenneGenerale.toStringAsFixed(2)}/20', style: GoogleFonts.jetBrainsMono(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+              const SizedBox(width: 10),
+              SSMPill.couleur(label: b.statut.libelle, couleur: b.statut.couleur),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right, color: SSMPalette.texte3, size: 18),
+            ],
           ),
         ),
       ),

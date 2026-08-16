@@ -7,14 +7,10 @@ import '../../services/annee_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/bulletin_service.dart';
 import '../../services/historique_statistique_bulletin_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'apercu_bulletin_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
 
 // ══════════════════════════════════════════════════════════
 // Validation groupée des bulletins "genere" (pas encore validés) d'une
@@ -213,7 +209,7 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$nombre bulletin(s) validé(s)'), backgroundColor: _vert),
+        SnackBar(content: Text('$nombre bulletin(s) validé(s)'), backgroundColor: SSMPalette.teal),
       );
     } catch (e) {
       _afficherErreur(e.toString().replaceAll('Exception: ', ''));
@@ -227,13 +223,15 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(titre),
-        content: Text(message),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text(titre, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+        content: Text(message, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.teal, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white),
             child: const Text('Valider'),
           ),
         ],
@@ -245,14 +243,14 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(echecs == 0 ? '$reussis bulletin(s) validé(s)' : '$reussis validé(s), $echecs échec(s)'),
-        backgroundColor: echecs == 0 ? _vert : Colors.orange,
+        backgroundColor: echecs == 0 ? SSMPalette.teal : SSMPalette.ambre,
       ),
     );
   }
 
   void _afficherErreur(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge));
   }
 
   void _ouvrirApercu(Bulletin b) {
@@ -265,18 +263,22 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text('Validation des bulletins', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: Colors.white)),
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Validation des bulletins', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargementUtilisateur || _chargementListes
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : !_autorise
+                      ? _vueNonAutorise()
+                      : _corps(),
+            ),
+            if (_autorise && !_chargementUtilisateur && !_chargementListes) _barreActions(),
+          ],
+        ),
       ),
-      body: _chargementUtilisateur || _chargementListes
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : !_autorise
-              ? _vueNonAutorise()
-              : _corps(),
-      bottomNavigationBar: (_autorise && !_chargementUtilisateur && !_chargementListes) ? _barreActions() : null,
     );
   }
 
@@ -287,12 +289,12 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline, color: _gris, size: 40),
+            const Icon(Icons.lock_outline, color: SSMPalette.texte3, size: 40),
             const SizedBox(height: 12),
             Text(
               'Seuls le directeur ou le censeur peuvent valider des bulletins.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: _texte),
+              style: GoogleFonts.inter(color: SSMPalette.texte2),
             ),
           ],
         ),
@@ -311,7 +313,7 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
           if (_bulletins.isNotEmpty)
             Row(
               children: [
-                Text('${_bulletins.length} bulletin(s) en attente', style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                Text('${_bulletins.length} bulletin(s) en attente', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                 const Spacer(),
                 TextButton(
                   onPressed: _basculerToutSelectionner,
@@ -329,9 +331,9 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _gris.withValues(alpha: 0.2)),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Row(
         children: [
@@ -339,7 +341,7 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
             child: DropdownButtonFormField<int>(
               value: _classeId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Classe', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(labelText: 'Classe', isDense: true),
               items: _classes.map((c) => DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['nom'] as String))).toList(),
               onChanged: _changerClasse,
             ),
@@ -349,7 +351,7 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
             child: DropdownButtonFormField<int>(
               value: _periodeId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Période', border: OutlineInputBorder(), isDense: true),
+              decoration: const InputDecoration(labelText: 'Période', isDense: true),
               items: _periodes.map((p) => DropdownMenuItem<int>(value: p['id'] as int, child: Text(p['nom'] as String))).toList(),
               onChanged: _changerPeriode,
             ),
@@ -361,17 +363,17 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
 
   Widget _listeBulletins() {
     if (_chargementBulletins) {
-      return const Center(child: CircularProgressIndicator(color: _indigo));
+      return const Center(child: CircularProgressIndicator(color: SSMPalette.indigo));
     }
     if (_erreur != null) {
-      return Center(child: Text(_erreur!, style: GoogleFonts.inter(color: _rouge)));
+      return Center(child: Text(_erreur!, style: GoogleFonts.inter(color: SSMPalette.rouge)));
     }
     if (_classeId == null || _periodeId == null) {
-      return Center(child: Text('Sélectionnez une classe et une période.', style: GoogleFonts.inter(color: _gris)));
+      return Center(child: Text('Sélectionnez une classe et une période.', style: GoogleFonts.inter(color: SSMPalette.texte3)));
     }
     if (_bulletins.isEmpty) {
       return Center(
-        child: Text('Aucun bulletin en attente de validation pour cette sélection.', style: GoogleFonts.inter(color: _gris)),
+        child: Text('Aucun bulletin en attente de validation pour cette sélection.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
       );
     }
 
@@ -383,42 +385,47 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
         final coche = _selection.contains(b.id);
         return Padding(
           padding: const EdgeInsets.only(bottom: 8),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: () => _ouvrirApercu(b),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: coche ? _indigo.withValues(alpha: 0.5) : _gris.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  children: [
-                    Checkbox(value: coche, onChanged: (_) => _basculerSelection(b.id), activeColor: _indigo),
-                    if (b.rang != null)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Text('${b.rang}${b.rangExAequo ? 'ex' : ''}',
-                            style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _indigo)),
-                      ),
-                    Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: SSMPalette.blanc,
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
+              border: Border.all(color: coche ? SSMPalette.indigo.withValues(alpha: 0.5) : SSMPalette.bordure),
+            ),
+            child: Row(
+              children: [
+                Checkbox(value: coche, onChanged: (_) => _basculerSelection(b.id), activeColor: SSMPalette.indigo),
+                if (b.rang != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: Text('${b.rang}${b.rangExAequo ? 'ex' : ''}',
+                        style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+                  ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => _ouvrirApercu(b),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Text(
                         b.nomEleve ?? 'Élève #${b.eleveId}',
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    Text('${b.moyenneGenerale.toStringAsFixed(2)}/20',
-                        style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: _texteFonce)),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.chevron_right, color: _gris, size: 18),
-                  ],
+                  ),
                 ),
-              ),
+                Text('${b.moyenneGenerale.toStringAsFixed(2)}/20',
+                    style: GoogleFonts.jetBrainsMono(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: () => _ouvrirApercu(b),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.chevron_right, color: SSMPalette.texte3, size: 18),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -430,32 +437,32 @@ class _ValidationBulletinsScreenState extends State<ValidationBulletinsScreen> {
     if (_bulletins.isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, -3))],
+      decoration: const BoxDecoration(
+        color: SSMPalette.blanc,
+        border: Border(top: BorderSide(color: SSMPalette.bordure)),
       ),
       child: SafeArea(
         top: false,
         child: Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                onPressed: (_validationEnCours || _selection.isEmpty) ? null : _validerSelection,
-                style: OutlinedButton.styleFrom(foregroundColor: _indigo, side: const BorderSide(color: _indigo)),
-                icon: const Icon(Icons.playlist_add_check, size: 18),
-                label: Text('Valider la sélection (${_selection.length})'),
+              child: SSMQuickActionButton(
+                icone: Icons.playlist_add_check,
+                label: 'Valider la sélection (${_selection.length})',
+                variante: SSMActionVariante.primaire,
+                onTap: (_validationEnCours || _selection.isEmpty) ? null : _validerSelection,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: ElevatedButton.icon(
-                onPressed: _validationEnCours ? null : _validerTous,
-                style: ElevatedButton.styleFrom(backgroundColor: _vert, foregroundColor: Colors.white),
-                icon: _validationEnCours
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : const Icon(Icons.done_all, size: 18),
-                label: Text('Valider tous (${_bulletins.length})'),
-              ),
+              child: _validationEnCours
+                  ? const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.teal)))
+                  : SSMQuickActionButton(
+                      icone: Icons.done_all,
+                      label: 'Valider tous (${_bulletins.length})',
+                      variante: SSMActionVariante.teal,
+                      onTap: _validerTous,
+                    ),
             ),
           ],
         ),
