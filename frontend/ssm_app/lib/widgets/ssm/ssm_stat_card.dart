@@ -35,6 +35,7 @@ class SSMStatCard extends StatelessWidget {
         border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -57,10 +58,13 @@ class SSMStatCard extends StatelessWidget {
           Text(
             label,
             style: GoogleFonts.inter(fontSize: 11.5, color: SSMPalette.texte2),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           if (sousTexte != null) ...[
             const SizedBox(height: 5),
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (tendance == SSMTendance.neutre)
                   Icon(Icons.circle, size: 6, color: SSMPalette.texte3)
@@ -74,6 +78,7 @@ class SSMStatCard extends StatelessWidget {
                 Flexible(
                   child: Text(
                     sousTexte!,
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(fontSize: 11, color: _couleurTendance),
                   ),

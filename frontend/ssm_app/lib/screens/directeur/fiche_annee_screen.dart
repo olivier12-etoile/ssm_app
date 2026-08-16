@@ -3,51 +3,48 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import '../../services/annee_service.dart';
 import '../../services/dashboard_frais_service.dart';
-import '../../widgets/ssm_widgets.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _orange = Color(0xFFEA580C);
-const Color _gris = Color(0xFF94A3B8);
-const Color _grisFonce = Color(0xFF475569);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 
 Color _couleurStatutPeriode(String statut) {
   switch (statut) {
     case 'ouverte':
-      return _vert;
+      return SSMPalette.teal;
     case 'en_veille':
-      return _orange;
+      return SSMPalette.ambre;
     case 'en_validation':
-      return _orange;
+      return SSMPalette.indigo;
     case 'cloturee':
-      return _rouge;
+      return SSMPalette.rouge;
     case 'archivee':
-      return _grisFonce;
+      return SSMPalette.texte3;
     default:
-      return _gris;
+      return SSMPalette.texte3;
   }
 }
 
 Color _couleurStatutEleve(String? statut) {
   switch (statut) {
     case 'admis':
-      return _vert;
+      return SSMPalette.teal;
     case 'redoublant':
-      return _orange;
+      return SSMPalette.ambre;
     case 'diplome':
-      return _indigo;
+      return SSMPalette.indigo;
     default:
-      return _gris;
+      return SSMPalette.texte3;
   }
 }
 
 Color _couleurMoyenne(double? m) {
-  if (m == null) return _gris;
-  if (m >= 14) return _vert;
-  if (m >= 10) return _teal;
-  return _rouge;
+  if (m == null) return SSMPalette.texte3;
+  if (m >= 14) return SSMPalette.teal;
+  if (m >= 10) return SSMPalette.indigo;
+  return SSMPalette.rouge;
 }
 
 class FicheAnneeScreen extends StatefulWidget {
@@ -92,73 +89,64 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge),
+    );
   }
 
   void _bientot() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Fonctionnalité à venir')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Fonctionnalité à venir')),
+    );
+  }
+
+  Color get _couleurStatutAnneeActuelle {
+    switch (widget.statut) {
+      case 'active':
+        return SSMPalette.teal;
+      case 'cloturee':
+        return SSMPalette.ambre;
+      case 'archivee':
+        return SSMPalette.texte3;
+      default:
+        return SSMPalette.texte3;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final couleurAppBar = widget.statut == 'active' ? _vert : _grisFonce;
-
     return DefaultTabController(
       length: 4,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: SSMPalette.fond,
         appBar: AppBar(
-          backgroundColor: couleurAppBar,
-          foregroundColor: Colors.white,
+          backgroundColor: SSMPalette.blanc,
+          foregroundColor: SSMPalette.texte1,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          centerTitle: false,
+          iconTheme: const IconThemeData(color: SSMPalette.texte2),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+            icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: SSMPalette.texte2),
             onPressed: () => Navigator.pop(context),
           ),
           title: Text(
             widget.libelle,
-            style: GoogleFonts.sora(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
+            style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
           ),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    widget.statut.toUpperCase(),
-                    style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+                child: SSMPill.couleur(label: widget.statut.toUpperCase(), couleur: _couleurStatutAnneeActuelle),
               ),
             ),
           ],
           bottom: TabBar(
-            indicatorColor: Colors.white,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white.withValues(alpha: 0.7),
-            labelStyle: GoogleFonts.inter(
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
+            indicatorColor: SSMPalette.indigo,
+            labelColor: SSMPalette.indigo,
+            unselectedLabelColor: SSMPalette.texte3,
+            labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 12),
             isScrollable: true,
             tabs: const [
               Tab(text: '📊 Vue générale'),
@@ -169,7 +157,7 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
           ),
         ),
         body: _chargement
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
             : Column(
                 children: [
                   _breadcrumb(),
@@ -192,8 +180,9 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
   Widget _breadcrumb() {
     return Container(
       width: double.infinity,
-      color: Colors.white.withValues(alpha: 0.5),
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       child: Row(
         children: [
           TextButton(
@@ -203,19 +192,12 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text(
-              'Années',
-              style: GoogleFonts.inter(fontSize: 12, color: _gris),
-            ),
+            child: Text('Années', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
           ),
-          const Icon(Icons.chevron_right, size: 14, color: _gris),
+          const Icon(Icons.chevron_right, size: 14, color: SSMPalette.texte3),
           Text(
             widget.libelle,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: _grisFonce,
-              fontWeight: FontWeight.w600,
-            ),
+            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -232,172 +214,137 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
     final periodes = (_details?['periodes'] as List?) ?? [];
     final classes = (_details?['classes'] as List?) ?? [];
 
-    return RefreshIndicator(
-      onRefresh: _charger,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.3,
-            children: [
-              SSMStatCard(
-                titre: 'Total élèves',
-                valeur: '${stats['nombre_eleves'] ?? 0}',
-                icone: Icons.people,
-                couleurIcone: _indigo,
+          LayoutBuilder(builder: (context, contraintes) {
+            final colonnes = contraintes.maxWidth >= 620 ? 4 : 2;
+            return GridView.builder(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: colonnes,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                mainAxisExtent: 168,
               ),
-              SSMStatCard(
-                titre: 'Taux de réussite',
-                valeur: '${stats['taux_reussite'] ?? 0}%',
-                icone: Icons.school,
-                couleurIcone: _vert,
-              ),
-              SSMStatCard(
-                titre: 'Total encaissé',
-                valeur: '${finances['total_encaisse'] ?? 0} FCFA',
-                icone: Icons.payments,
-                couleurIcone: _teal,
-              ),
-              SSMStatCard(
-                titre: 'Absences totales',
-                valeur: '${stats['absences_total'] ?? 0}',
-                icone: Icons.event_busy,
-                couleurIcone: _orange,
-              ),
-            ],
-          ),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: 4,
+              itemBuilder: (context, i) => [
+                SSMStatCard(
+                  icone: Icons.people,
+                  couleur: SSMPalette.indigo,
+                  valeur: '${stats['nombre_eleves'] ?? 0}',
+                  label: 'Total élèves',
+                ),
+                SSMStatCard(
+                  icone: Icons.school,
+                  couleur: SSMPalette.teal,
+                  valeur: '${stats['taux_reussite'] ?? 0}%',
+                  label: 'Taux de réussite',
+                ),
+                SSMStatCard(
+                  icone: Icons.payments,
+                  couleur: SSMPalette.teal,
+                  valeur: '${finances['total_encaisse'] ?? 0} FCFA',
+                  label: 'Total encaissé',
+                ),
+                SSMStatCard(
+                  icone: Icons.event_busy,
+                  couleur: SSMPalette.ambre,
+                  valeur: '${stats['absences_total'] ?? 0}',
+                  label: 'Absences totales',
+                ),
+              ][i],
+            );
+          }),
           const SizedBox(height: 20),
-          SSMSectionTitre(titre: 'Périodes'),
-          if (periodes.isEmpty)
-            Text('Aucune période', style: GoogleFonts.inter(color: _gris))
-          else
-            ...periodes.map((p) => _cartePeriode(p as Map<String, dynamic>)),
-          const SizedBox(height: 20),
-          SSMSectionTitre(titre: 'Classes'),
-          if (classes.isEmpty)
-            Text('Aucune classe', style: GoogleFonts.inter(color: _gris))
-          else
-            ...classes.map((c) => _carteClasse(c as Map<String, dynamic>)),
-        ],
-      ),
-    );
-  }
-
-  Widget _cartePeriode(Map<String, dynamic> p) {
-    final couleur = _couleurStatutPeriode(p['statut'] as String);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '${p['nom']}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+          SSMPanel(
+            titre: 'Périodes',
+            padding: EdgeInsets.zero,
+            child: periodes.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('Aucune période', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: SSMDataTable(
+                      colonnes: const [
+                        SSMDataColumn('Période'),
+                        SSMDataColumn('Dates'),
+                        SSMDataColumn('Notes saisies'),
+                        SSMDataColumn('Bulletins'),
+                        SSMDataColumn('Statut'),
+                      ],
+                      lignes: [
+                        for (final p in periodes) _lignePeriode(p as Map<String, dynamic>),
+                      ],
                     ),
-                    if (p['code'] != null) ...[
-                      const SizedBox(width: 6),
-                      Text(
-                        '${p['code']}',
-                        style: GoogleFonts.jetBrainsMono(
-                          fontSize: 11,
-                          color: _gris,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                Text(
-                  '${p['date_debut']} → ${p['date_fin']}',
-                  style: GoogleFonts.inter(fontSize: 12, color: _gris),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${p['notes_saisies']} notes saisies',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF334155),
                   ),
-                ),
-                Text(
-                  '${p['bulletins_generes']} bulletins générés',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-              ],
-            ),
           ),
-          SSMBadge(
-            label: (p['statut'] as String).toUpperCase(),
-            couleur: couleur,
+          const SizedBox(height: 20),
+          SSMPanel(
+            titre: 'Classes',
+            padding: EdgeInsets.zero,
+            child: classes.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('Aucune classe', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: SSMDataTable(
+                      colonnes: const [
+                        SSMDataColumn('Classe'),
+                        SSMDataColumn('Effectif'),
+                        SSMDataColumn('Moyenne'),
+                        SSMDataColumn('Réussite'),
+                      ],
+                      lignes: [
+                        for (final c in classes) _ligneClasse(c as Map<String, dynamic>),
+                      ],
+                    ),
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _carteClasse(Map<String, dynamic> c) {
+  List<Widget> _lignePeriode(Map<String, dynamic> p) {
+    final couleur = _couleurStatutPeriode(p['statut'] as String);
+    return [
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('${p['nom']}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          if (p['code'] != null) ...[
+            const SizedBox(width: 6),
+            Text('${p['code']}', style: GoogleFonts.jetBrainsMono(fontSize: 10.5, color: SSMPalette.texte3)),
+          ],
+        ],
+      ),
+      Text('${p['date_debut']} → ${p['date_fin']}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      Text('${p['notes_saisies']}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1)),
+      Text('${p['bulletins_generes']}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1)),
+      SSMPill.couleur(label: (p['statut'] as String).toUpperCase(), couleur: couleur),
+    ];
+  }
+
+  List<Widget> _ligneClasse(Map<String, dynamic> c) {
     final moyenne = (c['moyenne'] as num?)?.toDouble();
     final taux = (c['taux_reussite'] as num?)?.toDouble() ?? 0;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+    return [
+      Text('${c['nom']}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+      Text('${c['nombre_eleves']} élèves', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      Text(
+        moyenne != null ? '${moyenne.toStringAsFixed(1)}/20' : '—',
+        style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: _couleurMoyenne(moyenne)),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: SSMListeTile(
-        titre: c['nom'] as String,
-        sousTitre: '${c['nombre_eleves']} élèves',
-        icone: Icons.class_,
-        couleurIcone: _indigo,
-        trailing: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              moyenne != null ? '${moyenne.toStringAsFixed(1)}/20' : '—',
-              style: GoogleFonts.sora(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: _couleurMoyenne(moyenne),
-              ),
-            ),
-            const SizedBox(height: 2),
-            SSMBadge(
-              label: '$taux% réussite',
-              couleur: taux >= 50 ? _vert : _rouge,
-            ),
-          ],
-        ),
-      ),
-    );
+      SSMPill.couleur(label: '$taux%', couleur: taux >= 50 ? SSMPalette.teal : SSMPalette.rouge),
+    ];
   }
 
   // ══════════════════════════════════════════════════════
@@ -423,13 +370,11 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
             children: [
               Row(
                 children: [
-                  Expanded(child: _miniCarte('$admis admis ✅', _vert)),
+                  Expanded(child: _miniCarte('$admis admis ✅', SSMPalette.teal)),
                   const SizedBox(width: 8),
-                  Expanded(
-                    child: _miniCarte('$redoublants redoublants ⚠️', _orange),
-                  ),
+                  Expanded(child: _miniCarte('$redoublants redoublants ⚠️', SSMPalette.ambre)),
                   const SizedBox(width: 8),
-                  Expanded(child: _miniCarte('$diplomes diplômés 🎓', _indigo)),
+                  Expanded(child: _miniCarte('$diplomes diplômés 🎓', SSMPalette.indigo)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -452,17 +397,11 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
         ),
         Expanded(
           child: filtres.isEmpty
-              ? Center(
-                  child: Text(
-                    'Aucun élève',
-                    style: GoogleFonts.inter(color: _gris),
-                  ),
-                )
+              ? Center(child: Text('Aucun élève', style: GoogleFonts.inter(color: SSMPalette.texte3)))
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   itemCount: filtres.length,
-                  itemBuilder: (context, index) =>
-                      _carteEleve(filtres[index] as Map<String, dynamic>),
+                  itemBuilder: (context, index) => _carteEleve(filtres[index] as Map<String, dynamic>),
                 ),
         ),
         Padding(
@@ -470,10 +409,7 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
           child: SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: _indigo,
-                side: const BorderSide(color: _indigo),
-              ),
+              style: OutlinedButton.styleFrom(foregroundColor: SSMPalette.indigo, side: const BorderSide(color: SSMPalette.indigo, width: 1.5)),
               onPressed: _bientot,
               icon: const Icon(Icons.picture_as_pdf, size: 18),
               label: const Text('Exporter liste PDF'),
@@ -489,16 +425,12 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
         color: couleur.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
       ),
       child: Text(
         texte,
         textAlign: TextAlign.center,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: couleur,
-        ),
+        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: couleur),
       ),
     );
   }
@@ -510,17 +442,13 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: actif ? _indigo : Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: actif ? _indigo : const Color(0xFFE2E8F0)),
+          color: actif ? SSMPalette.indigo : SSMPalette.blanc,
+          borderRadius: BorderRadius.circular(SSMRayons.pilule),
+          border: Border.all(color: actif ? SSMPalette.indigo : const Color(0xFFE5E7EB)),
         ),
         child: Text(
           label,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: actif ? Colors.white : const Color(0xFF334155),
-          ),
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: actif ? Colors.white : SSMPalette.texte1),
         ),
       ),
     );
@@ -536,41 +464,20 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 20,
-            backgroundColor: _indigo.withValues(alpha: 0.15),
-            backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-            child: photoUrl == null
-                ? Text(
-                    nom.isNotEmpty ? nom[0].toUpperCase() : '?',
-                    style: GoogleFonts.sora(
-                      fontWeight: FontWeight.w700,
-                      color: _indigo,
-                    ),
-                  )
-                : null,
-          ),
+          SSMAvatar(nom: nom, photoUrl: photoUrl, rayon: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  '$nom ${e['prenom'] ?? ''}',
-                  style: GoogleFonts.sora(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  e['classe_nom'] as String? ?? '—',
-                  style: GoogleFonts.inter(fontSize: 12, color: _gris),
-                ),
+                Text('$nom ${e['prenom'] ?? ''}', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                Text(e['classe_nom'] as String? ?? '—', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
               ],
             ),
           ),
@@ -579,18 +486,10 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
             children: [
               Text(
                 moyenne != null ? '${moyenne.toStringAsFixed(1)}/20' : '—',
-                style: GoogleFonts.sora(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _couleurMoyenne(moyenne),
-                ),
+                style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _couleurMoyenne(moyenne)),
               ),
               const SizedBox(height: 2),
-              if (statut != null)
-                SSMBadge(
-                  label: statut.toUpperCase(),
-                  couleur: _couleurStatutEleve(statut),
-                ),
+              if (statut != null) SSMPill.couleur(label: statut.toUpperCase(), couleur: _couleurStatutEleve(statut)),
             ],
           ),
         ],
@@ -607,21 +506,14 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
 
     if (enseignants.isEmpty) {
       return Center(
-        child: Text(
-          'Aucun enseignant affecté cette année',
-          style: GoogleFonts.inter(color: _gris),
-        ),
+        child: Text('Aucun enseignant affecté cette année', style: GoogleFonts.inter(color: SSMPalette.texte3)),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _charger,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: enseignants.length,
-        itemBuilder: (context, index) =>
-            _carteEnseignant(enseignants[index] as Map<String, dynamic>),
-      ),
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: enseignants.length,
+      itemBuilder: (context, index) => _carteEnseignant(enseignants[index] as Map<String, dynamic>),
     );
   }
 
@@ -634,54 +526,24 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: _teal.withValues(alpha: 0.15),
-                backgroundImage: photoUrl != null
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: photoUrl == null
-                    ? Text(
-                        nom.isNotEmpty ? nom[0].toUpperCase() : '?',
-                        style: GoogleFonts.sora(
-                          fontWeight: FontWeight.w700,
-                          color: _teal,
-                        ),
-                      )
-                    : null,
-              ),
+              SSMAvatar(nom: nom, photoUrl: photoUrl, couleur: SSMPalette.teal, rayon: 20),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      nom,
-                      style: GoogleFonts.sora(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    Text(nom, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
                     if (e['fonction'] != null)
-                      Text(
-                        '${e['fonction']}',
-                        style: GoogleFonts.inter(fontSize: 12, color: _gris),
-                      ),
+                      Text('${e['fonction']}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
                   ],
                 ),
               ),
@@ -693,36 +555,21 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
             runSpacing: 6,
             children: classes.map((c) {
               return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: _teal.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
+                  color: SSMPalette.tealClair,
+                  borderRadius: BorderRadius.circular(SSMRayons.pilule),
                 ),
                 child: Text(
                   '${c['classe_nom']} - ${c['matiere_nom']}',
-                  style: GoogleFonts.inter(fontSize: 11, color: _teal),
+                  style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.teal),
                 ),
               );
             }).toList(),
           ),
           const SizedBox(height: 8),
-          Text(
-            '${e['notes_saisies']} notes saisies',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: const Color(0xFF334155),
-            ),
-          ),
-          Text(
-            '${e['evaluations_creees']} évaluations créées',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: const Color(0xFF334155),
-            ),
-          ),
+          Text('${e['notes_saisies']} notes saisies', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+          Text('${e['evaluations_creees']} évaluations créées', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
         ],
       ),
     );
@@ -737,41 +584,29 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
     final attendu = (finances['total_attendu'] as num?)?.toDouble() ?? 0;
     final encaisse = (finances['total_encaisse'] as num?)?.toDouble() ?? 0;
     final restant = (finances['total_restant'] as num?)?.toDouble() ?? 0;
-    final recouvrement = attendu > 0
-        ? (encaisse / attendu).clamp(0.0, 1.0)
-        : 0.0;
+    final recouvrement = attendu > 0 ? (encaisse / attendu).clamp(0.0, 1.0) : 0.0;
     final dettes = (finances['eleves_dettes'] as List?) ?? [];
 
-    return RefreshIndicator(
-      onRefresh: _charger,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: SSMPalette.blanc,
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
+              border: Border.all(color: SSMPalette.bordure),
             ),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _colonneFinance(
-                      'Total attendu',
-                      attendu,
-                      const Color(0xFF334155),
-                    ),
-                    _colonneFinance('Total encaissé', encaisse, _vert),
-                    _colonneFinance('Total restant', restant, _rouge),
+                    _colonneFinance('Total attendu', attendu, SSMPalette.texte1),
+                    _colonneFinance('Total encaissé', encaisse, SSMPalette.teal),
+                    _colonneFinance('Total restant', restant, SSMPalette.rouge),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -781,54 +616,52 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
                     value: recouvrement,
                     minHeight: 8,
                     backgroundColor: const Color(0xFFF1F5F9),
-                    color: recouvrement > 0.8
-                        ? _vert
-                        : (recouvrement > 0.5 ? _orange : _rouge),
+                    color: recouvrement > 0.8 ? SSMPalette.teal : (recouvrement > 0.5 ? SSMPalette.ambre : SSMPalette.rouge),
                   ),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  '${(recouvrement * 100).toStringAsFixed(0)}% de recouvrement',
-                  style: GoogleFonts.inter(fontSize: 12, color: _gris),
-                ),
+                Text('${(recouvrement * 100).toStringAsFixed(0)}% de recouvrement', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
               ],
             ),
           ),
           const SizedBox(height: 20),
-          SSMSectionTitre(titre: '💸 Dettes non soldées'),
-          if (dettes.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(
-                children: [
-                  const Icon(Icons.check_circle, color: _vert, size: 48),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Tous les élèves sont en règle',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: const Color(0xFF334155),
+          SSMPanel(
+            titre: '💸 Dettes non soldées',
+            padding: EdgeInsets.zero,
+            child: dettes.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.check_circle, color: SSMPalette.teal, size: 44),
+                        const SizedBox(height: 8),
+                        Text('Tous les élèves sont en règle', style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1)),
+                      ],
+                    ),
+                  )
+                : Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: SSMDataTable(
+                      colonnes: const [
+                        SSMDataColumn('Élève'),
+                        SSMDataColumn('Classe'),
+                        SSMDataColumn('Dû'),
+                        SSMDataColumn('Payé'),
+                      ],
+                      lignes: [
+                        for (final d in dettes) _ligneDette(d as Map<String, dynamic>),
+                      ],
                     ),
                   ),
-                ],
-              ),
-            )
-          else
-            ...dettes.map((d) => _carteDette(d as Map<String, dynamic>)),
+          ),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _indigo,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white),
               onPressed: () async {
                 try {
-                  final chemin = await DashboardFraisService.telechargerRapport(
-                    anneeScolaireId: widget.anneeId,
-                  );
+                  final chemin = await DashboardFraisService.telechargerRapport(anneeScolaireId: widget.anneeId);
                   await OpenFile.open(chemin);
                 } catch (e) {
                   _afficherErreur(e.toString().replaceAll('Exception: ', ''));
@@ -846,99 +679,30 @@ class _FicheAnneeScreenState extends State<FicheAnneeScreen> {
   Widget _colonneFinance(String label, double valeur, Color couleur) {
     return Column(
       children: [
-        Text(
-          valeur.toStringAsFixed(0),
-          style: GoogleFonts.sora(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: couleur,
-          ),
-        ),
+        Text(valeur.toStringAsFixed(0), style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: couleur)),
         const SizedBox(height: 2),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
       ],
     );
   }
 
-  Widget _carteDette(Map<String, dynamic> d) {
+  List<Widget> _ligneDette(Map<String, dynamic> d) {
     final du = (d['montant_du'] as num?)?.toDouble() ?? 0;
     final paye = (d['montant_paye'] as num?)?.toDouble() ?? 0;
-    final progression = du > 0 ? (paye / du).clamp(0.0, 1.0) : 0.0;
     final nom = d['nom'] as String? ?? '';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
+    return [
+      Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: _rouge.withValues(alpha: 0.12),
-            child: Text(
-              nom.isNotEmpty ? nom[0].toUpperCase() : '?',
-              style: GoogleFonts.sora(
-                fontWeight: FontWeight.w700,
-                color: _rouge,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '$nom ${d['prenom'] ?? ''}',
-                  style: GoogleFonts.sora(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  d['classe_nom'] as String? ?? '—',
-                  style: GoogleFonts.inter(fontSize: 12, color: _gris),
-                ),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progression,
-                    minHeight: 5,
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    color: _vert,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          SSMAvatar(nom: nom, couleur: SSMPalette.rouge, rayon: 14),
           const SizedBox(width: 8),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                du.toStringAsFixed(0),
-                style: GoogleFonts.sora(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: _rouge,
-                ),
-              ),
-              Text(
-                paye.toStringAsFixed(0),
-                style: GoogleFonts.sora(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: _vert,
-                ),
-              ),
-            ],
-          ),
+          Text('$nom ${d['prenom'] ?? ''}', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
         ],
       ),
-    );
+      Text(d['classe_nom'] as String? ?? '—', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      Text(du.toStringAsFixed(0), style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.rouge)),
+      Text(paye.toStringAsFixed(0), style: GoogleFonts.sora(fontSize: 12, fontWeight: FontWeight.w700, color: SSMPalette.teal)),
+    ];
   }
 }

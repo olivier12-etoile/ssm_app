@@ -150,6 +150,18 @@ class _DashboardDirecteurScreenState extends State<DashboardDirecteurScreen> {
         ),
         const SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
       ]),
+      if (d?.utilisateur?.role == 'directeur')
+        SSMNavSection(titre: 'Administration', items: [
+          const SSMNavItem(icone: Icons.people_alt_outlined, label: 'Utilisateurs', route: '/directeur/utilisateurs'),
+          SSMNavItem(
+            icone: Icons.class_outlined,
+            label: 'Classes',
+            route: '/directeur/classes',
+            badge: badge(d?.classesActives ?? 0),
+          ),
+          const SSMNavItem(icone: Icons.menu_book_outlined, label: 'Matières', route: '/directeur/matieres'),
+          const SSMNavItem(icone: Icons.calendar_month_outlined, label: 'Années & Périodes', route: '/directeur/annees'),
+        ]),
     ];
   }
 
@@ -229,7 +241,7 @@ class _DashboardDirecteurScreenState extends State<DashboardDirecteurScreen> {
           crossAxisCount: colonnes,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          mainAxisExtent: 128,
+          mainAxisExtent: 168,
         ),
         itemBuilder: (context, i) => cartes[i],
       );

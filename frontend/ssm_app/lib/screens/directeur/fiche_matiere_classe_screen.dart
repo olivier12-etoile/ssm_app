@@ -1,10 +1,15 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/auth_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/cahier_texte_service.dart';
 import '../../services/evaluation_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 
 const List<String> _joursSemaine = [
   'Lundi',
@@ -45,9 +50,32 @@ String _mention(double note) {
 }
 
 Color _couleurMention(double note) {
-  if (note >= 14) return const Color(0xFF16A34A);
-  if (note >= 10) return const Color(0xFFD97706);
-  return const Color(0xFFDC2626);
+  if (note >= 14) return SSMPalette.teal;
+  if (note >= 10) return SSMPalette.ambre;
+  return SSMPalette.rouge;
+}
+
+InputDecoration _decorationChamp(String label, {bool dense = false, String? hint}) {
+  return InputDecoration(
+    labelText: label,
+    hintText: hint,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    isDense: dense,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
 }
 
 class FicheMatiereClasseScreen extends StatefulWidget {
@@ -204,19 +232,13 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
 
   void _afficherErreur(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFFDC2626),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF16A34A),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -234,10 +256,12 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
     return DefaultTabController(
       length: 3,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: SSMPalette.fond,
         appBar: AppBar(
           backgroundColor: widget.couleurMatiere,
           foregroundColor: Colors.white,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
             onPressed: () => Navigator.pop(context),
@@ -245,7 +269,7 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
           title: Text(
             widget.matiereNom,
             style: GoogleFonts.sora(
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.w700,
               color: Colors.white,
             ),
@@ -260,7 +284,7 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                     '${widget.classeNom} · Coef. ${widget.coefficient.toStringAsFixed(1)}',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: Colors.white.withValues(alpha: 0.75),
                     ),
                   ),
                 ),
@@ -303,8 +327,11 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
   Widget _breadcrumb(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: Colors.white.withValues(alpha: 0.5),
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: const BoxDecoration(
+        color: SSMPalette.blanc,
+        border: Border(bottom: BorderSide(color: SSMPalette.bordure)),
+      ),
       child: Row(
         children: [
           TextButton(
@@ -317,13 +344,10 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
             ),
             child: Text(
               'Classes',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: const Color(0xFF94A3B8),
-              ),
+              style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
             ),
           ),
-          const Icon(Icons.chevron_right, size: 14, color: Color(0xFF94A3B8)),
+          const Icon(Icons.chevron_right, size: 14, color: SSMPalette.texte3),
           TextButton(
             onPressed: () => Navigator.pop(context),
             style: TextButton.styleFrom(
@@ -333,18 +357,15 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
             ),
             child: Text(
               widget.classeNom,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: const Color(0xFF94A3B8),
-              ),
+              style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
             ),
           ),
-          const Icon(Icons.chevron_right, size: 14, color: Color(0xFF94A3B8)),
+          const Icon(Icons.chevron_right, size: 14, color: SSMPalette.texte3),
           Text(
             widget.matiereNom,
             style: GoogleFonts.inter(
               fontSize: 12,
-              color: const Color(0xFF334155),
+              color: SSMPalette.texte1,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -364,40 +385,31 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
           ? FloatingActionButton.extended(
               onPressed: () => _afficherDialogSeance(),
               backgroundColor: widget.couleurMatiere,
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: Text(
-                'Ajouter une séance',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add),
+              label: const Text('Ajouter une séance'),
             )
           : null,
       body: RefreshIndicator(
         onRefresh: _chargerCahier,
+        color: widget.couleurMatiere,
         child: _chargementCahier
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
             : ListView(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
                 children: [
                   Text(
                     '${_seances.length} séance${_seances.length > 1 ? 's' : ''} enregistrée${_seances.length > 1 ? 's' : ''}',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: const Color(0xFF334155),
-                    ),
+                    style: GoogleFonts.inter(fontSize: 12.5, color: SSMPalette.texte2),
                   ),
                   const SizedBox(height: 12),
                   if (_seances.isEmpty)
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      padding: const EdgeInsets.symmetric(vertical: 32),
                       child: Center(
                         child: Text(
                           'Aucune séance enregistrée',
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF334155),
-                          ),
+                          style: GoogleFonts.inter(color: SSMPalette.texte3),
                         ),
                       ),
                     )
@@ -417,163 +429,91 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
     final exercices = seance['exercices'] as String?;
     final devoir = seance['devoir'] as String?;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  dateCours != null ? _formatDateComplete(dateCours) : '—',
+                  style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                ),
+              ),
+              if (dateCours != null)
+                SSMPill.couleur(label: _joursSemaine[dateCours.weekday - 1], couleur: widget.couleurMatiere),
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 18, color: SSMPalette.indigo),
+                onPressed: () => _afficherDialogSeance(seance: seance),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18, color: SSMPalette.rouge),
+                onPressed: () => _confirmerSuppressionSeance(seance),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 8),
+          Text(
+            '📖 COURS DU JOUR',
+            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: SSMPalette.texte3),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            seance['cours_du_jour'] as String? ?? '',
+            style: GoogleFonts.inter(fontSize: 13.5, color: SSMPalette.texte1),
+          ),
+          if (exercices != null && exercices.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              '✏️ EXERCICES',
+              style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: SSMPalette.texte3),
+            ),
+            const SizedBox(height: 2),
+            Text(exercices, style: GoogleFonts.inter(fontSize: 13.5, color: SSMPalette.texte1)),
+          ],
+          if (devoir != null && devoir.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: SSMPalette.ambreClair,
+                borderRadius: BorderRadius.circular(SSMRayons.petit),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Icon(Icons.assignment_outlined, color: SSMPalette.ambre, size: 18),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      dateCours != null ? _formatDateComplete(dateCours) : '—',
-                      style: GoogleFonts.sora(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                  ),
-                  if (dateCours != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: widget.couleurMatiere.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        _joursSemaine[dateCours.weekday - 1],
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: widget.couleurMatiere,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dateRemise != null
+                              ? 'Devoir à remettre le ${_formatDateComplete(dateRemise)}'
+                              : 'Devoir',
+                          style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: SSMPalette.ambre),
                         ),
-                      ),
+                        const SizedBox(height: 2),
+                        Text(devoir, style: GoogleFonts.inter(fontSize: 12.5, color: SSMPalette.texte1)),
+                      ],
                     ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.edit,
-                      size: 18,
-                      color: Color(0xFF1E3A8A),
-                    ),
-                    onPressed: () => _afficherDialogSeance(seance: seance),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.delete,
-                      size: 18,
-                      color: Color(0xFFDC2626),
-                    ),
-                    onPressed: () => _confirmerSuppressionSeance(seance),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              Text(
-                '📖 COURS DU JOUR',
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF94A3B8),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                seance['cours_du_jour'] as String? ?? '',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-              if (exercices != null && exercices.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Text(
-                  '✏️ EXERCICES',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  exercices,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-              ],
-              if (devoir != null && devoir.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFD97706).withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.assignment_outlined,
-                        color: Color(0xFFD97706),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              dateRemise != null
-                                  ? 'Devoir à remettre le ${_formatDateComplete(dateRemise)}'
-                                  : 'Devoir',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: const Color(0xFF92400E),
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              devoir,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: const Color(0xFF0F172A),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -603,9 +543,9 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
         builder: (context, setStateDialog) {
           return Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
             ),
-            backgroundColor: Colors.white,
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 480, maxHeight: 700),
               child: Padding(
@@ -618,11 +558,7 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                       estModification
                           ? 'Modifier la séance'
                           : 'Nouvelle séance',
-                      style: GoogleFonts.sora(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
-                      ),
+                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                     ),
                     const SizedBox(height: 16),
                     Expanded(
@@ -632,9 +568,10 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                           children: [
                             ListTile(
                               contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.date_range),
+                              leading: const Icon(Icons.date_range, color: SSMPalette.texte2),
                               title: Text(
                                 'Date du cours : ${_formatDateComplete(dateCours)}',
+                                style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
                               ),
                               onTap: () async {
                                 final d = await showDatePicker(
@@ -643,53 +580,40 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                                   firstDate: DateTime(2020),
                                   lastDate: DateTime(2035),
                                 );
-                                if (d != null)
+                                if (d != null) {
                                   setStateDialog(() => dateCours = d);
+                                }
                               },
                             ),
                             const SizedBox(height: 8),
                             TextField(
                               controller: coursController,
                               maxLines: 4,
-                              decoration: const InputDecoration(
-                                labelText: 'Cours du jour *',
-                                hintText: 'Décrivez le contenu du cours...',
-                                alignLabelWithHint: true,
-                                border: OutlineInputBorder(),
-                              ),
+                              decoration: _decorationChamp('Cours du jour *', hint: 'Décrivez le contenu du cours...'),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: exercicesController,
                               maxLines: 3,
-                              decoration: const InputDecoration(
-                                labelText: 'Exercices',
-                                hintText: 'Exercices donnés aux élèves...',
-                                alignLabelWithHint: true,
-                                border: OutlineInputBorder(),
-                              ),
+                              decoration: _decorationChamp('Exercices', hint: 'Exercices donnés aux élèves...'),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: devoirController,
                               maxLines: 3,
-                              decoration: const InputDecoration(
-                                labelText: 'Devoir',
-                                hintText: 'Devoir à faire à la maison...',
-                                alignLabelWithHint: true,
-                                border: OutlineInputBorder(),
-                              ),
+                              decoration: _decorationChamp('Devoir', hint: 'Devoir à faire à la maison...'),
                               onChanged: (_) => setStateDialog(() {}),
                             ),
                             if (devoirController.text.trim().isNotEmpty) ...[
                               const SizedBox(height: 8),
                               ListTile(
                                 contentPadding: EdgeInsets.zero,
-                                leading: const Icon(Icons.event),
+                                leading: const Icon(Icons.event, color: SSMPalette.texte2),
                                 title: Text(
                                   dateRemiseDevoir != null
                                       ? 'Date de remise : ${_formatDateComplete(dateRemiseDevoir!)}'
                                       : 'Date de remise (optionnel)',
+                                  style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
                                 ),
                                 onTap: () async {
                                   final d = await showDatePicker(
@@ -698,8 +622,9 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                                     firstDate: DateTime(2020),
                                     lastDate: DateTime(2035),
                                   );
-                                  if (d != null)
+                                  if (d != null) {
                                     setStateDialog(() => dateRemiseDevoir = d);
+                                  }
                                 },
                               ),
                             ],
@@ -713,7 +638,7 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -722,9 +647,10 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: widget.couleurMatiere,
                               foregroundColor: Colors.white,
+                              elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(SSMRayons.moyen),
                               ),
                             ),
                             onPressed: () async {
@@ -801,23 +727,58 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
   Future<void> _confirmerSuppressionSeance(dynamic seance) async {
     final confirme = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer cette séance ?'),
-        content: const Text('Cette action est irréversible.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
-              foregroundColor: Colors.white,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        backgroundColor: SSMPalette.blanc,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 380),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: SSMPalette.ambre, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Supprimer cette séance ?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Cette action est irréversible.',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: SSMPalette.rouge,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                        ),
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Supprimer'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Supprimer'),
           ),
-        ],
+        ),
       ),
     );
 
@@ -842,13 +803,13 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
 
   Widget _tabNotesEtMoyennes() {
     if (_chargementPeriode || _chargementNotes) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: SSMPalette.indigo));
     }
     if (_periodeId == null) {
       return Center(
         child: Text(
           'Aucune période active',
-          style: GoogleFonts.inter(color: const Color(0xFF334155)),
+          style: GoogleFonts.inter(color: SSMPalette.texte3),
         ),
       );
     }
@@ -884,36 +845,36 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
 
     return RefreshIndicator(
       onRefresh: _chargerNotes,
+      color: widget.couleurMatiere,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Row(
             children: [
               Expanded(
-                child: _miniCard(
-                  'Moyenne classe',
-                  moyenneClasse != null
-                      ? '${moyenneClasse.toStringAsFixed(2)}/20'
-                      : '—',
-                  const Color(0xFF1E3A8A),
+                child: SSMStatCard(
+                  icone: Icons.groups_outlined,
+                  couleur: SSMPalette.indigo,
+                  valeur: moyenneClasse != null ? '${moyenneClasse.toStringAsFixed(2)}/20' : '—',
+                  label: 'Moyenne classe',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _miniCard(
-                  'Meilleur élève',
-                  meilleureLigne != null
-                      ? '${(meilleureLigne['eleve'] as Map)['nom']}'
-                      : '—',
-                  const Color(0xFF16A34A),
+                child: SSMStatCard(
+                  icone: Icons.star_outline,
+                  couleur: SSMPalette.teal,
+                  valeur: meilleureLigne != null ? '${(meilleureLigne['eleve'] as Map)['nom']}' : '—',
+                  label: 'Meilleur élève',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _miniCard(
-                  'Élèves < 10',
-                  '$nombreSous10',
-                  const Color(0xFFDC2626),
+                child: SSMStatCard(
+                  icone: Icons.trending_down,
+                  couleur: SSMPalette.rouge,
+                  valeur: '$nombreSous10',
+                  label: 'Élèves < 10',
                 ),
               ),
             ],
@@ -921,135 +882,61 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
           const SizedBox(height: 16),
           if (lignes.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 32),
               child: Center(
                 child: Text(
                   'Aucune note enregistrée pour $_periodeNom',
-                  style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                  style: GoogleFonts.inter(color: SSMPalette.texte3),
                 ),
               ),
             )
           else
-            ...lignes.map((l) => _ligneEleve(l['eleve'], l['entree'])),
+            SSMPanel(
+              titre: 'Élèves',
+              padding: EdgeInsets.zero,
+              child: SSMDataTable(
+                colonnes: const [
+                  SSMDataColumn('Élève'),
+                  SSMDataColumn('Moyenne'),
+                  SSMDataColumn('Mention'),
+                ],
+                lignes: [for (final l in lignes) _ligneEleveNote(l['eleve'], l['entree'])],
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _miniCard(String label, String valeur, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            valeur,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.sora(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: couleur,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: const Color(0xFF334155),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _ligneEleve(dynamic eleve, dynamic entree) {
+  List<Widget> _ligneEleveNote(dynamic eleve, dynamic entree) {
     final nom = '${eleve['nom']} ${eleve['prenom']}';
     final moyenne = entree['moyenne_finale'] != null
         ? (entree['moyenne_finale'] as num).toDouble()
         : null;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
+    return [
+      Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: widget.couleurMatiere.withValues(alpha: 0.15),
-            child: Text(
-              (eleve['nom'] as String).substring(0, 1).toUpperCase(),
-              style: GoogleFonts.sora(
-                fontWeight: FontWeight.w700,
-                color: widget.couleurMatiere,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              nom,
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          if (moyenne != null) ...[
-            Text(
-              '${moyenne.toStringAsFixed(2)}/20',
-              style: GoogleFonts.sora(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: moyenne >= 10
-                    ? const Color(0xFF16A34A)
-                    : const Color(0xFFDC2626),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: _couleurMention(moyenne).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                _mention(moyenne),
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: _couleurMention(moyenne),
-                ),
-              ),
-            ),
-          ] else
-            Text(
-              '—',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: const Color(0xFF94A3B8),
-              ),
-            ),
+          SSMAvatar(nom: eleve['nom'] as String? ?? '?', rayon: 15, couleur: widget.couleurMatiere),
+          const SizedBox(width: 8),
+          Text(nom, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
         ],
       ),
-    );
+      moyenne != null
+          ? Text(
+              '${moyenne.toStringAsFixed(2)}/20',
+              style: GoogleFonts.sora(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: moyenne >= 10 ? SSMPalette.teal : SSMPalette.rouge,
+              ),
+            )
+          : Text('—', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
+      moyenne != null
+          ? SSMPill.couleur(label: _mention(moyenne), couleur: _couleurMention(moyenne))
+          : const SizedBox.shrink(),
+    ];
   }
 
   // ══════════════════════════════════════════════════════
@@ -1058,115 +945,72 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
 
   Widget _tabEvaluations() {
     if (_chargementPeriode || _chargementEvaluations) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: SSMPalette.indigo));
     }
     if (_periodeId == null) {
       return Center(
         child: Text(
           'Aucune période active',
-          style: GoogleFonts.inter(color: const Color(0xFF334155)),
+          style: GoogleFonts.inter(color: SSMPalette.texte3),
         ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _chargerEvaluations,
+      color: widget.couleurMatiere,
       child: _evaluations.isEmpty
           ? ListView(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  padding: const EdgeInsets.symmetric(vertical: 32),
                   child: Center(
                     child: Text(
                       'Aucune évaluation pour $_periodeNom',
-                      style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                      style: GoogleFonts.inter(color: SSMPalette.texte3),
                     ),
                   ),
                 ),
               ],
             )
-          : ListView.builder(
+          : ListView(
               padding: const EdgeInsets.all(16),
-              itemCount: _evaluations.length,
-              itemBuilder: (context, index) =>
-                  _carteEvaluation(_evaluations[index]),
+              children: [
+                SSMPanel(
+                  titre: 'Évaluations',
+                  padding: EdgeInsets.zero,
+                  child: SSMDataTable(
+                    colonnes: const [
+                      SSMDataColumn('Type'),
+                      SSMDataColumn('Évaluation'),
+                      SSMDataColumn('Date'),
+                      SSMDataColumn(''),
+                    ],
+                    lignes: [for (final e in _evaluations) _ligneEvaluation(e)],
+                  ),
+                ),
+              ],
             ),
     );
   }
 
-  Widget _carteEvaluation(dynamic evaluation) {
+  List<Widget> _ligneEvaluation(dynamic evaluation) {
     final type = evaluation['type'] as String;
     final estDevoir = type == 'devoir';
     final date = (evaluation['date_evaluation'] as String?)?.split('T').first;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+    return [
+      SSMPill.couleur(label: estDevoir ? 'Devoir' : 'Composition', couleur: estDevoir ? SSMPalette.indigo : SSMPalette.ambre),
+      Text(
+        '${evaluation['libelle'] ?? ''} · N°${evaluation['numero']}',
+        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color:
-                  (estDevoir
-                          ? const Color(0xFF0284C7)
-                          : const Color(0xFF7C3AED))
-                      .withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              estDevoir ? 'Devoir' : 'Composition',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: estDevoir
-                    ? const Color(0xFF0284C7)
-                    : const Color(0xFF7C3AED),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${evaluation['libelle'] ?? ''} · N°${evaluation['numero']}',
-                  style: GoogleFonts.sora(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
-                  ),
-                ),
-                if (date != null)
-                  Text(
-                    date,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: const Color(0xFF94A3B8),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          TextButton(
-            onPressed: () => _afficherNotesEvaluation(evaluation),
-            child: const Text('Voir les notes'),
-          ),
-        ],
+      Text(date ?? '—', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
+      TextButton(
+        onPressed: () => _afficherNotesEvaluation(evaluation),
+        child: const Text('Voir les notes'),
       ),
-    );
+    ];
   }
 
   Future<void> _afficherNotesEvaluation(dynamic evaluation) async {
@@ -1174,8 +1018,8 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
     await showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        backgroundColor: SSMPalette.blanc,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420, maxHeight: 560),
           child: Padding(
@@ -1186,11 +1030,7 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
               children: [
                 Text(
                   evaluation['libelle'] as String? ?? 'Notes',
-                  style: GoogleFonts.sora(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
+                  style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                 ),
                 const SizedBox(height: 16),
                 Expanded(
@@ -1198,15 +1038,12 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                       ? Center(
                           child: Text(
                             'Aucune note saisie',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF334155),
-                            ),
+                            style: GoogleFonts.inter(color: SSMPalette.texte3),
                           ),
                         )
                       : ListView.separated(
                           itemCount: notes.length,
-                          separatorBuilder: (context, index) =>
-                              const Divider(height: 1),
+                          separatorBuilder: (context, index) => const Divider(height: 1, color: SSMPalette.bordure),
                           itemBuilder: (context, index) {
                             final n = notes[index];
                             final valeur = (n['valeur'] as num?)?.toDouble();
@@ -1217,19 +1054,15 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                                   Expanded(
                                     child: Text(
                                       '${n['nom']} ${n['prenom']}',
-                                      style: GoogleFonts.inter(fontSize: 14),
+                                      style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
                                     ),
                                   ),
                                   Text(
-                                    valeur != null
-                                        ? '${valeur.toStringAsFixed(2)}/20'
-                                        : '—',
+                                    valeur != null ? '${valeur.toStringAsFixed(2)}/20' : '—',
                                     style: GoogleFonts.sora(
-                                      fontSize: 14,
+                                      fontSize: 13,
                                       fontWeight: FontWeight.w700,
-                                      color: valeur != null && valeur >= 10
-                                          ? const Color(0xFF16A34A)
-                                          : const Color(0xFFDC2626),
+                                      color: valeur != null && valeur >= 10 ? SSMPalette.teal : SSMPalette.rouge,
                                     ),
                                   ),
                                 ],
@@ -1243,7 +1076,7 @@ class _FicheMatiereClasseScreenState extends State<FicheMatiereClasseScreen> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Fermer'),
+                    child: Text('Fermer', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                   ),
                 ),
               ],

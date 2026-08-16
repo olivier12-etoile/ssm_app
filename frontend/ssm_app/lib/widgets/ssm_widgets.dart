@@ -38,6 +38,7 @@ class SSMStatCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -67,6 +68,8 @@ class SSMStatCard extends StatelessWidget {
               fontSize: 12,
               color: const Color(0xFF334155),
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           if (variation != null) ...[
             const SizedBox(height: 8),

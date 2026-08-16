@@ -1,8 +1,15 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/utilisateur.dart';
+import '../../services/auth_service.dart';
 import '../../services/matiere_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_page_scaffold.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sidebar.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 
 const List<Color> _couleursMatiere = [
   Color(0xFF1E3A8A), // Indigo
@@ -17,7 +24,7 @@ const List<Color> _couleursMatiere = [
   Color(0xFF65A30D), // Lime
 ];
 
-const Color _couleurParDefaut = Color(0xFF1E3A8A);
+const Color _couleurParDefaut = SSMPalette.indigo;
 
 Color _couleurMatiere(dynamic matiere) {
   final couleur = matiere['couleur'] as String?;
@@ -29,6 +36,8 @@ Color _couleurMatiere(dynamic matiere) {
   }
 }
 
+enum _OngletMatieres { liste, statistiques }
+
 class GestionMatieresScreen extends StatefulWidget {
   const GestionMatieresScreen({super.key});
 
@@ -37,10 +46,15 @@ class GestionMatieresScreen extends StatefulWidget {
 }
 
 class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
+  _OngletMatieres _onglet = _OngletMatieres.liste;
+
+  Utilisateur? _utilisateur;
+
   List<dynamic> _matieres = [];
   bool _chargementListe = true;
   String _recherche = '';
   Timer? _debounceRecherche;
+  final _rechercheController = TextEditingController();
 
   Map<String, dynamic>? _statistiques;
   bool _chargementStats = true;
@@ -48,6 +62,9 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
   @override
   void initState() {
     super.initState();
+    AuthService.getUtilisateur().then((u) {
+      if (mounted) setState(() => _utilisateur = u);
+    });
     _chargerListe();
     _chargerStatistiques();
   }
@@ -55,6 +72,7 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
   @override
   void dispose() {
     _debounceRecherche?.cancel();
+    _rechercheController.dispose();
     super.dispose();
   }
 
@@ -97,127 +115,150 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
   }
 
   void _afficherErreur(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
+  }
+
+  void _naviguer(BuildContext context, String route) {
+    if (route == '/directeur/matieres') return;
+    Navigator.pushNamed(context, route);
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _afficherDialogMatiere(),
-          backgroundColor: const Color(0xFF1E3A8A),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: Text('Nouvelle matière',
-              style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
-        ),
-        body: SafeArea(
-          child: Column(
-            children: [
-              _enTete(),
-              TabBar(
-                labelColor: const Color(0xFF1E3A8A),
-                unselectedLabelColor: const Color(0xFF94A3B8),
-                indicatorColor: const Color(0xFF1E3A8A),
-                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
-                tabs: const [
-                  Tab(text: 'Matières'),
-                  Tab(text: 'Statistiques'),
-                ],
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _ongletListe(),
-                    _ongletStatistiques(),
-                  ],
-                ),
-              ),
-            ],
+    return SSMPageScaffold(
+      nomEcole: _utilisateur?.codeEcole ?? 'Mon établissement',
+      codeEcole: _utilisateur?.codeEcole ?? '—',
+      nomUtilisateur: _utilisateur?.nom ?? '…',
+      role: _libelleRole(_utilisateur?.role),
+      sections: _sections(),
+      routeActuelle: '/directeur/matieres',
+      onNavigate: (route) => _naviguer(context, route),
+      onProfilTap: () => Navigator.pushNamed(context, '/profil'),
+      breadcrumb: 'Accueil',
+      breadcrumbActuel: 'Matières',
+      floatingActionButton: _onglet == _OngletMatieres.liste
+          ? FloatingActionButton.extended(
+              backgroundColor: SSMPalette.indigo,
+              foregroundColor: Colors.white,
+              onPressed: () => _afficherDialogMatiere(),
+              icon: const Icon(Icons.add),
+              label: const Text('Nouvelle matière'),
+            )
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Matières',
+            style: GoogleFonts.sora(fontSize: 19, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            '${_matieres.length} matière${_matieres.length > 1 ? 's' : ''} configurée${_matieres.length > 1 ? 's' : ''}',
+            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
+          ),
+          const SizedBox(height: 12),
+          _segments(),
+          const SizedBox(height: 16),
+          if (_onglet == _OngletMatieres.liste) _ongletListe() else _ongletStatistiques(),
+        ],
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════
-  // EN-TÊTE
-  // ══════════════════════════════════════════════════════
+  String _libelleRole(String? role) {
+    switch (role) {
+      case 'directeur':
+        return 'Directeur';
+      case 'censeur':
+        return 'Censeur';
+      case 'secretaire':
+        return 'Secrétaire';
+      case 'enseignant':
+        return 'Enseignant';
+      case 'comptable':
+        return 'Comptable';
+      case 'super_admin':
+        return 'Super admin';
+      default:
+        return role ?? '';
+    }
+  }
 
-  Widget _enTete() {
+  List<SSMNavSection> _sections() {
+    return [
+      SSMNavSection(titre: 'Principal', items: [
+        const SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/tableau-de-bord'),
+        const SSMNavItem(icone: Icons.people_outline, label: 'Élèves', route: '/directeur/eleves'),
+        const SSMNavItem(icone: Icons.grade_outlined, label: 'Notes & évaluations', route: '/notes'),
+        const SSMNavItem(icone: Icons.price_change_outlined, label: 'Frais scolaires', route: '/directeur/frais'),
+        const SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Emploi du temps', route: '/emploi-du-temps'),
+        const SSMNavItem(icone: Icons.description_outlined, label: 'Bulletins PDF', route: '/bulletins'),
+      ]),
+      SSMNavSection(titre: 'Pilotage', items: [
+        const SSMNavItem(icone: Icons.bar_chart_outlined, label: 'Statistiques', route: '/statistiques'),
+        const SSMNavItem(icone: Icons.notifications_outlined, label: 'Notifications', route: '/notifications'),
+        const SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
+      ]),
+      if (_utilisateur?.role == 'directeur')
+        SSMNavSection(titre: 'Administration', items: [
+          const SSMNavItem(icone: Icons.people_alt_outlined, label: 'Utilisateurs', route: '/directeur/utilisateurs'),
+          const SSMNavItem(icone: Icons.class_outlined, label: 'Classes', route: '/directeur/classes'),
+          SSMNavItem(
+            icone: Icons.menu_book_outlined,
+            label: 'Matières',
+            route: '/directeur/matieres',
+            badge: (!_chargementListe && _matieres.isNotEmpty) ? _matieres.length : null,
+          ),
+          const SSMNavItem(icone: Icons.calendar_month_outlined, label: 'Années & Périodes', route: '/directeur/annees'),
+        ]),
+    ];
+  }
+
+  // ── Sélecteur d'onglet ──
+  Widget _segments() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(bottomLeft: Radius.circular(20), bottomRight: Radius.circular(20)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+      child: Row(
         children: [
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacementNamed(context, '/tableau-de-bord');
-                  }
-                },
-              ),
-              const SizedBox(width: 4),
-              Text('Retour', style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.8))),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Matières', style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white)),
-                  const SizedBox(height: 4),
-                  Text('${_matieres.length} matières configurées',
-                      style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7))),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Text('${_matieres.length}',
-                        style: GoogleFonts.sora(fontSize: 28, fontWeight: FontWeight.w700, color: Colors.white)),
-                    Text('matières', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
-                  ],
-                ),
-              ),
-            ],
-          ),
+          Expanded(child: _segment('Matières', _OngletMatieres.liste)),
+          Expanded(child: _segment('Statistiques', _OngletMatieres.statistiques)),
         ],
+      ),
+    );
+  }
+
+  Widget _segment(String label, _OngletMatieres valeur) {
+    final actif = _onglet == valeur;
+    return GestureDetector(
+      onTap: () => setState(() => _onglet = valeur),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: actif ? SSMPalette.blanc : Colors.transparent,
+          borderRadius: BorderRadius.circular(SSMRayons.petit),
+          boxShadow: actif ? SSMOmbres.legere : null,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: actif ? FontWeight.w600 : FontWeight.w400,
+            color: actif ? SSMPalette.indigo : SSMPalette.texte2,
+          ),
+        ),
       ),
     );
   }
@@ -227,58 +268,45 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _ongletListe() {
-    return RefreshIndicator(
-      onRefresh: _chargerListe,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _barreRecherche(),
-          const SizedBox(height: 16),
-          if (_chargementListe)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 40),
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (_matieres.isEmpty)
-            _etatVide()
-          else
-            ..._matieres.map((m) => _carteMatiere(m)),
-          const SizedBox(height: 80),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _barreRecherche(),
+        const SizedBox(height: 16),
+        if (_chargementListe)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60),
+            child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+          )
+        else if (_matieres.isEmpty)
+          _etatVide()
+        else
+          LayoutBuilder(builder: (context, contraintes) {
+            return contraintes.maxWidth >= 760 ? _tableMatieres() : _listeCartesMatieres();
+          }),
+      ],
     );
   }
 
   Widget _barreRecherche() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(50),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(50),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.search, size: 16, color: const Color(0xFF334155).withValues(alpha: 0.6)),
-              const SizedBox(width: 6),
-              Expanded(
-                child: TextField(
-                  onChanged: _onRechercheChangee,
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher une matière...',
-                    border: InputBorder.none,
-                    isDense: true,
-                    hintStyle: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155).withValues(alpha: 0.5)),
-                  ),
-                  style: GoogleFonts.inter(fontSize: 13),
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: TextField(
+        controller: _rechercheController,
+        onChanged: _onRechercheChangee,
+        style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+        decoration: InputDecoration(
+          hintText: 'Rechercher une matière...',
+          hintStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
+          prefixIcon: const Icon(Icons.search, size: 18, color: SSMPalette.texte3),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
@@ -286,20 +314,21 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
 
   Widget _etatVide() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 40),
+      padding: const EdgeInsets.symmetric(vertical: 48),
       child: Center(
         child: Column(
           children: [
-            const Icon(Icons.book_outlined, size: 64, color: Color(0xFF94A3B8)),
-            const SizedBox(height: 16),
-            Text('Aucune matière créée', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF334155))),
+            const Icon(Icons.menu_book_outlined, size: 56, color: SSMPalette.texte3),
+            const SizedBox(height: 14),
+            Text('Aucune matière créée', style: GoogleFonts.inter(fontSize: 13.5, color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E3A8A),
+                backgroundColor: SSMPalette.indigo,
                 foregroundColor: Colors.white,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
               ),
               onPressed: () => _afficherDialogMatiere(),
               child: const Text('Créer la première matière'),
@@ -310,6 +339,55 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
     );
   }
 
+  // ── Vue desktop large : tableau ──
+  Widget _tableMatieres() {
+    return SSMDataTable(
+      colonnes: const [
+        SSMDataColumn(''),
+        SSMDataColumn('Matière'),
+        SSMDataColumn('Classes'),
+        SSMDataColumn('Enseignants'),
+        SSMDataColumn('Actions'),
+      ],
+      lignes: [for (final m in _matieres) _ligneMatiere(m)],
+    );
+  }
+
+  List<Widget> _ligneMatiere(dynamic matiere) {
+    final id = matiere['id'] as int;
+    final nom = matiere['nom'] as String;
+    final code = matiere['code'] as String?;
+    final couleur = _couleurMatiere(matiere);
+    final nombreClasses = (matiere['nombre_classes'] as num?)?.toInt() ?? 0;
+    final enseignants = (matiere['enseignants'] as List?) ?? [];
+
+    return [
+      Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(SSMRayons.petit + 2)),
+        child: Icon(Icons.menu_book_outlined, size: 15, color: couleur),
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(nom, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          if (code != null && code.isNotEmpty)
+            Text(code, style: GoogleFonts.jetBrainsMono(fontSize: 10.5, color: SSMPalette.texte3)),
+        ],
+      ),
+      SSMPill.couleur(label: '$nombreClasses classe${nombreClasses > 1 ? 's' : ''}', couleur: SSMPalette.indigo),
+      Text('${enseignants.length} prof${enseignants.length > 1 ? 's' : ''}', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+      _menuActionsMatiere(id, nom, nombreClasses, matiere),
+    ];
+  }
+
+  // ── Vue mobile/étroite : cartes ──
+  Widget _listeCartesMatieres() {
+    return Column(children: _matieres.map((m) => _carteMatiere(m)).toList());
+  }
+
   Widget _carteMatiere(dynamic matiere) {
     final id = matiere['id'] as int;
     final nom = matiere['nom'] as String;
@@ -318,116 +396,87 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
     final nombreClasses = (matiere['nombre_classes'] as num?)?.toInt() ?? 0;
     final enseignants = (matiere['enseignants'] as List?) ?? [];
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(14),
-            border: Border(left: BorderSide(color: couleur, width: 4)),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: couleur.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.book, color: couleur, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(nom,
-                        style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                    if (code != null && code.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(code,
-                          style: GoogleFonts.jetBrainsMono(fontSize: 12, color: const Color(0xFF94A3B8))),
-                    ],
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Icon(Icons.school, size: 13, color: const Color(0xFF94A3B8)),
-                        const SizedBox(width: 4),
-                        Text('$nombreClasses classe${nombreClasses > 1 ? 's' : ''}',
-                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
-                        const SizedBox(width: 12),
-                        Icon(Icons.person, size: 13, color: const Color(0xFF94A3B8)),
-                        const SizedBox(width: 4),
-                        Text('${enseignants.length} prof${enseignants.length > 1 ? 's' : ''}',
-                            style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(9999),
-                    ),
-                    child: Text('$nombreClasses classe${nombreClasses > 1 ? 's' : ''}',
-                        style: GoogleFonts.inter(
-                            fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF1E3A8A))),
-                  ),
-                  const SizedBox(height: 4),
-                  PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Color(0xFF94A3B8)),
-                    onSelected: (valeur) {
-                      if (valeur == 'modifier') _afficherDialogMatiere(matiere: matiere);
-                      if (valeur == 'statistiques') DefaultTabController.of(context).animateTo(1);
-                      if (valeur == 'supprimer') _confirmerSuppression(id, nom, nombreClasses);
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'modifier',
-                        child: Row(children: [
-                          Icon(Icons.edit, color: Color(0xFF1E3A8A), size: 18),
-                          SizedBox(width: 8),
-                          Text('Modifier'),
-                        ]),
-                      ),
-                      const PopupMenuItem(
-                        value: 'statistiques',
-                        child: Row(children: [
-                          Icon(Icons.bar_chart, color: Color(0xFF0D9488), size: 18),
-                          SizedBox(width: 8),
-                          Text('Statistiques'),
-                        ]),
-                      ),
-                      const PopupMenuItem(
-                        value: 'supprimer',
-                        child: Row(children: [
-                          Icon(Icons.delete, color: Color(0xFFDC2626), size: 18),
-                          SizedBox(width: 8),
-                          Text('Supprimer'),
-                        ]),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border(
+          top: BorderSide(color: SSMPalette.bordure),
+          right: BorderSide(color: SSMPalette.bordure),
+          bottom: BorderSide(color: SSMPalette.bordure),
+          left: BorderSide(color: couleur, width: 3),
         ),
       ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+            child: Icon(Icons.menu_book_outlined, color: couleur, size: 19),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(nom, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                if (code != null && code.isNotEmpty)
+                  Text(code, style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte3)),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    SSMPill.couleur(label: '$nombreClasses classe${nombreClasses > 1 ? 's' : ''}', couleur: SSMPalette.indigo),
+                    SSMPill.couleur(label: '${enseignants.length} prof${enseignants.length > 1 ? 's' : ''}', couleur: SSMPalette.teal),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          _menuActionsMatiere(id, nom, nombreClasses, matiere),
+        ],
+      ),
+    );
+  }
+
+  Widget _menuActionsMatiere(int id, String nom, int nombreClasses, dynamic matiere) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, color: SSMPalette.texte3),
+      onSelected: (valeur) {
+        if (valeur == 'modifier') _afficherDialogMatiere(matiere: matiere);
+        if (valeur == 'statistiques') setState(() => _onglet = _OngletMatieres.statistiques);
+        if (valeur == 'supprimer') _confirmerSuppression(id, nom, nombreClasses);
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: 'modifier',
+          child: Row(children: [
+            Icon(Icons.edit, color: SSMPalette.indigo, size: 18),
+            SizedBox(width: 8),
+            Text('Modifier'),
+          ]),
+        ),
+        const PopupMenuItem(
+          value: 'statistiques',
+          child: Row(children: [
+            Icon(Icons.bar_chart, color: SSMPalette.teal, size: 18),
+            SizedBox(width: 8),
+            Text('Statistiques'),
+          ]),
+        ),
+        const PopupMenuItem(
+          value: 'supprimer',
+          child: Row(children: [
+            Icon(Icons.delete, color: SSMPalette.rouge, size: 18),
+            SizedBox(width: 8),
+            Text('Supprimer'),
+          ]),
+        ),
+      ],
     );
   }
 
@@ -437,52 +486,58 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
 
   Widget _ongletStatistiques() {
     if (_chargementStats) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 60),
+        child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+      );
     }
     final stats = _statistiques;
     if (stats == null) {
-      return Center(child: Text('Erreur chargement statistiques', style: GoogleFonts.inter(color: const Color(0xFF334155))));
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Center(child: Text('Erreur chargement statistiques', style: GoogleFonts.inter(color: SSMPalette.texte3))),
+      );
     }
 
     final matieres = (stats['matieres'] as List?) ?? [];
     final plusFacile = stats['matiere_plus_facile'] as Map<String, dynamic>?;
     final plusDifficile = stats['matiere_plus_difficile'] as Map<String, dynamic>?;
 
-    return RefreshIndicator(
-      onRefresh: _chargerStatistiques,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Row(
-            children: [
-              Expanded(child: _carteExtreme(
-                titre: 'La plus facile',
-                donnees: plusFacile,
-                couleur: const Color(0xFF16A34A),
-                icone: Icons.trending_up,
-              )),
-              const SizedBox(width: 12),
-              Expanded(child: _carteExtreme(
-                titre: 'La plus difficile',
-                donnees: plusDifficile,
-                couleur: const Color(0xFFDC2626),
-                icone: Icons.trending_down,
-              )),
-            ],
-          ),
-          const SizedBox(height: 20),
-          if (matieres.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Center(
-                child: Text('Aucune statistique disponible', style: GoogleFonts.inter(color: const Color(0xFF334155))),
-              ),
-            )
-          else
-            ...matieres.map((m) => _carteStatMatiere(m as Map<String, dynamic>)),
-          const SizedBox(height: 80),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(builder: (context, contraintes) {
+          final colonnes = contraintes.maxWidth >= 520 ? 2 : 1;
+          return GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: colonnes,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              mainAxisExtent: 168,
+            ),
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: 2,
+            itemBuilder: (context, i) => [
+              _carteExtreme(titre: 'La plus facile', donnees: plusFacile, couleur: SSMPalette.teal, icone: Icons.trending_up),
+              _carteExtreme(titre: 'La plus difficile', donnees: plusDifficile, couleur: SSMPalette.rouge, icone: Icons.trending_down),
+            ][i],
+          );
+        }),
+        const SizedBox(height: 16),
+        Text(
+          'Moyenne par matière',
+          style: GoogleFonts.sora(fontSize: 12.5, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+        ),
+        const SizedBox(height: 10),
+        if (matieres.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: Text('Aucune statistique disponible', style: GoogleFonts.inter(color: SSMPalette.texte3))),
+          )
+        else
+          ...matieres.map((m) => _carteStatMatiere(m as Map<String, dynamic>)),
+      ],
     );
   }
 
@@ -495,33 +550,13 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
     final nom = donnees?['matiere_nom'] as String?;
     final moyenne = donnees?['moyenne_generale'];
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: couleur.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(icone, color: couleur, size: 24),
-              const SizedBox(height: 8),
-              Text(titre, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF334155))),
-              const SizedBox(height: 4),
-              Text(nom ?? '—',
-                  style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
-                  maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              Text(moyenne != null ? '$moyenne/20' : '—',
-                  style: GoogleFonts.sora(fontSize: 28, fontWeight: FontWeight.w700, color: couleur)),
-            ],
-          ),
-        ),
-      ),
+    return SSMStatCard(
+      icone: icone,
+      couleur: couleur,
+      valeur: moyenne != null ? '$moyenne/20' : '—',
+      label: nom ?? '—',
+      sousTexte: titre,
+      tendance: SSMTendance.neutre,
     );
   }
 
@@ -530,58 +565,53 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
     final moyenne = (matiere['moyenne_generale'] as num?)?.toDouble();
     final moyennesParClasse = (matiere['moyennes_par_classe'] as List?) ?? [];
     final couleur = moyenne == null
-        ? const Color(0xFF94A3B8)
+        ? SSMPalette.texte3
         : moyenne > 12
-            ? const Color(0xFF16A34A)
+            ? SSMPalette.teal
             : moyenne > 8
-                ? const Color(0xFFEA580C)
-                : const Color(0xFFDC2626);
+                ? SSMPalette.ambre
+                : SSMPalette.rouge;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2)),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(Icons.book, size: 18, color: couleur),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(nom,
-                        style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                  ),
-                  Text(moyenne != null ? '${moyenne.toStringAsFixed(2)}/20' : '—/20',
-                      style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: couleur)),
-                ],
+              Icon(Icons.menu_book_outlined, size: 18, color: couleur),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(nom, style: GoogleFonts.sora(fontSize: 13.5, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
               ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: moyenne != null ? (moyenne / 20).clamp(0.0, 1.0) : 0,
-                  minHeight: 6,
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  color: couleur,
-                ),
+              Text(
+                moyenne != null ? '${moyenne.toStringAsFixed(2)}/20' : '—/20',
+                style: GoogleFonts.sora(fontSize: 13.5, fontWeight: FontWeight.w700, color: couleur),
               ),
-              const SizedBox(height: 6),
-              Text('${moyennesParClasse.length} classe${moyennesParClasse.length > 1 ? 's' : ''} concernée${moyennesParClasse.length > 1 ? 's' : ''}',
-                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
             ],
           ),
-        ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: moyenne != null ? (moyenne / 20).clamp(0.0, 1.0) : 0,
+              minHeight: 6,
+              backgroundColor: const Color(0xFFF1F5F9),
+              color: couleur,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '${moyennesParClasse.length} classe${moyennesParClasse.length > 1 ? 's' : ''} concernée${moyennesParClasse.length > 1 ? 's' : ''}',
+            style: GoogleFonts.inter(fontSize: 11.5, color: SSMPalette.texte2),
+          ),
+        ],
       ),
     );
   }
@@ -589,6 +619,28 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
   // ══════════════════════════════════════════════════════
   // DIALOG CRÉER / MODIFIER
   // ══════════════════════════════════════════════════════
+
+  InputDecoration _decorationChamp(String label, {bool dense = false}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      isDense: dense,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+      ),
+    );
+  }
 
   Future<void> _afficherDialogMatiere({dynamic matiere}) async {
     final estModification = matiere != null;
@@ -601,8 +653,8 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Padding(
@@ -611,32 +663,25 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(estModification ? 'Modifier' : 'Nouvelle matière',
-                        style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                    Text(
+                      estModification ? 'Modifier' : 'Nouvelle matière',
+                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+                    ),
                     const SizedBox(height: 20),
                     TextField(
                       controller: nomController,
-                      decoration: InputDecoration(
-                        labelText: 'Nom *',
-                        hintText: 'ex: Mathématiques, Français, SVT...',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      style: GoogleFonts.inter(fontSize: 14),
+                      decoration: _decorationChamp('Nom *').copyWith(hintText: 'ex: Mathématiques, Français, SVT...'),
+                      style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: codeController,
-                      decoration: InputDecoration(
-                        labelText: 'Code (optionnel)',
-                        hintText: 'ex: MATH, FR, SVT',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      style: GoogleFonts.jetBrainsMono(fontSize: 14),
+                      decoration: _decorationChamp('Code (optionnel)').copyWith(hintText: 'ex: MATH, FR, SVT'),
+                      style: GoogleFonts.jetBrainsMono(fontSize: 14, color: SSMPalette.texte1),
                       textCapitalization: TextCapitalization.characters,
                     ),
                     const SizedBox(height: 16),
-                    Text('Couleur d\'identification',
-                        style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
+                    Text("Couleur d'identification", style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
                     const SizedBox(height: 10),
                     Wrap(
                       spacing: 10,
@@ -666,7 +711,7 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         color: couleurSelectionnee.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(SSMRayons.petit),
                       ),
                       child: Row(
                         children: [
@@ -678,7 +723,7 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
                           const SizedBox(width: 10),
                           Text(
                             nomController.text.isEmpty ? 'Aperçu' : nomController.text,
-                            style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF0F172A)),
+                            style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
                           ),
                         ],
                       ),
@@ -686,15 +731,21 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
                     const SizedBox(height: 20),
                     Row(
                       children: [
-                        Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
+                          ),
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E3A8A),
+                              backgroundColor: SSMPalette.indigo,
                               foregroundColor: Colors.white,
+                              elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                             ),
                             onPressed: () async {
                               if (nomController.text.trim().isEmpty) {
@@ -754,8 +805,8 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
     await showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        backgroundColor: SSMPalette.blanc,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
           child: Padding(
@@ -763,32 +814,40 @@ class _GestionMatieresScreenState extends State<GestionMatieresScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 48),
+                const Icon(Icons.warning_amber_rounded, color: SSMPalette.ambre, size: 48),
                 const SizedBox(height: 16),
-                Text('Supprimer "$nom" ?',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                Text(
+                  'Supprimer "$nom" ?',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+                ),
                 if (nombreClasses > 0) ...[
                   const SizedBox(height: 12),
                   Text(
                     'Cette matière est utilisée dans $nombreClasses classe(s). '
                     'La supprimer retirera également ses données de ces classes.',
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFFDC2626)),
+                    style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.rouge),
                   ),
                 ],
                 const SizedBox(height: 20),
                 Row(
                   children: [
-                    Expanded(child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler'))),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
+                      ),
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC2626),
+                          backgroundColor: SSMPalette.rouge,
                           foregroundColor: Colors.white,
+                          elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                         ),
                         onPressed: () async {
                           try {

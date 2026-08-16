@@ -306,6 +306,13 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
         SSMNavItem(icone: Icons.notifications_outlined, label: 'Notifications', route: '/notifications'),
         SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
       ]),
+      if (role == 'directeur')
+        const SSMNavSection(titre: 'Administration', items: [
+          SSMNavItem(icone: Icons.people_alt_outlined, label: 'Utilisateurs', route: '/directeur/utilisateurs'),
+          SSMNavItem(icone: Icons.class_outlined, label: 'Classes', route: '/directeur/classes'),
+          SSMNavItem(icone: Icons.menu_book_outlined, label: 'Matières', route: '/directeur/matieres'),
+          SSMNavItem(icone: Icons.calendar_month_outlined, label: 'Années & Périodes', route: '/directeur/annees'),
+        ]),
     ];
   }
 
@@ -471,7 +478,7 @@ class _BulletinsModuleScreenState extends State<BulletinsModuleScreen> {
           crossAxisCount: colonnes,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          mainAxisExtent: 118,
+          mainAxisExtent: 168,
         ),
         itemBuilder: (context, i) => cartes[i],
       );

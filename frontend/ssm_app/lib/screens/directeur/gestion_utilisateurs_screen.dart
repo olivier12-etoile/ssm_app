@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,10 +7,52 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_file/open_file.dart';
+import '../../models/utilisateur.dart';
+import '../../services/auth_service.dart';
 import '../../services/utilisateur_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_page_scaffold.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sidebar.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 import 'affectation_enseignant_screen.dart';
 import 'fiche_utilisateur_screen.dart';
+
+Color _couleurRole(String role) {
+  switch (role) {
+    case 'enseignant':
+      return SSMPalette.indigo;
+    case 'censeur':
+      return SSMPalette.ambre;
+    case 'secretaire':
+      return SSMPalette.teal;
+    case 'directeur':
+      return SSMPalette.rouge;
+    default:
+      return SSMPalette.texte3;
+  }
+}
+
+String _labelRole(String role) {
+  switch (role) {
+    case 'enseignant':
+      return 'Enseignant';
+    case 'censeur':
+      return 'Censeur';
+    case 'secretaire':
+      return 'Secrétaire';
+    case 'directeur':
+      return 'Directeur';
+    default:
+      return role;
+  }
+}
+
+enum _OngletUtilisateurs { tableauDeBord, liste }
 
 class GestionUtilisateursScreen extends StatefulWidget {
   const GestionUtilisateursScreen({super.key});
@@ -23,6 +64,10 @@ class GestionUtilisateursScreen extends StatefulWidget {
 
 class _GestionUtilisateursScreenState
     extends State<GestionUtilisateursScreen> {
+  _OngletUtilisateurs _onglet = _OngletUtilisateurs.tableauDeBord;
+
+  Utilisateur? _utilisateur;
+
   // ── Vue d'ensemble ──────────────────────────
   Map<String, dynamic>? _tableauDeBord;
   List<dynamic> _derniersInscrits = [];
@@ -49,6 +94,9 @@ class _GestionUtilisateursScreenState
   @override
   void initState() {
     super.initState();
+    AuthService.getUtilisateur().then((u) {
+      if (mounted) setState(() => _utilisateur = u);
+    });
     _chargerApercu();
     _chargerListe();
   }
@@ -106,82 +154,145 @@ class _GestionUtilisateursScreenState
   }
 
   void _afficherErreur(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFFDC2626)),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: const Color(0xFF16A34A)),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
   }
 
-  Color _couleurRole(String role) {
+  void _naviguer(BuildContext context, String route) {
+    if (route == '/directeur/utilisateurs') return;
+    Navigator.pushNamed(context, route);
+  }
+
+  String _libelleRole(String? role) {
     switch (role) {
-      case 'enseignant':  return const Color(0xFF1E3A8A); // indigo
-      case 'censeur':     return const Color(0xFFD97706); // ambre
-      case 'secretaire':  return const Color(0xFF0D9488); // teal
-      case 'directeur':   return const Color(0xFF7C3AED); // violet
-      default:            return const Color(0xFF94A3B8);
+      case 'directeur':
+        return 'Directeur';
+      case 'censeur':
+        return 'Censeur';
+      case 'secretaire':
+        return 'Secrétaire';
+      case 'enseignant':
+        return 'Enseignant';
+      case 'comptable':
+        return 'Comptable';
+      case 'super_admin':
+        return 'Super admin';
+      default:
+        return role ?? '';
     }
   }
 
-  IconData _iconeRole(String role) {
-    switch (role) {
-      case 'enseignant':  return Icons.school;
-      case 'censeur':     return Icons.admin_panel_settings;
-      case 'secretaire':  return Icons.assignment_ind;
-      case 'directeur':   return Icons.workspace_premium;
-      default:            return Icons.person;
-    }
-  }
-
-  String _labelRole(String role) {
-    switch (role) {
-      case 'enseignant':  return 'Enseignant';
-      case 'censeur':     return 'Censeur';
-      case 'secretaire':  return 'Secrétaire';
-      case 'directeur':   return 'Directeur';
-      default:            return role;
-    }
+  List<SSMNavSection> _sections() {
+    final total = _tableauDeBord?['total'] as int?;
+    return [
+      SSMNavSection(titre: 'Principal', items: [
+        const SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/tableau-de-bord'),
+        const SSMNavItem(icone: Icons.people_outline, label: 'Élèves', route: '/directeur/eleves'),
+        const SSMNavItem(icone: Icons.grade_outlined, label: 'Notes & évaluations', route: '/notes'),
+        const SSMNavItem(icone: Icons.price_change_outlined, label: 'Frais scolaires', route: '/directeur/frais'),
+        const SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Emploi du temps', route: '/emploi-du-temps'),
+        const SSMNavItem(icone: Icons.description_outlined, label: 'Bulletins PDF', route: '/bulletins'),
+      ]),
+      SSMNavSection(titre: 'Pilotage', items: [
+        const SSMNavItem(icone: Icons.bar_chart_outlined, label: 'Statistiques', route: '/statistiques'),
+        const SSMNavItem(icone: Icons.notifications_outlined, label: 'Notifications', route: '/notifications'),
+        const SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
+      ]),
+      if (_utilisateur?.role == 'directeur')
+        SSMNavSection(titre: 'Administration', items: [
+          SSMNavItem(
+            icone: Icons.people_alt_outlined,
+            label: 'Utilisateurs',
+            route: '/directeur/utilisateurs',
+            badge: (!_chargementApercu && (total ?? 0) > 0) ? total : null,
+          ),
+          const SSMNavItem(icone: Icons.class_outlined, label: 'Classes', route: '/directeur/classes'),
+          const SSMNavItem(icone: Icons.menu_book_outlined, label: 'Matières', route: '/directeur/matieres'),
+          const SSMNavItem(icone: Icons.calendar_month_outlined, label: 'Années & Périodes', route: '/directeur/annees'),
+        ]),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        appBar: AppBar(
-          title: Text(
-            'Gestion des utilisateurs',
-            style: GoogleFonts.sora(fontWeight: FontWeight.w600, color: Colors.white),
+    return SSMPageScaffold(
+      nomEcole: _utilisateur?.codeEcole ?? 'Mon établissement',
+      codeEcole: _utilisateur?.codeEcole ?? '—',
+      nomUtilisateur: _utilisateur?.nom ?? '…',
+      role: _libelleRole(_utilisateur?.role),
+      sections: _sections(),
+      routeActuelle: '/directeur/utilisateurs',
+      onNavigate: (route) => _naviguer(context, route),
+      onProfilTap: () => Navigator.pushNamed(context, '/profil'),
+      breadcrumb: 'Accueil',
+      breadcrumbActuel: 'Utilisateurs',
+      floatingActionButton: _onglet == _OngletUtilisateurs.liste
+          ? FloatingActionButton.extended(
+              backgroundColor: SSMPalette.indigo,
+              foregroundColor: Colors.white,
+              onPressed: () => _afficherDialogUtilisateur(),
+              icon: const Icon(Icons.person_add_alt_1),
+              label: const Text('Nouvel utilisateur'),
+            )
+          : null,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Utilisateurs',
+            style: GoogleFonts.sora(fontSize: 19, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
           ),
-          backgroundColor: const Color(0xFF1E3A8A),
-          foregroundColor: Colors.white,
-          bottom: TabBar(
-            indicatorColor: const Color(0xFFD97706),
-            indicatorWeight: 3,
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
-            tabs: const [
-              Tab(text: "Vue d'ensemble"),
-              Tab(text: 'Liste des utilisateurs'),
-            ],
+          const SizedBox(height: 12),
+          _segments(),
+          const SizedBox(height: 16),
+          if (_onglet == _OngletUtilisateurs.tableauDeBord) _ongletApercu() else _ongletListe(),
+        ],
+      ),
+    );
+  }
+
+  // ── Sélecteur d'onglet ──
+  Widget _segments() {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: const Color(0xFFF3F4F6), borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+      child: Row(
+        children: [
+          Expanded(child: _segment("📊 Vue d'ensemble", _OngletUtilisateurs.tableauDeBord)),
+          Expanded(child: _segment('👥 Liste des utilisateurs', _OngletUtilisateurs.liste)),
+        ],
+      ),
+    );
+  }
+
+  Widget _segment(String label, _OngletUtilisateurs valeur) {
+    final actif = _onglet == valeur;
+    return GestureDetector(
+      onTap: () => setState(() => _onglet = valeur),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: actif ? SSMPalette.blanc : Colors.transparent,
+          borderRadius: BorderRadius.circular(SSMRayons.petit),
+          boxShadow: actif ? SSMOmbres.legere : null,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 13,
+            fontWeight: actif ? FontWeight.w600 : FontWeight.w400,
+            color: actif ? SSMPalette.indigo : SSMPalette.texte2,
           ),
-        ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: const Color(0xFF1E3A8A),
-          onPressed: () => _afficherDialogUtilisateur(),
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-        body: TabBarView(
-          children: [
-            _ongletApercu(),
-            _ongletListe(),
-          ],
         ),
       ),
     );
@@ -193,193 +304,82 @@ class _GestionUtilisateursScreenState
 
   Widget _ongletApercu() {
     if (_chargementApercu || _tableauDeBord == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 60),
+        child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+      );
     }
 
     final total      = _tableauDeBord!['total'] as int? ?? 0;
-    final parRole     = _tableauDeBord!['par_role'] as Map<String, dynamic>? ?? {};
-    final actifs      = _tableauDeBord!['actifs'] as int? ?? 0;
-    final desactives  = _tableauDeBord!['desactives'] as int? ?? 0;
+    final parRole    = _tableauDeBord!['par_role'] as Map<String, dynamic>? ?? {};
+    final actifs     = _tableauDeBord!['actifs'] as int? ?? 0;
+    final desactives = _tableauDeBord!['desactives'] as int? ?? 0;
 
-    final large = MediaQuery.of(context).size.width > 700;
-    final grille = _grilleMiniCartes(parRole, total, actifs, desactives);
-    final donut = _carteDonut(parRole);
+    final cartes = <_CarteStat>[
+      _CarteStat('TOTAL', '$total', Icons.people, SSMPalette.indigo),
+      _CarteStat('ENSEIGNANTS', '${parRole['enseignant'] ?? 0}', Icons.school, _couleurRole('enseignant')),
+      _CarteStat('CENSEURS', '${parRole['censeur'] ?? 0}', Icons.verified_user, _couleurRole('censeur')),
+      _CarteStat('SECRÉTAIRES', '${parRole['secretaire'] ?? 0}', Icons.badge, _couleurRole('secretaire')),
+      _CarteStat('ACTIFS', '$actifs', Icons.check_circle, SSMPalette.teal),
+      _CarteStat('INACTIFS', '$desactives', Icons.block, SSMPalette.rouge),
+    ];
 
     return RefreshIndicator(
       onRefresh: _chargerApercu,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
+      color: SSMPalette.indigo,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── En-tête gradient ────────────────────
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20),
-                bottomRight: Radius.circular(20),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Utilisateurs',
-                      style: GoogleFonts.sora(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.white),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '$total membres au total',
-                      style: GoogleFonts.inter(fontSize: 13, color: Colors.white.withValues(alpha: 0.7)),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('$total', style: GoogleFonts.sora(fontSize: 32, fontWeight: FontWeight.w700, color: Colors.white)),
-                      Text('utilisateurs', style: GoogleFonts.inter(fontSize: 11, color: Colors.white.withValues(alpha: 0.7))),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          Text(
+            '$total utilisateurs · $actifs actifs · $desactives inactifs',
+            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+          LayoutBuilder(builder: (context, contraintes) {
+            final large = contraintes.maxWidth >= 760;
+            final grille = LayoutBuilder(builder: (context, c) {
+              final colonnes = c.maxWidth >= 560 ? 3 : (c.maxWidth >= 360 ? 2 : 1);
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: cartes.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: colonnes,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  mainAxisExtent: 168,
+                ),
+                itemBuilder: (context, i) {
+                  final c2 = cartes[i];
+                  return SSMStatCard(icone: c2.icone, couleur: c2.couleur, valeur: c2.valeur, label: c2.label);
+                },
+              );
+            });
+            final donut = _carteDonut(parRole);
 
-          // ── Mini-cartes stats + donut ───────────
-          if (large)
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 3, child: grille),
-                const SizedBox(width: 16),
-                Expanded(flex: 2, child: donut),
-              ],
-            )
-          else
-            Column(
-              children: [
-                grille,
-                const SizedBox(height: 20),
-                donut,
-              ],
-            ),
-          const SizedBox(height: 24),
-
-          // ── Derniers inscrits ──────────────────
-          SSMSectionTitre(titre: 'Derniers inscrits'),
-          if (_derniersInscrits.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-              child: Text('Aucun utilisateur récent', style: GoogleFonts.inter(color: const Color(0xFF334155))),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2)),
-                ],
-              ),
-              child: Column(
-                children: _derniersInscrits.map(_itemDernierInscrit).toList(),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _grilleMiniCartes(Map<String, dynamic> parRole, int total, int actifs, int desactives) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final largeurCarte = (constraints.maxWidth - 24) / 3;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _miniCarteStat('TOTAL', '$total', Icons.people, const Color(0xFF1E3A8A), largeurCarte),
-            _miniCarteStat('ENSEIGNANTS', '${parRole['enseignant'] ?? 0}', Icons.school, const Color(0xFF0D9488), largeurCarte),
-            _miniCarteStat('CENSEURS', '${parRole['censeur'] ?? 0}', Icons.verified_user, const Color(0xFFD97706), largeurCarte),
-            _miniCarteStat('SECRÉTAIRES', '${parRole['secretaire'] ?? 0}', Icons.badge, const Color(0xFF7C3AED), largeurCarte),
-            _miniCarteStat('ACTIFS', '$actifs', Icons.check_circle, const Color(0xFF16A34A), largeurCarte),
-            _miniCarteStat('INACTIFS', '$desactives', Icons.block, const Color(0xFFDC2626), largeurCarte),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _miniCarteStat(String label, String valeur, IconData icone, Color couleur, double largeur) {
-    return SizedBox(
-      width: largeur,
-      height: 80,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.65),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+            return large
+                ? Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        label,
-                        style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8), fontWeight: FontWeight.w600, letterSpacing: 0.3),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        valeur,
-                        style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      Expanded(flex: 3, child: grille),
+                      const SizedBox(width: 16),
+                      Expanded(flex: 2, child: donut),
                     ],
-                  ),
-                ),
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(icone, color: couleur, size: 18),
-                ),
-              ],
-            ),
+                  )
+                : Column(children: [grille, const SizedBox(height: 16), donut]);
+          }),
+          const SizedBox(height: 20),
+          SSMPanel(
+            titre: 'Derniers inscrits',
+            padding: EdgeInsets.zero,
+            child: _derniersInscrits.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('Aucun utilisateur récent', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                  )
+                : Column(children: _derniersInscrits.map((u) => _itemDernierInscrit(u as Map<String, dynamic>)).toList()),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -388,28 +388,26 @@ class _GestionUtilisateursScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3)),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         children: [
           Text('Répartition par rôle',
-              style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+              style: GoogleFonts.sora(fontSize: 12.5, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
           const SizedBox(height: 8),
-          SizedBox(height: 160, child: _donutRepartitionRole(parRole)),
+          SizedBox(height: 150, child: _donutRepartitionRole(parRole)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 10,
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
-              _legende('Directeur', const Color(0xFF1E3A8A)),
-              _legende('Enseignants', const Color(0xFF0D9488)),
-              _legende('Censeurs', const Color(0xFFD97706)),
-              _legende('Secrétaires', const Color(0xFF7C3AED)),
+              _legende('Directeur', _couleurRole('directeur')),
+              _legende('Enseignants', _couleurRole('enseignant')),
+              _legende('Censeurs', _couleurRole('censeur')),
+              _legende('Secrétaires', _couleurRole('secretaire')),
             ],
           ),
         ],
@@ -417,24 +415,18 @@ class _GestionUtilisateursScreenState
     );
   }
 
-  Widget _itemDernierInscrit(dynamic u) {
+  Widget _itemDernierInscrit(Map<String, dynamic> u) {
     final role       = u['role'] as String;
-    final couleur    = _couleurRole(role);
     final photoUrl   = u['photo_url'] as String?;
     final nomComplet = '${u['name']} ${u['prenom'] ?? ''}'.trim();
     final creeLe     = (u['created_at'] as String?)?.split('T').first;
     final actif      = u['actif'] == true;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: couleur.withValues(alpha: 0.15),
-            backgroundImage: photoUrl != null ? NetworkImage(photoUrl) : null,
-            child: photoUrl == null ? Icon(_iconeRole(role), size: 16, color: couleur) : null,
-          ),
+          SSMAvatar(nom: nomComplet, photoUrl: photoUrl, couleur: _couleurRole(role), rayon: 18),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -442,23 +434,20 @@ class _GestionUtilisateursScreenState
               children: [
                 Text(
                   nomComplet,
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
-                  creeLe != null ? '${_labelRole(role)} • $creeLe' : _labelRole(role),
-                  style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF334155)),
+                  creeLe != null ? '${_labelRole(role)} · $creeLe' : _labelRole(role),
+                  style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          SSMBadge(
-            label: actif ? 'ACTIF' : 'INACTIF',
-            couleur: actif ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-          ),
+          SSMPill.couleur(label: actif ? 'Actif' : 'Inactif', couleur: actif ? SSMPalette.teal : SSMPalette.rouge),
         ],
       ),
     );
@@ -472,18 +461,18 @@ class _GestionUtilisateursScreenState
     final total = directeur + enseignant + censeur + secretaire;
 
     if (total == 0) {
-      return Center(child: Text('Aucune donnée', style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))));
+      return Center(child: Text('Aucune donnée', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)));
     }
 
     return PieChart(
       PieChartData(
         sectionsSpace: 2,
-        centerSpaceRadius: 40,
+        centerSpaceRadius: 38,
         sections: [
-          if (directeur > 0)  PieChartSectionData(value: directeur.toDouble(),  color: const Color(0xFF1E3A8A), showTitle: false, radius: 24),
-          if (enseignant > 0) PieChartSectionData(value: enseignant.toDouble(), color: const Color(0xFF0D9488), showTitle: false, radius: 24),
-          if (censeur > 0)    PieChartSectionData(value: censeur.toDouble(),    color: const Color(0xFFD97706), showTitle: false, radius: 24),
-          if (secretaire > 0) PieChartSectionData(value: secretaire.toDouble(), color: const Color(0xFF7C3AED), showTitle: false, radius: 24),
+          if (directeur > 0)  PieChartSectionData(value: directeur.toDouble(),  color: _couleurRole('directeur'),  showTitle: false, radius: 22),
+          if (enseignant > 0) PieChartSectionData(value: enseignant.toDouble(), color: _couleurRole('enseignant'), showTitle: false, radius: 22),
+          if (censeur > 0)    PieChartSectionData(value: censeur.toDouble(),    color: _couleurRole('censeur'),    showTitle: false, radius: 22),
+          if (secretaire > 0) PieChartSectionData(value: secretaire.toDouble(), color: _couleurRole('secretaire'), showTitle: false, radius: 22),
         ],
       ),
     );
@@ -493,9 +482,9 @@ class _GestionUtilisateursScreenState
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 10, height: 10, decoration: BoxDecoration(color: couleur, shape: BoxShape.circle)),
+        Container(width: 9, height: 9, decoration: BoxDecoration(color: couleur, shape: BoxShape.circle)),
         const SizedBox(width: 6),
-        Text(label, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
+        Text(label, style: GoogleFonts.inter(fontSize: 11.5, color: SSMPalette.texte2)),
       ],
     );
   }
@@ -506,74 +495,88 @@ class _GestionUtilisateursScreenState
 
   Widget _ongletListe() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-          child: _barreRecherche(),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: _chipsFiltres(),
+        _barreRecherche(),
+        const SizedBox(height: 10),
+        SizedBox(height: 36, child: _chipsFiltres()),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(child: _dropdownTri()),
+            const SizedBox(width: 8),
+          ],
         ),
         const SizedBox(height: 10),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            children: [
-              Expanded(child: _dropdownTri()),
-              const SizedBox(width: 12),
-              _boutonsExport(),
-            ],
-          ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SSMQuickActionButton(
+              icone: Icons.person_add_alt_1,
+              label: 'Ajouter',
+              variante: SSMActionVariante.primaire,
+              onTap: () => _afficherDialogUtilisateur(),
+            ),
+            SSMQuickActionButton(
+              icone: Icons.picture_as_pdf,
+              label: 'PDF',
+              variante: SSMActionVariante.gris,
+              onTap: _exporterPdf,
+            ),
+            SSMQuickActionButton(
+              icone: Icons.table_chart,
+              label: 'Excel',
+              variante: SSMActionVariante.teal,
+              onTap: _exporterExcel,
+            ),
+            SSMQuickActionButton(
+              icone: Icons.upload_file,
+              label: 'Importer',
+              variante: SSMActionVariante.ambre,
+              onTap: _importerExcel,
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: _chargementListe
-              ? const Center(child: CircularProgressIndicator())
-              : _utilisateurs.isEmpty
-                  ? Center(child: Text('Aucun utilisateur trouvé', style: GoogleFonts.inter(color: const Color(0xFF334155))))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _utilisateurs.length,
-                      itemBuilder: (context, index) =>
-                          _carteUtilisateur(_utilisateurs[index] as Map<String, dynamic>),
-                    ),
-        ),
+        const SizedBox(height: 16),
+        if (_chargementListe)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 60),
+            child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+          )
+        else if (_utilisateurs.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: Text('Aucun utilisateur trouvé', style: GoogleFonts.inter(color: SSMPalette.texte3))),
+          )
+        else
+          LayoutBuilder(builder: (context, contraintes) {
+            return contraintes.maxWidth >= 760 ? _tableUtilisateurs() : _listeCartes();
+          }),
+        const SizedBox(height: 12),
         _paginationBar(),
       ],
     );
   }
 
   Widget _barreRecherche() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(50),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(50),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.search, size: 18, color: const Color(0xFF334155).withValues(alpha: 0.6)),
-              const SizedBox(width: 8),
-              Expanded(
-                child: TextField(
-                  onChanged: _onRechercheChangee,
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher...',
-                    border: InputBorder.none,
-                    isDense: true,
-                    hintStyle: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF334155).withValues(alpha: 0.5)),
-                  ),
-                  style: GoogleFonts.inter(fontSize: 14),
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: TextField(
+        onChanged: _onRechercheChangee,
+        style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+        decoration: InputDecoration(
+          hintText: 'Rechercher un utilisateur...',
+          hintStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
+          prefixIcon: const Icon(Icons.search, size: 18, color: SSMPalette.texte3),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
@@ -607,11 +610,9 @@ class _GestionUtilisateursScreenState
       }),
     ];
 
-    return SingleChildScrollView(
+    return ListView(
       scrollDirection: Axis.horizontal,
-      child: Row(
-        children: chips.map((c) => Padding(padding: const EdgeInsets.only(right: 8), child: c)).toList(),
-      ),
+      children: chips.map((c) => Padding(padding: const EdgeInsets.only(right: 8), child: c)).toList(),
     );
   }
 
@@ -619,17 +620,18 @@ class _GestionUtilisateursScreenState
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
         decoration: BoxDecoration(
-          color: selectionne ? const Color(0xFF1E3A8A) : Colors.white.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(50),
+          color: selectionne ? SSMPalette.indigo : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(SSMRayons.pilule),
         ),
+        alignment: Alignment.center,
         child: Text(
           label,
           style: GoogleFonts.inter(
-            fontSize: 13,
+            fontSize: 12.5,
             fontWeight: FontWeight.w600,
-            color: selectionne ? Colors.white : const Color(0xFF334155),
+            color: selectionne ? Colors.white : SSMPalette.texte2,
           ),
         ),
       ),
@@ -637,67 +639,35 @@ class _GestionUtilisateursScreenState
   }
 
   Widget _dropdownTri() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(50),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(50),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: _tri,
-              isDense: true,
-              isExpanded: true,
-              icon: const Icon(Icons.sort, size: 18),
-              items: _labelsTri.entries
-                  .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, style: GoogleFonts.inter(fontSize: 13))))
-                  .toList(),
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _tri = v);
-                _chargerListe();
-              },
-            ),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _tri,
+          isDense: true,
+          isExpanded: true,
+          icon: const Icon(Icons.sort, size: 18, color: SSMPalette.texte3),
+          style: GoogleFonts.inter(fontSize: 12.5, color: SSMPalette.texte1),
+          items: _labelsTri.entries
+              .map((e) => DropdownMenuItem(value: e.key, child: Text('Trier par : ${e.value}')))
+              .toList(),
+          onChanged: (v) {
+            if (v == null) return;
+            setState(() => _tri = v);
+            _chargerListe();
+          },
         ),
       ),
     );
   }
 
-  Widget _boutonsExport() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.picture_as_pdf),
-          color: const Color(0xFFDC2626),
-          tooltip: 'Exporter PDF',
-          onPressed: _exporterPdf,
-        ),
-        IconButton(
-          icon: const Icon(Icons.table_chart),
-          color: const Color(0xFF16A34A),
-          tooltip: 'Exporter Excel',
-          onPressed: _exporterExcel,
-        ),
-        IconButton(
-          icon: const Icon(Icons.upload_file),
-          color: const Color(0xFFD97706),
-          tooltip: 'Importer',
-          onPressed: _importerExcel,
-        ),
-      ],
-    );
-  }
-
   Future<void> _exporterPdf() async {
     try {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Génération du PDF...')));
       final chemin = await UtilisateurService.exporterPdf(role: _filtreRole, actif: _filtreActif);
       await OpenFile.open(chemin);
     } catch (e) {
@@ -707,7 +677,6 @@ class _GestionUtilisateursScreenState
 
   Future<void> _exporterExcel() async {
     try {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Génération du fichier Excel...')));
       final chemin = await UtilisateurService.exporterExcel(role: _filtreRole);
       await OpenFile.open(chemin);
     } catch (e) {
@@ -723,7 +692,6 @@ class _GestionUtilisateursScreenState
     if (resultat == null || resultat.files.single.path == null) return;
 
     try {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Import en cours...')));
       final fichier = File(resultat.files.single.path!);
       final rapport = await UtilisateurService.importerExcel(fichier);
       final crees   = (rapport['crees']   as List?)?.length ?? 0;
@@ -737,6 +705,56 @@ class _GestionUtilisateursScreenState
     }
   }
 
+  // ── Vue desktop large : tableau ──
+  Widget _tableUtilisateurs() {
+    return SSMDataTable(
+      colonnes: const [
+        SSMDataColumn(''),
+        SSMDataColumn('Utilisateur'),
+        SSMDataColumn('Rôle'),
+        SSMDataColumn('Statut'),
+        SSMDataColumn('Actions'),
+      ],
+      onLigneTap: (i) => _ouvrirFiche(_utilisateurs[i] as Map<String, dynamic>),
+      lignes: [
+        for (final u in _utilisateurs) _ligneUtilisateur(u as Map<String, dynamic>),
+      ],
+    );
+  }
+
+  List<Widget> _ligneUtilisateur(Map<String, dynamic> u) {
+    final role       = u['role'] as String;
+    final actif      = u['actif'] == true;
+    final nomComplet = '${u['name']} ${u['prenom'] ?? ''}'.trim();
+    final photoUrl   = u['photo_url'] as String?;
+    final couleur    = _couleurRole(role);
+
+    return [
+      SSMAvatar(nom: nomComplet, photoUrl: photoUrl, couleur: couleur, rayon: 16),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(nomComplet, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          const SizedBox(height: 2),
+          Text(u['email'] as String, style: GoogleFonts.inter(fontSize: 10.5, color: SSMPalette.texte3)),
+        ],
+      ),
+      SSMPill.couleur(label: _labelRole(role), couleur: couleur),
+      SSMPill.couleur(label: actif ? 'Actif' : 'Inactif', couleur: actif ? SSMPalette.teal : SSMPalette.rouge),
+      PopupMenuButton<String>(
+        icon: const Icon(Icons.more_vert, size: 18, color: SSMPalette.texte3),
+        onSelected: (valeur) => _gererActionMenu(valeur, u),
+        itemBuilder: (context) => _entreesMenuAction(role, actif),
+      ),
+    ];
+  }
+
+  // ── Vue mobile/étroite : cartes ──
+  Widget _listeCartes() {
+    return Column(children: _utilisateurs.map((u) => _carteUtilisateur(u as Map<String, dynamic>)).toList());
+  }
+
   Widget _carteUtilisateur(Map<String, dynamic> u) {
     final role       = u['role'] as String;
     final actif      = u['actif'] == true;
@@ -744,138 +762,108 @@ class _GestionUtilisateursScreenState
     final photoUrl   = u['photo_url'] as String?;
     final couleur    = _couleurRole(role);
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => FicheUtilisateurScreen(userId: u['id'] as int),
-        ),
-      ).then((_) {
-        _chargerListe(page: _pageActuelle);
-        _chargerApercu();
-      }),
-      child: Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.65),
-              border: Border(
-                top:    BorderSide(color: Colors.white.withValues(alpha: 0.7)),
-                right:  BorderSide(color: Colors.white.withValues(alpha: 0.7)),
-                bottom: BorderSide(color: Colors.white.withValues(alpha: 0.7)),
-                left:   BorderSide(color: couleur, width: 4),
-              ),
-              boxShadow: [
-                BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 6)),
-              ],
+    return Material(
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => _ouvrirFiche(u),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border(
+              top: BorderSide(color: SSMPalette.bordure),
+              right: BorderSide(color: SSMPalette.bordure),
+              bottom: BorderSide(color: SSMPalette.bordure),
+              left: BorderSide(color: couleur, width: 3),
             ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [couleur, couleur.withValues(alpha: 0.7)]),
-                    image: photoUrl != null
-                        ? DecorationImage(image: NetworkImage(photoUrl), fit: BoxFit.cover)
-                        : null,
-                  ),
-                  alignment: Alignment.center,
-                  child: photoUrl == null
-                      ? Text(
-                          (u['name'] as String).isNotEmpty ? (u['name'] as String).substring(0, 1).toUpperCase() : '?',
-                          style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(nomComplet, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
-                      if (u['fonction'] != null) ...[
-                        const SizedBox(height: 2),
-                        Text(u['fonction'] as String, style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155))),
-                      ],
-                      const SizedBox(height: 2),
-                      Text(u['email'] as String, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
-                      if (u['telephone'] != null) ...[
-                        const SizedBox(height: 2),
-                        Text(u['telephone'] as String, style: GoogleFonts.inter(fontSize: 11, color: const Color(0xFF94A3B8))),
-                      ],
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SSMAvatar(nom: nomComplet, photoUrl: photoUrl, couleur: couleur, rayon: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Text(nomComplet, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                    if (u['fonction'] != null)
+                      Text(u['fonction'] as String, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+                    Text(u['email'] as String, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+                    const SizedBox(height: 4),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
                       children: [
-                        SSMBadge(label: _labelRole(role), couleur: couleur),
-                        const SizedBox(width: 6),
-                        SSMBadge(
-                          label: actif ? 'ACTIF' : 'INACTIF',
-                          couleur: actif ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                        ),
-                      ],
-                    ),
-                    PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert, size: 20, color: Color(0xFF334155)),
-                      onSelected: (valeur) => _gererActionMenu(valeur, u),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'modifier',
-                          child: Row(children: [
-                            Icon(Icons.edit, color: Color(0xFF1E3A8A), size: 18),
-                            SizedBox(width: 8),
-                            Text('Modifier'),
-                          ]),
-                        ),
-                        if (role == 'enseignant')
-                          const PopupMenuItem(
-                            value: 'affectations',
-                            child: Row(children: [
-                              Icon(Icons.assignment, color: Color(0xFF0D9488), size: 18),
-                              SizedBox(width: 8),
-                              Text('Voir affectations'),
-                            ]),
-                          ),
-                        const PopupMenuItem(
-                          value: 'reset',
-                          child: Row(children: [
-                            Icon(Icons.lock_reset, color: Colors.orange, size: 18),
-                            SizedBox(width: 8),
-                            Text('Réinitialiser mot de passe'),
-                          ]),
-                        ),
-                        PopupMenuItem(
-                          value: actif ? 'desactiver' : 'reactiver',
-                          child: Row(children: [
-                            Icon(actif ? Icons.block : Icons.check_circle,
-                                color: actif ? const Color(0xFFDC2626) : const Color(0xFF16A34A), size: 18),
-                            const SizedBox(width: 8),
-                            Text(actif ? 'Désactiver' : 'Réactiver'),
-                          ]),
-                        ),
+                        SSMPill.couleur(label: _labelRole(role), couleur: couleur),
+                        SSMPill.couleur(label: actif ? 'Actif' : 'Inactif', couleur: actif ? SSMPalette.teal : SSMPalette.rouge),
                       ],
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 20, color: SSMPalette.texte3),
+                onSelected: (valeur) => _gererActionMenu(valeur, u),
+                itemBuilder: (context) => _entreesMenuAction(role, actif),
+              ),
+            ],
           ),
         ),
       ),
-      ),
     );
+  }
+
+  void _ouvrirFiche(Map<String, dynamic> u) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => FicheUtilisateurScreen(userId: u['id'] as int)),
+    ).then((_) {
+      _chargerListe(page: _pageActuelle);
+      _chargerApercu();
+    });
+  }
+
+  List<PopupMenuEntry<String>> _entreesMenuAction(String role, bool actif) {
+    return [
+      const PopupMenuItem(
+        value: 'modifier',
+        child: Row(children: [
+          Icon(Icons.edit, color: SSMPalette.indigo, size: 18),
+          SizedBox(width: 8),
+          Text('Modifier'),
+        ]),
+      ),
+      if (role == 'enseignant')
+        const PopupMenuItem(
+          value: 'affectations',
+          child: Row(children: [
+            Icon(Icons.assignment, color: SSMPalette.teal, size: 18),
+            SizedBox(width: 8),
+            Text('Voir affectations'),
+          ]),
+        ),
+      const PopupMenuItem(
+        value: 'reset',
+        child: Row(children: [
+          Icon(Icons.lock_reset, color: SSMPalette.ambre, size: 18),
+          SizedBox(width: 8),
+          Text('Réinitialiser mot de passe'),
+        ]),
+      ),
+      PopupMenuItem(
+        value: actif ? 'desactiver' : 'reactiver',
+        child: Row(children: [
+          Icon(actif ? Icons.block : Icons.check_circle,
+              color: actif ? SSMPalette.rouge : SSMPalette.teal, size: 18),
+          const SizedBox(width: 8),
+          Text(actif ? 'Désactiver' : 'Réactiver'),
+        ]),
+      ),
+    ];
   }
 
   Future<void> _gererActionMenu(String action, Map<String, dynamic> u) async {
@@ -917,20 +905,21 @@ class _GestionUtilisateursScreenState
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
         title: Row(
           children: [
-            const Icon(Icons.warning_amber, color: Color(0xFFD97706)),
+            const Icon(Icons.warning_amber, color: SSMPalette.ambre),
             const SizedBox(width: 8),
-            Expanded(child: Text('Désactiver $nom ?', style: GoogleFonts.sora(fontWeight: FontWeight.w700))),
+            Expanded(child: Text('Désactiver $nom ?', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: SSMPalette.indigo))),
           ],
         ),
-        content: Text('Cet utilisateur ne pourra plus se connecter.', style: GoogleFonts.inter()),
+        content: Text('Cet utilisateur ne pourra plus se connecter.', style: GoogleFonts.inter(color: SSMPalette.texte2)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
             child: const Text('Désactiver'),
           ),
         ],
@@ -966,37 +955,38 @@ class _GestionUtilisateursScreenState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (succesCreation) ...[
-              const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 64),
+              const Icon(Icons.check_circle, color: SSMPalette.teal, size: 56),
               const SizedBox(height: 12),
               Text('Compte créé avec succès !',
-                  style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                  style: GoogleFonts.sora(fontSize: 17, fontWeight: FontWeight.w700, color: SSMPalette.indigo), textAlign: TextAlign.center),
               const SizedBox(height: 16),
             ] else
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: Text(titre, style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700), textAlign: TextAlign.center),
+                child: Text(titre, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo), textAlign: TextAlign.center),
               ),
-            Text('Mot de passe temporaire :', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
+            Text('Mot de passe temporaire :', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(SSMRayons.moyen), border: Border.all(color: SSMPalette.bordure)),
               alignment: Alignment.center,
               child: Text(
                 motDePasse,
-                style: GoogleFonts.jetBrainsMono(fontSize: 24, fontWeight: FontWeight.w700, color: const Color(0xFF1E3A8A)),
+                style: GoogleFonts.jetBrainsMono(fontSize: 22, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Communiquez ce mot de passe à l\'utilisateur.',
-              style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155)),
+              "Communiquez ce mot de passe à l'utilisateur.",
+              style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1006,14 +996,16 @@ class _GestionUtilisateursScreenState
           TextButton.icon(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: motDePasse));
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mot de passe copié')));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Mot de passe copié')),
+              );
             },
             icon: const Icon(Icons.copy, size: 16),
             label: const Text('Copier'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1E3A8A), foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
             child: const Text('Fermer'),
           ),
         ],
@@ -1022,34 +1014,49 @@ class _GestionUtilisateursScreenState
   }
 
   Widget _paginationBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.6),
-        border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.8))),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          TextButton.icon(
-            onPressed: _pageActuelle > 1 ? () => _chargerListe(page: _pageActuelle - 1) : null,
-            icon: const Icon(Icons.chevron_left),
-            label: const Text('Précédent'),
-          ),
-          Text('Page $_pageActuelle sur $_dernierePage', style: GoogleFonts.inter(fontSize: 13, color: const Color(0xFF334155))),
-          TextButton.icon(
-            onPressed: _pageActuelle < _dernierePage ? () => _chargerListe(page: _pageActuelle + 1) : null,
-            label: const Text('Suivant'),
-            icon: const Icon(Icons.chevron_right),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        TextButton(
+          onPressed: _pageActuelle > 1 ? () => _chargerListe(page: _pageActuelle - 1) : null,
+          child: const Text('< Précédent'),
+        ),
+        const SizedBox(width: 8),
+        Text('Page $_pageActuelle sur $_dernierePage', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3)),
+        const SizedBox(width: 8),
+        TextButton(
+          onPressed: _pageActuelle < _dernierePage ? () => _chargerListe(page: _pageActuelle + 1) : null,
+          child: const Text('Suivant >'),
+        ),
+      ],
     );
   }
 
   // ══════════════════════════════════════════════════════
   // DIALOG CRÉER / MODIFIER UN UTILISATEUR
   // ══════════════════════════════════════════════════════
+
+  InputDecoration _decorationChamp(String label, {IconData? icone}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      prefixIcon: icone != null ? Icon(icone, size: 19, color: SSMPalette.texte3) : null,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+      ),
+    );
+  }
 
   Future<void> _afficherDialogUtilisateur({Map<String, dynamic>? utilisateurExistant}) async {
     final modification = utilisateurExistant != null;
@@ -1070,7 +1077,8 @@ class _GestionUtilisateursScreenState
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
               child: Padding(
@@ -1081,10 +1089,10 @@ class _GestionUtilisateursScreenState
                   children: [
                     Text(
                       modification ? "Modifier l'utilisateur" : 'Nouvel utilisateur',
-                      style: GoogleFonts.sora(fontSize: 20, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                     ),
                     const SizedBox(height: 16),
-                    Expanded(
+                    Flexible(
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1105,14 +1113,14 @@ class _GestionUtilisateursScreenState
                                   children: [
                                     CircleAvatar(
                                       radius: 44,
-                                      backgroundColor: const Color(0xFF1E3A8A).withValues(alpha: 0.15),
+                                      backgroundColor: SSMPalette.indigo.withValues(alpha: 0.15),
                                       backgroundImage: photo != null
                                           ? FileImage(photo!)
                                           : (photoUrlExistante != null
                                               ? NetworkImage(photoUrlExistante) as ImageProvider
                                               : null),
                                       child: (photo == null && photoUrlExistante == null)
-                                          ? const Icon(Icons.person, size: 40, color: Color(0xFF1E3A8A))
+                                          ? Icon(Icons.person, size: 40, color: SSMPalette.indigo)
                                           : null,
                                     ),
                                     Positioned(
@@ -1120,7 +1128,7 @@ class _GestionUtilisateursScreenState
                                       bottom: 0,
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
-                                        decoration: const BoxDecoration(color: Color(0xFFD97706), shape: BoxShape.circle),
+                                        decoration: const BoxDecoration(color: SSMPalette.ambre, shape: BoxShape.circle),
                                         child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
                                       ),
                                     ),
@@ -1129,19 +1137,13 @@ class _GestionUtilisateursScreenState
                               ),
                             ),
                             const SizedBox(height: 20),
-                            TextField(
-                              controller: nomController,
-                              decoration: const InputDecoration(labelText: 'Nom *', prefixIcon: Icon(Icons.person)),
-                            ),
+                            TextField(controller: nomController, decoration: _decorationChamp('Nom *', icone: Icons.person)),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: prenomController,
-                              decoration: const InputDecoration(labelText: 'Prénom *', prefixIcon: Icon(Icons.person_outline)),
-                            ),
+                            TextField(controller: prenomController, decoration: _decorationChamp('Prénom *', icone: Icons.person_outline)),
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                Text('Sexe :', style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF334155))),
+                                Text('Sexe :', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
                                 const SizedBox(width: 12),
                                 SegmentedButton<String>(
                                   segments: const [
@@ -1158,28 +1160,22 @@ class _GestionUtilisateursScreenState
                             TextField(
                               controller: emailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(labelText: 'Email *', prefixIcon: Icon(Icons.email)),
+                              decoration: _decorationChamp('Email *', icone: Icons.email_outlined),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: telephoneController,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(labelText: 'Téléphone', prefixIcon: Icon(Icons.phone)),
+                              decoration: _decorationChamp('Téléphone', icone: Icons.phone_outlined),
                             ),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: adresseController,
-                              decoration: const InputDecoration(labelText: 'Adresse', prefixIcon: Icon(Icons.location_on)),
-                            ),
+                            TextField(controller: adresseController, decoration: _decorationChamp('Adresse', icone: Icons.location_on_outlined)),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: fonctionController,
-                              decoration: const InputDecoration(labelText: 'Fonction', prefixIcon: Icon(Icons.work)),
-                            ),
+                            TextField(controller: fonctionController, decoration: _decorationChamp('Fonction', icone: Icons.work_outline)),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
-                              value: role,
-                              decoration: const InputDecoration(labelText: 'Rôle *', prefixIcon: Icon(Icons.badge)),
+                              initialValue: role,
+                              decoration: _decorationChamp('Rôle *', icone: Icons.badge_outlined),
                               items: const [
                                 DropdownMenuItem(value: 'enseignant', child: Text('Enseignant')),
                                 DropdownMenuItem(value: 'censeur', child: Text('Censeur')),
@@ -1195,15 +1191,20 @@ class _GestionUtilisateursScreenState
                     Row(
                       children: [
                         Expanded(
-                          child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
+                          ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E3A8A),
+                              backgroundColor: SSMPalette.indigo,
                               foregroundColor: Colors.white,
+                              elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                             ),
                             onPressed: () async {
                               if (nomController.text.isEmpty ||
@@ -1273,4 +1274,13 @@ class _GestionUtilisateursScreenState
     adresseController.dispose();
     fonctionController.dispose();
   }
+}
+
+class _CarteStat {
+  final String label;
+  final String valeur;
+  final IconData icone;
+  final Color couleur;
+
+  const _CarteStat(this.label, this.valeur, this.icone, this.couleur);
 }

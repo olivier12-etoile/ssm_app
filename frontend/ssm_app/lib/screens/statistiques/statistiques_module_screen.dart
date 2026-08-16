@@ -356,6 +356,13 @@ class _StatistiquesModuleScreenState extends State<StatistiquesModuleScreen> {
         ),
         const SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
       ]),
+      if (_utilisateur?.role == 'directeur')
+        const SSMNavSection(titre: 'Administration', items: [
+          SSMNavItem(icone: Icons.people_alt_outlined, label: 'Utilisateurs', route: '/directeur/utilisateurs'),
+          SSMNavItem(icone: Icons.class_outlined, label: 'Classes', route: '/directeur/classes'),
+          SSMNavItem(icone: Icons.menu_book_outlined, label: 'Matières', route: '/directeur/matieres'),
+          SSMNavItem(icone: Icons.calendar_month_outlined, label: 'Années & Périodes', route: '/directeur/annees'),
+        ]),
     ];
   }
 
@@ -502,7 +509,7 @@ class _StatistiquesModuleScreenState extends State<StatistiquesModuleScreen> {
           crossAxisCount: colonnes,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          mainAxisExtent: 128,
+          mainAxisExtent: 168,
         ),
         itemBuilder: (context, i) => cartes[i],
       );

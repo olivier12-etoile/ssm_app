@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -12,8 +11,45 @@ import '../../services/classe_matiere_service.dart';
 import '../../services/affectation_service.dart';
 import '../../services/matiere_service.dart';
 import '../../services/utilisateur_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
+import '../../widgets/ssm_widgets.dart' show SSMSectionTitre;
 import 'fiche_utilisateur_screen.dart';
+
+ButtonStyle _stylePrimaire(Color couleur) => ElevatedButton.styleFrom(
+      backgroundColor: couleur,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+    );
+
+InputDecoration _decorationChamp(String label, {bool dense = false, IconData? icone}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    prefixIcon: icone != null ? Icon(icone, color: SSMPalette.texte3) : null,
+    isDense: dense,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
 
 const List<Map<String, dynamic>> _grilleHoraire = [
   {'debut': '07:00', 'fin': '08:00', 'recreation': false},
@@ -267,20 +303,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   }
 
   void _afficherErreur(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFFDC2626),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF16A34A),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -331,22 +363,29 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     return DefaultTabController(
       length: 6,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
-        extendBodyBehindAppBar: true,
+        backgroundColor: SSMPalette.fond,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: SSMPalette.blanc,
+          foregroundColor: SSMPalette.texte2,
           elevation: 0,
-          iconTheme: const IconThemeData(color: Colors.white),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-            onPressed: () => Navigator.pop(context),
+          surfaceTintColor: Colors.transparent,
+          iconTheme: const IconThemeData(color: SSMPalette.texte2),
+          title: Text(
+            _classe?['nom'] as String? ?? 'Fiche classe',
+            style: GoogleFonts.sora(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: SSMPalette.indigo,
+            ),
           ),
         ),
         body: _chargement || _classe == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(color: SSMPalette.indigo),
+              )
             : NestedScrollView(
                 headerSliverBuilder: (context, innerBoxIsScrolled) => [
-                  SliverToBoxAdapter(child: _heroHeader(context)),
+                  SliverToBoxAdapter(child: _carteEnTeteClasse(context)),
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: _TabBarDelegate(_tabBar()),
@@ -368,10 +407,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   }
 
   // ══════════════════════════════════════════════════════
-  // EN-TÊTE HERO
+  // EN-TÊTE — carte d'identité de la classe
   // ══════════════════════════════════════════════════════
 
-  Widget _heroHeader(BuildContext context) {
+  Widget _carteEnTeteClasse(BuildContext context) {
     final classe = _classe!;
     final nom = classe['nom'] as String;
     final niveau = classe['niveau'] as String? ?? '';
@@ -390,47 +429,61 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(
-        24,
-        MediaQuery.of(context).padding.top + kToolbarHeight,
-        24,
-        24,
-      ),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            nom,
-            style: GoogleFonts.sora(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
+          Row(
             children: [
-              _badgeBlanc(niveau),
-              if (serie != null) _badgeBlanc(serie),
-              if (salle != null) _badgeBlanc(salle),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: SSMPalette.indigo.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(SSMRayons.grand),
+                ),
+                child: const Icon(Icons.class_, color: SSMPalette.indigo),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      nom,
+                      style: GoogleFonts.sora(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: SSMPalette.texte1,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        SSMPill.couleur(label: niveau, couleur: SSMPalette.indigo),
+                        if (serie != null) SSMPill.couleur(label: serie, couleur: SSMPalette.teal),
+                        if (salle != null) SSMPill.couleur(label: salle, couleur: SSMPalette.texte2),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: _statHero(Icons.people, '$nombreEleves élèves')),
-              Expanded(
-                child: _statHero(Icons.book, '$nombreMatieres matières'),
-              ),
-              Expanded(child: _statHero(Icons.school, '$nombreProfs profs')),
+              Expanded(child: _statEnTete(Icons.people_outline, '$nombreEleves élèves')),
+              Expanded(child: _statEnTete(Icons.menu_book_outlined, '$nombreMatieres matières')),
+              Expanded(child: _statEnTete(Icons.school_outlined, '$nombreProfs profs')),
             ],
           ),
           const SizedBox(height: 12),
@@ -439,53 +492,33 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             child: LinearProgressIndicator(
               value: pourcentage,
               minHeight: 6,
-              backgroundColor: Colors.white.withValues(alpha: 0.2),
-              color: Colors.white,
+              backgroundColor: SSMPalette.bordure,
+              color: pourcentage >= 1
+                  ? SSMPalette.rouge
+                  : pourcentage >= 0.8
+                  ? SSMPalette.ambre
+                  : SSMPalette.teal,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            '$nombreEleves / $capaciteMax',
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: Colors.white.withValues(alpha: 0.7),
-            ),
+            '$nombreEleves / $capaciteMax places',
+            style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3),
           ),
         ],
       ),
     );
   }
 
-  Widget _badgeBlanc(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          color: Colors.white,
-        ),
-      ),
-    );
-  }
-
-  Widget _statHero(IconData icone, String label) {
+  Widget _statEnTete(IconData icone, String label) {
     return Row(
       children: [
-        Icon(icone, size: 15, color: Colors.white.withValues(alpha: 0.8)),
+        Icon(icone, size: 15, color: SSMPalette.texte3),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
+            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -494,39 +527,35 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   }
 
   Widget _tabBar() {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          color: Colors.white.withValues(alpha: 0.95),
-          child: TabBar(
-            isScrollable: true,
-            labelColor: const Color(0xFF1E3A8A),
-            unselectedLabelColor: const Color(0xFF94A3B8),
-            indicatorColor: const Color(0xFFD97706),
-            labelStyle: GoogleFonts.inter(
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+    return Container(
+      color: SSMPalette.blanc,
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: SSMPalette.bordure)),
+      ),
+      child: TabBar(
+        isScrollable: true,
+        labelColor: SSMPalette.indigo,
+        unselectedLabelColor: SSMPalette.texte3,
+        indicatorColor: SSMPalette.ambre,
+        labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13),
+        unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w400, fontSize: 13),
+        tabs: const [
+          Tab(text: '📋 Infos'),
+          Tab(text: '👥 Élèves'),
+          Tab(text: '👨‍🏫 Profs'),
+          Tab(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.menu_book, size: 16),
+                SizedBox(width: 6),
+                Text('Matières & Profs'),
+              ],
             ),
-            tabs: const [
-              Tab(text: '📋 Infos'),
-              Tab(text: '👥 Élèves'),
-              Tab(text: '👨‍🏫 Profs'),
-              Tab(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.menu_book, size: 16),
-                    SizedBox(width: 6),
-                    Text('Matières & Profs'),
-                  ],
-                ),
-              ),
-              Tab(text: '📅 EDT'),
-              Tab(text: '📊 Stats'),
-            ],
           ),
-        ),
+          Tab(text: '📅 EDT'),
+          Tab(text: '📊 Stats'),
+        ],
       ),
     );
   }
@@ -536,15 +565,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: child,
     );
@@ -569,16 +592,17 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
     return RefreshIndicator(
       onRefresh: _chargerTout,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          _carteGlass(
+          SSMPanel(
+            titre: 'Informations générales',
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ligneInfo(Icons.class_, 'Nom', classe['nom'] as String),
+                _ligneInfo(Icons.class_outlined, 'Nom', classe['nom'] as String),
                 _ligneInfo(
-                  Icons.layers,
+                  Icons.layers_outlined,
                   'Niveau',
                   classe['niveau'] as String? ?? '—',
                 ),
@@ -588,137 +612,97 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   classe['serie'] as String? ?? '—',
                 ),
                 _ligneInfo(
-                  Icons.room,
+                  Icons.room_outlined,
                   'Salle',
                   classe['salle'] as String? ?? '—',
+                  dernier: true,
                 ),
               ],
             ),
           ),
-          _carteGlass(
+          const SizedBox(height: 16),
+          SSMPanel(
+            titre: 'Capacité',
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Capacité',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(height: 6),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
                     value: pourcentage,
                     minHeight: 8,
-                    backgroundColor: const Color(0xFFF1F5F9),
+                    backgroundColor: SSMPalette.bordure,
                     color: pourcentage >= 1
-                        ? const Color(0xFFDC2626)
+                        ? SSMPalette.rouge
                         : pourcentage >= 0.8
-                        ? const Color(0xFFEA580C)
-                        : const Color(0xFF16A34A),
+                        ? SSMPalette.ambre
+                        : SSMPalette.teal,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   '$nombreEleves / $capaciteMax élèves',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF334155),
-                  ),
+                  style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
                 ),
               ],
             ),
           ),
-          _carteGlass(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Professeur principal',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: const Color(0xFF94A3B8),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                if (prof != null)
-                  Row(
+          const SizedBox(height: 16),
+          SSMPanel(
+            titre: 'Professeur principal',
+            child: prof != null
+                ? Row(
                     children: [
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: const Color(
-                          0xFF1E3A8A,
-                        ).withValues(alpha: 0.15),
-                        backgroundImage: prof['photo_url'] != null
-                            ? NetworkImage(prof['photo_url'] as String)
-                            : null,
-                        child: prof['photo_url'] == null
-                            ? Text(
-                                (prof['name'] as String)
-                                    .substring(0, 1)
-                                    .toUpperCase(),
-                                style: GoogleFonts.sora(
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1E3A8A),
-                                ),
-                              )
-                            : null,
+                      SSMAvatar(
+                        nom: prof['name'] as String,
+                        photoUrl: prof['photo_url'] as String?,
+                        rayon: 18,
                       ),
                       const SizedBox(width: 10),
                       Text(
                         prof['name'] as String,
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                       ),
                     ],
                   )
-                else
-                  Text(
+                : Text(
                     'Non défini',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      color: const Color(0xFF94A3B8),
-                    ),
+                    style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte3),
                   ),
-              ],
-            ),
           ),
-          _carteGlass(
+          const SizedBox(height: 16),
+          SSMPanel(
+            titre: 'Autres informations',
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _ligneInfo(
-                  Icons.calendar_month,
+                  Icons.calendar_month_outlined,
                   'Année académique',
                   annee?['libelle'] as String? ?? '—',
                 ),
-                _ligneInfo(Icons.event, 'Créée le', createdAt ?? '—'),
+                _ligneInfo(Icons.event_outlined, 'Créée le', createdAt ?? '—'),
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.info_outline,
-                        size: 16,
-                        color: Color(0xFF94A3B8),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Statut : ',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          color: const Color(0xFF334155),
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: SSMPalette.texte3.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(9),
                         ),
+                        child: const Icon(Icons.info_outline, size: 17, color: SSMPalette.texte3),
                       ),
-                      SSMBadge(
-                        label: actif ? 'ACTIVE' : 'INACTIVE',
-                        couleur: actif
-                            ? const Color(0xFF16A34A)
-                            : const Color(0xFF94A3B8),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Statut',
+                        style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3),
+                      ),
+                      const Spacer(),
+                      SSMPill.couleur(
+                        label: actif ? 'Active' : 'Inactive',
+                        couleur: actif ? SSMPalette.teal : SSMPalette.texte3,
                       ),
                     ],
                   ),
@@ -726,17 +710,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: _afficherDialogModifierClasse,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF1E3A8A),
-                    side: const BorderSide(color: Color(0xFF1E3A8A)),
-                  ),
-                  icon: const Icon(Icons.edit, size: 16),
+                  icon: const Icon(Icons.edit_outlined, size: 16),
                   label: const Text('Modifier'),
                 ),
               ),
@@ -746,8 +726,8 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     ? OutlinedButton.icon(
                         onPressed: _archiverClasse,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFDC2626),
-                          side: const BorderSide(color: Color(0xFFDC2626)),
+                          foregroundColor: SSMPalette.rouge,
+                          side: const BorderSide(color: SSMPalette.rouge),
                         ),
                         icon: const Icon(Icons.archive_outlined, size: 16),
                         label: const Text('Archiver'),
@@ -755,8 +735,8 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     : OutlinedButton.icon(
                         onPressed: _activerClasse,
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF16A34A),
-                          side: const BorderSide(color: Color(0xFF16A34A)),
+                          foregroundColor: SSMPalette.teal,
+                          side: const BorderSide(color: SSMPalette.teal),
                         ),
                         icon: const Icon(Icons.check_circle_outline, size: 16),
                         label: const Text('Activer'),
@@ -770,27 +750,34 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     );
   }
 
-  Widget _ligneInfo(IconData icone, String label, String valeur) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+  Widget _ligneInfo(IconData icone, String label, String valeur, {bool dernier = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: dernier ? null : const Border(bottom: BorderSide(color: SSMPalette.bordure)),
+      ),
       child: Row(
         children: [
-          Icon(icone, size: 16, color: const Color(0xFF94A3B8)),
-          const SizedBox(width: 10),
-          Text(
-            '$label : ',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: const Color(0xFF334155),
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: SSMPalette.indigo.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
             ),
+            child: Icon(icone, size: 17, color: SSMPalette.indigo),
           ),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              valeur,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+                Text(
+                  valeur,
+                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                ),
+              ],
             ),
           ),
         ],
@@ -840,8 +827,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         builder: (context, setStateDialog) {
           return Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
             ),
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 500, maxHeight: 640),
               child: Padding(
@@ -853,8 +841,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     Text(
                       'Modifier la classe',
                       style: GoogleFonts.sora(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
+                        color: SSMPalette.indigo,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -865,18 +854,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           children: [
                             TextField(
                               controller: nomController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nom *',
-                                prefixIcon: Icon(Icons.class_),
-                              ),
+                              decoration: _decorationChamp('Nom *', icone: Icons.class_outlined),
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<String>(
                               value: _niveaux.contains(niveau) ? niveau : null,
-                              decoration: const InputDecoration(
-                                labelText: 'Niveau *',
-                                prefixIcon: Icon(Icons.layers),
-                              ),
+                              decoration: _decorationChamp('Niveau *', icone: Icons.layers_outlined),
                               items: _niveaux
                                   .map(
                                     (n) => DropdownMenuItem(
@@ -891,37 +874,33 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                             const SizedBox(height: 12),
                             TextField(
                               controller: serieController,
-                              decoration: const InputDecoration(
-                                labelText: 'Série',
-                                prefixIcon: Icon(Icons.bookmark_outline),
-                              ),
+                              decoration: _decorationChamp('Série', icone: Icons.bookmark_outline),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: salleController,
-                              decoration: const InputDecoration(
-                                labelText: 'Salle',
-                                prefixIcon: Icon(Icons.room),
-                              ),
+                              decoration: _decorationChamp('Salle', icone: Icons.room_outlined),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: capaciteController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Capacité max *',
-                                prefixIcon: Icon(Icons.people),
-                              ),
+                              decoration: _decorationChamp('Capacité max *', icone: Icons.people_outline),
                             ),
                             const SizedBox(height: 12),
                             Row(
                               children: [
                                 Text(
                                   'Statut :',
-                                  style: GoogleFonts.inter(fontSize: 14),
+                                  style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte2),
                                 ),
                                 const SizedBox(width: 12),
                                 SegmentedButton<String>(
+                                  style: SegmentedButton.styleFrom(
+                                    selectedBackgroundColor: SSMPalette.indigo,
+                                    selectedForegroundColor: Colors.white,
+                                    foregroundColor: SSMPalette.texte2,
+                                  ),
                                   segments: const [
                                     ButtonSegment(
                                       value: 'active',
@@ -942,10 +921,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                             DropdownButtonFormField<int>(
                               value: professeurPrincipalId,
                               isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Professeur principal',
-                                prefixIcon: Icon(Icons.school),
-                              ),
+                              decoration: _decorationChamp('Professeur principal', icone: Icons.school_outlined),
                               hint: const Text('Aucun'),
                               items: _tousEnseignants
                                   .map(
@@ -969,16 +945,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E3A8A),
-                              foregroundColor: Colors.white,
-                            ),
+                            style: _stylePrimaire(SSMPalette.indigo),
                             onPressed: () async {
                               try {
                                 await ClasseService.modifier(
@@ -1038,48 +1011,43 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   Widget _tabEleves() {
     return RefreshIndicator(
       onRefresh: _chargerTout,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           Text(
             '${_eleves.length} élève(s) inscrit(s)',
-            style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700),
+            style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
           ),
           const SizedBox(height: 16),
           _sectionPresence(),
           const SizedBox(height: 16),
           TextField(
             onChanged: (v) => setState(() => _rechercheEleve = v),
-            decoration: const InputDecoration(
-              labelText: 'Rechercher un élève',
-              prefixIcon: Icon(Icons.search),
-            ),
+            decoration: _decorationChamp('Rechercher un élève', icone: Icons.search),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              ElevatedButton.icon(
-                onPressed: _afficherDialogAjouterEleve,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1E3A8A),
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.person_add, size: 16),
-                label: const Text('Ajouter un élève'),
+              SSMQuickActionButton(
+                icone: Icons.person_add_alt_1,
+                label: 'Ajouter un élève',
+                variante: SSMActionVariante.primaire,
+                onTap: _afficherDialogAjouterEleve,
               ),
-              ElevatedButton.icon(
-                onPressed: () => _afficherDialogTransfert(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0D9488),
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.compare_arrows, size: 16),
-                label: const Text('Transférer'),
+              SSMQuickActionButton(
+                icone: Icons.compare_arrows,
+                label: 'Transférer',
+                variante: SSMActionVariante.teal,
+                onTap: () => _afficherDialogTransfert(),
               ),
-              ElevatedButton.icon(
-                onPressed: () async {
+              SSMQuickActionButton(
+                icone: Icons.picture_as_pdf,
+                label: 'Imprimer liste',
+                variante: SSMActionVariante.rouge,
+                onTap: () async {
                   try {
                     final chemin = await ClasseService.exporterPdf(
                       widget.classeId,
@@ -1089,15 +1057,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFDC2626),
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.picture_as_pdf, size: 16),
-                label: const Text('Imprimer liste'),
               ),
-              ElevatedButton.icon(
-                onPressed: () async {
+              SSMQuickActionButton(
+                icone: Icons.table_chart,
+                label: 'Export Excel',
+                variante: SSMActionVariante.gris,
+                onTap: () async {
                   try {
                     final chemin = await ClasseService.exporterExcel(
                       widget.classeId,
@@ -1107,12 +1072,6 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  foregroundColor: Colors.white,
-                ),
-                icon: const Icon(Icons.table_chart, size: 16),
-                label: const Text('Export Excel'),
               ),
             ],
           ),
@@ -1123,7 +1082,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               child: Center(
                 child: Text(
                   'Aucun élève',
-                  style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                  style: GoogleFonts.inter(color: SSMPalette.texte3),
                 ),
               ),
             )
@@ -1151,7 +1110,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           children: [
             const Icon(
               Icons.calendar_today,
-              color: Color(0xFF1E3A8A),
+              color: SSMPalette.indigo,
               size: 18,
             ),
             const SizedBox(width: 8),
@@ -1160,7 +1119,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                 'Présence du ${_formatDateAffichee(_dateSelectionnee)}',
                 style: GoogleFonts.inter(
                   fontSize: 13,
-                  color: const Color(0xFF334155),
+                  color: SSMPalette.texte2,
                 ),
               ),
             ),
@@ -1170,112 +1129,106 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                 'Changer',
                 style: GoogleFonts.inter(
                   fontSize: 12,
-                  color: const Color(0xFF1E3A8A),
+                  color: SSMPalette.indigo,
                 ),
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: _chargementPresences
-                  ? const Center(
-                      child: SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: SSMPalette.blanc,
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: SSMPalette.bordure),
+          ),
+          child: _chargementPresences
+              ? const Center(
+                  child: SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo),
+                  ),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: SSMPalette.tealClair,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.check_circle,
+                                color: SSMPalette.teal,
+                                size: 16,
                               ),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF16A34A,
-                                ).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$nombrePresents présents',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: SSMPalette.teal,
+                                ),
                               ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.check_circle,
-                                    color: Color(0xFF16A34A),
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '$nombrePresents présents',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF166534),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFFDC2626,
-                                ).withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.cancel,
-                                    color: Color(0xFFDC2626),
-                                    size: 16,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '$nombreAbsents absents',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: const Color(0xFF991B1B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                        Text(
-                          '$nombreNonMarques non marqués',
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: nombreNonMarques > 0
-                                ? const Color(0xFFEA580C)
-                                : const Color(0xFF94A3B8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: SSMPalette.rougeClair,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.cancel,
+                                color: SSMPalette.rouge,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$nombreAbsents absents',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: SSMPalette.rouge,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-            ),
-          ),
+                    Text(
+                      '$nombreNonMarques non marqués',
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        color: nombreNonMarques > 0
+                            ? SSMPalette.ambre
+                            : SSMPalette.texte3,
+                      ),
+                    ),
+                  ],
+                ),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -1283,12 +1236,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           child: ElevatedButton.icon(
             onPressed: auMoinsUnMarque ? _enregistrerPresence : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
+              backgroundColor: SSMPalette.indigo,
               foregroundColor: Colors.white,
+              elevation: 0,
               padding: const EdgeInsets.symmetric(vertical: 14),
-              disabledBackgroundColor: const Color(
-                0xFF1E3A8A,
-              ).withValues(alpha: 0.3),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+              disabledBackgroundColor: SSMPalette.indigo.withValues(alpha: 0.3),
             ),
             icon: const Icon(Icons.save, size: 18),
             label: const Text('Enregistrer la présence'),
@@ -1305,107 +1258,87 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     final eleveId = eleve['id'] as int;
     final presence = _presences[eleveId];
     final couleurBordure = presence == 'present'
-        ? const Color(0xFF16A34A)
+        ? SSMPalette.teal
         : presence == 'absent'
-        ? const Color(0xFFDC2626)
-        : const Color(0xFF94A3B8);
+        ? SSMPalette.rouge
+        : SSMPalette.bordure;
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(12),
-            border: Border(left: BorderSide(color: couleurBordure, width: 4)),
-          ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: const Color(
-                  0xFF1E3A8A,
-                ).withValues(alpha: 0.15),
-                backgroundImage: photoUrl != null
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: photoUrl == null
-                    ? Text(
-                        (eleve['nom'] as String).substring(0, 1).toUpperCase(),
-                        style: GoogleFonts.sora(
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1E3A8A),
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border(
+          top: BorderSide(color: SSMPalette.bordure),
+          right: BorderSide(color: SSMPalette.bordure),
+          bottom: BorderSide(color: SSMPalette.bordure),
+          left: BorderSide(color: couleurBordure, width: 4),
+        ),
+      ),
+      child: Row(
+        children: [
+          SSMAvatar(nom: eleve['nom'] as String? ?? '?', photoUrl: photoUrl, sexe: sexe, rayon: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${eleve['nom']} ${eleve['prenom']}',
+                  style: GoogleFonts.sora(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: SSMPalette.texte1,
+                  ),
+                ),
+                Text(
+                  'Matricule: ${eleve['matricule']}',
+                  style: GoogleFonts.jetBrainsMono(
+                    fontSize: 11,
+                    color: SSMPalette.texte3,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '${eleve['nom']} ${eleve['prenom']}',
-                      style: GoogleFonts.sora(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Icon(
+                      sexe == 'M' ? Icons.boy : Icons.girl,
+                      color: sexe == 'M' ? SSMPalette.indigo : SSMPalette.teal,
+                      size: 16,
                     ),
-                    Text(
-                      'Matricule: ${eleve['matricule']}',
-                      style: GoogleFonts.jetBrainsMono(
-                        fontSize: 11,
-                        color: const Color(0xFF94A3B8),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          sexe == 'M' ? Icons.boy : Icons.girl,
-                          color: sexe == 'M'
-                              ? const Color(0xFF0284C7)
-                              : const Color(0xFFEC4899),
-                          size: 16,
-                        ),
-                        if (statut != null) ...[
-                          const SizedBox(width: 6),
-                          SSMBadge(
-                            label: statut.toUpperCase(),
-                            couleur: const Color(0xFF16A34A),
-                          ),
-                        ],
-                      ],
-                    ),
+                    if (statut != null) ...[
+                      const SizedBox(width: 6),
+                      SSMPill.couleur(label: statut, couleur: SSMPalette.teal),
+                    ],
                   ],
                 ),
-              ),
-              _boutonPresence(
-                eleveId: eleveId,
-                etat: 'present',
-                actif: presence == 'present',
-                icone: Icons.check,
-                couleur: const Color(0xFF16A34A),
-              ),
-              const SizedBox(width: 8),
-              _boutonPresence(
-                eleveId: eleveId,
-                etat: 'absent',
-                actif: presence == 'absent',
-                icone: Icons.close,
-                couleur: const Color(0xFFDC2626),
-              ),
-              PopupMenuButton<String>(
-                icon: const Icon(
-                  Icons.more_vert,
-                  size: 20,
-                  color: Color(0xFF334155),
-                ),
-                onSelected: (action) {
+              ],
+            ),
+          ),
+          _boutonPresence(
+            eleveId: eleveId,
+            etat: 'present',
+            actif: presence == 'present',
+            icone: Icons.check,
+            couleur: SSMPalette.teal,
+          ),
+          const SizedBox(width: 8),
+          _boutonPresence(
+            eleveId: eleveId,
+            etat: 'absent',
+            actif: presence == 'absent',
+            icone: Icons.close,
+            couleur: SSMPalette.rouge,
+          ),
+          PopupMenuButton<String>(
+            icon: const Icon(
+              Icons.more_vert,
+              size: 20,
+              color: SSMPalette.texte2,
+            ),
+            onSelected: (action) {
                   switch (action) {
                     case 'fiche':
                       Navigator.pushNamed(
@@ -1432,9 +1365,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               ),
             ],
           ),
-        ),
-      ),
-    );
+        );
   }
 
   Widget _boutonPresence({
@@ -1478,58 +1409,89 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
-            title: const Text('Ajouter un élève'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nomController,
-                  decoration: const InputDecoration(labelText: 'Nom'),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: prenomController,
-                  decoration: const InputDecoration(labelText: 'Prénom'),
-                ),
-                const SizedBox(height: 12),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(value: 'M', label: Text('M')),
-                    ButtonSegment(value: 'F', label: Text('F')),
-                  ],
-                  selected: {sexe},
-                  onSelectionChanged: (s) =>
-                      setStateDialog(() => sexe = s.first),
-                ),
-                const SizedBox(height: 12),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.cake),
-                  title: Text(
-                    dateNaissance != null
-                        ? '${dateNaissance!.day}/${dateNaissance!.month}/${dateNaissance!.year}'
-                        : 'Date de naissance',
+            backgroundColor: SSMPalette.blanc,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            title: Text(
+              'Ajouter un élève',
+              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+            ),
+            content: SizedBox(
+              width: 380,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nomController,
+                    decoration: _decorationChamp('Nom'),
                   ),
-                  onTap: () async {
-                    final choisie = await showDatePicker(
-                      context: context,
-                      initialDate: DateTime(2015),
-                      firstDate: DateTime(1995),
-                      lastDate: DateTime.now(),
-                    );
-                    if (choisie != null) {
-                      setStateDialog(() => dateNaissance = choisie);
-                    }
-                  },
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: prenomController,
+                    decoration: _decorationChamp('Prénom'),
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<String>(
+                    style: SegmentedButton.styleFrom(
+                      selectedBackgroundColor: SSMPalette.indigo,
+                      selectedForegroundColor: Colors.white,
+                      foregroundColor: SSMPalette.texte2,
+                    ),
+                    segments: const [
+                      ButtonSegment(value: 'M', label: Text('M')),
+                      ButtonSegment(value: 'F', label: Text('F')),
+                    ],
+                    selected: {sexe},
+                    onSelectionChanged: (s) =>
+                        setStateDialog(() => sexe = s.first),
+                  ),
+                  const SizedBox(height: 12),
+                  Material(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                      onTap: () async {
+                        final choisie = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime(2015),
+                          firstDate: DateTime(1995),
+                          lastDate: DateTime.now(),
+                        );
+                        if (choisie != null) {
+                          setStateDialog(() => dateNaissance = choisie);
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.cake_outlined, size: 19, color: SSMPalette.texte3),
+                            const SizedBox(width: 10),
+                            Text(
+                              dateNaissance != null
+                                  ? '${dateNaissance!.day}/${dateNaissance!.month}/${dateNaissance!.year}'
+                                  : 'Date de naissance',
+                              style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
               ),
               ElevatedButton(
+                style: _stylePrimaire(SSMPalette.indigo),
                 onPressed: () async {
                   if (nomController.text.isEmpty ||
                       prenomController.text.isEmpty ||
@@ -1573,52 +1535,59 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
-            title: const Text('Transférer un élève'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (eleveIdPreselectionne == null)
+            backgroundColor: SSMPalette.blanc,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            title: Text(
+              'Transférer un élève',
+              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+            ),
+            content: SizedBox(
+              width: 380,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (eleveIdPreselectionne == null)
+                    DropdownButtonFormField<int>(
+                      value: eleveId,
+                      isExpanded: true,
+                      decoration: _decorationChamp('Élève'),
+                      items: _eleves
+                          .map(
+                            (e) => DropdownMenuItem<int>(
+                              value: e['id'] as int,
+                              child: Text('${e['nom']} ${e['prenom']}'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (v) => setStateDialog(() => eleveId = v),
+                    ),
+                  const SizedBox(height: 12),
                   DropdownButtonFormField<int>(
-                    value: eleveId,
+                    value: classeDestinationId,
                     isExpanded: true,
-                    decoration: const InputDecoration(labelText: 'Élève'),
-                    items: _eleves
+                    decoration: _decorationChamp('Classe de destination'),
+                    items: _toutesClasses
+                        .where((c) => c['id'] != widget.classeId)
                         .map(
-                          (e) => DropdownMenuItem<int>(
-                            value: e['id'] as int,
-                            child: Text('${e['nom']} ${e['prenom']}'),
+                          (c) => DropdownMenuItem<int>(
+                            value: c['id'] as int,
+                            child: Text(c['nom'] as String),
                           ),
                         )
                         .toList(),
-                    onChanged: (v) => setStateDialog(() => eleveId = v),
+                    onChanged: (v) =>
+                        setStateDialog(() => classeDestinationId = v),
                   ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<int>(
-                  value: classeDestinationId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Classe de destination',
-                  ),
-                  items: _toutesClasses
-                      .where((c) => c['id'] != widget.classeId)
-                      .map(
-                        (c) => DropdownMenuItem<int>(
-                          value: c['id'] as int,
-                          child: Text(c['nom'] as String),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) =>
-                      setStateDialog(() => classeDestinationId = v),
-                ),
-              ],
+                ],
+              ),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
               ),
               ElevatedButton(
+                style: _stylePrimaire(SSMPalette.teal),
                 onPressed: eleveId == null || classeDestinationId == null
                     ? null
                     : () async {
@@ -1667,6 +1636,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
     return RefreshIndicator(
       onRefresh: _chargerTout,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -1674,42 +1644,25 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFD97706).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0xFFD97706).withValues(alpha: 0.3),
-                ),
+                color: SSMPalette.ambreClair,
+                borderRadius: BorderRadius.circular(SSMRayons.grand),
+                border: Border.all(color: const Color(0xFFFDE68A)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SSMBadge(
+                  const SSMPill(
                     label: 'PROFESSEUR PRINCIPAL',
-                    couleur: Color(0xFFD97706),
+                    couleur: SSMPalette.ambre,
                   ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: const Color(
-                          0xFFD97706,
-                        ).withValues(alpha: 0.15),
-                        backgroundImage: prof['photo_url'] != null
-                            ? NetworkImage(prof['photo_url'] as String)
-                            : null,
-                        child: prof['photo_url'] == null
-                            ? Text(
-                                (prof['name'] as String)
-                                    .substring(0, 1)
-                                    .toUpperCase(),
-                                style: GoogleFonts.sora(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFFD97706),
-                                ),
-                              )
-                            : null,
+                      SSMAvatar(
+                        nom: prof['name'] as String,
+                        photoUrl: prof['photo_url'] as String?,
+                        couleur: SSMPalette.ambre,
+                        rayon: 28,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1721,6 +1674,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               style: GoogleFonts.sora(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
+                                color: SSMPalette.texte1,
                               ),
                             ),
                             if (matieresProfPrincipal.isNotEmpty)
@@ -1732,7 +1686,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                         '${m['matiere_nom']} ',
                                         style: GoogleFonts.inter(
                                           fontSize: 12,
-                                          color: const Color(0xFF334155),
+                                          color: SSMPalette.texte2,
                                         ),
                                       ),
                                     )
@@ -1753,7 +1707,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           if (_matieresParEnseignant.isEmpty)
             Text(
               'Aucun enseignant affecté',
-              style: GoogleFonts.inter(color: const Color(0xFF334155)),
+              style: GoogleFonts.inter(color: SSMPalette.texte2),
             )
           else
             ..._matieresParEnseignant.entries.map(
@@ -1765,8 +1719,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFEA580C).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                color: SSMPalette.ambreClair,
+                borderRadius: BorderRadius.circular(SSMRayons.grand),
+                border: Border.all(color: const Color(0xFFFDE68A)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1776,7 +1731,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     style: GoogleFonts.sora(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFFEA580C),
+                      color: SSMPalette.ambre,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -1788,7 +1743,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           Expanded(
                             child: Text(
                               m['matiere_nom'] as String,
-                              style: GoogleFonts.inter(fontSize: 13),
+                              style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
                             ),
                           ),
                           TextButton(
@@ -1796,7 +1751,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               m['matiere_id'] as int,
                               m['matiere_nom'] as String,
                             ),
-                            child: const Text('Affecter'),
+                            child: Text('Affecter', style: GoogleFonts.inter(color: SSMPalette.indigo)),
                           ),
                         ],
                       ),
@@ -1821,41 +1776,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: const Color(
-                  0xFF1E3A8A,
-                ).withValues(alpha: 0.15),
-                backgroundImage: photoUrl != null
-                    ? NetworkImage(photoUrl)
-                    : null,
-                child: photoUrl == null
-                    ? Text(
-                        (premiere['enseignant_nom'] as String)
-                            .substring(0, 1)
-                            .toUpperCase(),
-                        style: GoogleFonts.sora(
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF1E3A8A),
-                        ),
-                      )
-                    : null,
-              ),
+              SSMAvatar(nom: premiere['enseignant_nom'] as String, photoUrl: photoUrl, rayon: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
@@ -1863,6 +1793,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   style: GoogleFonts.sora(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
+                    color: SSMPalette.texte1,
                   ),
                 ),
               ),
@@ -1874,7 +1805,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         FicheUtilisateurScreen(userId: enseignantId),
                   ),
                 ),
-                child: const Text('Voir profil'),
+                child: Text('Voir profil', style: GoogleFonts.inter(color: SSMPalette.indigo)),
               ),
             ],
           ),
@@ -1884,22 +1815,11 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             runSpacing: 6,
             children: matieres.map((m) {
               final coef = m['coefficient'];
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0D9488).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  coef != null
-                      ? '${m['matiere_nom']} (coef $coef)'
-                      : '${m['matiere_nom']}',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0D9488),
-                  ),
-                ),
+              return SSMPill.couleur(
+                label: coef != null
+                    ? '${m['matiere_nom']} (coef $coef)'
+                    : '${m['matiere_nom']}',
+                couleur: SSMPalette.teal,
               );
             }).toList(),
           ),
@@ -1914,7 +1834,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   .join(' • '),
               style: GoogleFonts.inter(
                 fontSize: 11,
-                color: const Color(0xFF94A3B8),
+                color: SSMPalette.texte3,
               ),
             ),
           ],
@@ -1925,13 +1845,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.phone, size: 13, color: Color(0xFF1E3A8A)),
+                  const Icon(Icons.phone, size: 13, color: SSMPalette.indigo),
                   const SizedBox(width: 4),
                   Text(
                     telephone,
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFF1E3A8A),
+                      color: SSMPalette.indigo,
                     ),
                   ),
                 ],
@@ -1954,11 +1874,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
-            title: Text('Affecter — $matiereNom'),
+            backgroundColor: SSMPalette.blanc,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            title: Text(
+              'Affecter — $matiereNom',
+              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+            ),
             content: DropdownButtonFormField<int>(
               value: enseignantId,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Enseignant'),
+              decoration: _decorationChamp('Enseignant'),
               items: _tousEnseignants
                   .map(
                     (e) => DropdownMenuItem<int>(
@@ -1972,9 +1897,10 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
               ),
               ElevatedButton(
+                style: _stylePrimaire(SSMPalette.indigo),
                 onPressed: enseignantId == null
                     ? null
                     : () async {
@@ -2023,11 +1949,11 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
   }
 
   Color _couleurDepuisHex(String? hex) {
-    if (hex == null || hex.isEmpty) return const Color(0xFF1E3A8A);
+    if (hex == null || hex.isEmpty) return SSMPalette.indigo;
     try {
       return Color(int.parse(hex.replaceAll('#', '0xFF')));
     } catch (_) {
-      return const Color(0xFF1E3A8A);
+      return SSMPalette.indigo;
     }
   }
 
@@ -2040,34 +1966,36 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
     return RefreshIndicator(
       onRefresh: _chargerTout,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           Row(
             children: [
               Expanded(
-                child: _miniCardMatieres(
-                  '$nombreMatieres',
-                  'matières',
-                  const Color(0xFF1E3A8A),
+                child: SSMStatCard(
+                  icone: Icons.menu_book_outlined,
+                  couleur: SSMPalette.indigo,
+                  valeur: '$nombreMatieres',
+                  label: 'matières',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _miniCardMatieres(
-                  '$nombreAffectees',
-                  'affectées',
-                  const Color(0xFF0D9488),
+                child: SSMStatCard(
+                  icone: Icons.check_circle_outline,
+                  couleur: SSMPalette.teal,
+                  valeur: '$nombreAffectees',
+                  label: 'affectées',
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: _miniCardMatieres(
-                  '$nombreSansProf',
-                  'sans prof',
-                  nombreSansProf > 0
-                      ? const Color(0xFFEA580C)
-                      : const Color(0xFF94A3B8),
+                child: SSMStatCard(
+                  icone: Icons.warning_amber_outlined,
+                  couleur: nombreSansProf > 0 ? SSMPalette.ambre : SSMPalette.texte3,
+                  valeur: '$nombreSansProf',
+                  label: 'sans prof',
                 ),
               ),
             ],
@@ -2081,7 +2009,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               child: Center(
                 child: Text(
                   'Aucune matière configurée',
-                  style: GoogleFonts.inter(color: const Color(0xFF334155)),
+                  style: GoogleFonts.inter(color: SSMPalette.texte2),
                 ),
               ),
             )
@@ -2092,68 +2020,30 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     );
   }
 
-  Widget _miniCardMatieres(String valeur, String label, Color couleur) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Text(
-            valeur,
-            style: GoogleFonts.sora(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: couleur,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              color: const Color(0xFF334155),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _boutonAjouterMatiere() {
-    return GestureDetector(
-      onTap: _afficherDialogAjouterMatiere,
-      child: CustomPaint(
-        painter: _BordurePointilleePainter(
-          couleur: const Color(0xFF1E3A8A).withValues(alpha: 0.3),
-          rayon: 12,
-        ),
+    return Material(
+      color: SSMPalette.indigoClair,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: _afficherDialogAjouterMatiere,
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: const Color(0xFF1E3A8A).withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: SSMPalette.indigo.withValues(alpha: 0.3)),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.add_circle, color: Color(0xFF1E3A8A)),
+              const Icon(Icons.add_circle_outline, color: SSMPalette.indigo),
               const SizedBox(width: 8),
               Text(
                 'Ajouter une matière à cette classe',
                 style: GoogleFonts.inter(
                   fontSize: 14,
-                  color: const Color(0xFF1E3A8A),
+                  color: SSMPalette.indigo,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -2180,7 +2070,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
     return Material(
       color: Colors.transparent,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () => _ouvrirFicheMatiere(matiere, couleur),
@@ -2188,16 +2078,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.85),
-            borderRadius: BorderRadius.circular(14),
-            border: Border(left: BorderSide(color: couleur, width: 4)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            color: SSMPalette.blanc,
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border(
+              top: BorderSide(color: SSMPalette.bordure),
+              right: BorderSide(color: SSMPalette.bordure),
+              bottom: BorderSide(color: SSMPalette.bordure),
+              left: BorderSide(color: couleur, width: 4),
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -2223,7 +2111,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           style: GoogleFonts.sora(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0F172A),
+                            color: SSMPalette.texte1,
                           ),
                         ),
                         if (code != null && code.isNotEmpty)
@@ -2231,7 +2119,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                             code,
                             style: GoogleFonts.jetBrainsMono(
                               fontSize: 11,
-                              color: const Color(0xFF94A3B8),
+                              color: SSMPalette.texte3,
                             ),
                           ),
                       ],
@@ -2243,7 +2131,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E3A8A).withValues(alpha: 0.10),
+                      color: SSMPalette.indigoClair,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Column(
@@ -2252,7 +2140,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           'Coef.',
                           style: GoogleFonts.inter(
                             fontSize: 10,
-                            color: const Color(0xFF94A3B8),
+                            color: SSMPalette.texte3,
                           ),
                         ),
                         Text(
@@ -2260,7 +2148,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           style: GoogleFonts.sora(
                             fontSize: 18,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF1E3A8A),
+                            color: SSMPalette.indigo,
                           ),
                         ),
                       ],
@@ -2270,7 +2158,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     icon: const Icon(
                       Icons.edit_outlined,
                       size: 18,
-                      color: Color(0xFF1E3A8A),
+                      color: SSMPalette.indigo,
                     ),
                     tooltip: 'Modifier le coefficient',
                     onPressed: () =>
@@ -2278,7 +2166,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   ),
                 ],
               ),
-              const Divider(height: 20),
+              const Divider(height: 20, color: SSMPalette.bordure),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -2288,42 +2176,24 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         'Enseignant : ',
                         style: GoogleFonts.inter(
                           fontSize: 12,
-                          color: const Color(0xFF94A3B8),
+                          color: SSMPalette.texte3,
                         ),
                       ),
                       if (nomEnseignant != null) ...[
-                        CircleAvatar(
-                          radius: 14,
-                          backgroundColor: const Color(
-                            0xFF0D9488,
-                          ).withValues(alpha: 0.15),
-                          backgroundImage: photoEnseignant != null
-                              ? NetworkImage(photoEnseignant)
-                              : null,
-                          child: photoEnseignant == null
-                              ? Text(
-                                  nomEnseignant.substring(0, 1).toUpperCase(),
-                                  style: GoogleFonts.sora(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF0D9488),
-                                  ),
-                                )
-                              : null,
-                        ),
+                        SSMAvatar(nom: nomEnseignant, photoUrl: photoEnseignant, couleur: SSMPalette.teal, rayon: 14),
                         const SizedBox(width: 6),
                         Text(
                           nomEnseignant,
                           style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0D9488),
+                            color: SSMPalette.teal,
                           ),
                         ),
                       ] else ...[
                         const Icon(
                           Icons.warning_amber_outlined,
-                          color: Color(0xFFEA580C),
+                          color: SSMPalette.ambre,
                           size: 16,
                         ),
                         const SizedBox(width: 4),
@@ -2331,7 +2201,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           'Non affecté',
                           style: GoogleFonts.inter(
                             fontSize: 13,
-                            color: const Color(0xFFEA580C),
+                            color: SSMPalette.ambre,
                           ),
                         ),
                       ],
@@ -2343,7 +2213,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                       nomEnseignant != null ? 'Changer' : 'Affecter',
                       style: GoogleFonts.inter(
                         fontSize: 12,
-                        color: const Color(0xFF1E3A8A),
+                        color: SSMPalette.indigo,
                       ),
                     ),
                   ),
@@ -2355,14 +2225,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   onPressed: () => _confirmerRetraitMatiere(matiere),
                   icon: const Icon(
                     Icons.delete_outline,
-                    color: Color(0xFFDC2626),
+                    color: SSMPalette.rouge,
                     size: 16,
                   ),
                   label: Text(
                     'Retirer de la classe',
                     style: GoogleFonts.inter(
                       fontSize: 12,
-                      color: const Color(0xFFDC2626),
+                      color: SSMPalette.rouge,
                     ),
                   ),
                 ),
@@ -2406,8 +2276,8 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     await showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        backgroundColor: SSMPalette.blanc,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 380),
           child: Padding(
@@ -2421,7 +2291,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   style: GoogleFonts.sora(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: const Color(0xFF0F172A),
+                    color: SSMPalette.indigo,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -2430,20 +2300,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: InputDecoration(
-                    labelText: 'Coefficient',
-                    hintText: 'ex: 3, 4.5, 7',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
+                  decoration: _decorationChamp('Coefficient').copyWith(hintText: 'ex: 3, 4.5, 7'),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Ce coefficient est spécifique à $nomClasse',
                   style: GoogleFonts.inter(
                     fontSize: 12,
-                    color: const Color(0xFF94A3B8),
+                    color: SSMPalette.texte3,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -2452,20 +2316,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Annuler'),
+                        child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1E3A8A),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
+                        style: _stylePrimaire(SSMPalette.indigo),
                         onPressed: () async {
                           final coef = double.tryParse(
                             controller.text.replaceAll(',', '.'),
@@ -2517,9 +2374,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         builder: (context, setStateDialog) {
           return Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
             ),
-            backgroundColor: Colors.white,
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Padding(
@@ -2533,7 +2390,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                       style: GoogleFonts.sora(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0F172A),
+                        color: SSMPalette.indigo,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -2541,18 +2398,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                       nomClasse,
                       style: GoogleFonts.inter(
                         fontSize: 13,
-                        color: const Color(0xFF334155),
+                        color: SSMPalette.texte2,
                       ),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int?>(
                       value: enseignantId,
                       isExpanded: true,
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
+                      decoration: _decorationChamp('Enseignant'),
                       items: [
                         const DropdownMenuItem<int?>(
                           value: null,
@@ -2583,20 +2436,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E3A8A),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                            style: _stylePrimaire(SSMPalette.indigo),
                             onPressed: () async {
                               try {
                                 final ancienId =
@@ -2650,8 +2496,8 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        backgroundColor: SSMPalette.blanc,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
           child: Padding(
@@ -2661,7 +2507,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
               children: [
                 const Icon(
                   Icons.warning_amber_rounded,
-                  color: Color(0xFFD97706),
+                  color: SSMPalette.ambre,
                   size: 48,
                 ),
                 const SizedBox(height: 16),
@@ -2671,7 +2517,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   style: GoogleFonts.sora(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
+                    color: SSMPalette.texte1,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -2680,7 +2526,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
                     fontSize: 13,
-                    color: const Color(0xFF334155),
+                    color: SSMPalette.texte2,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -2689,20 +2535,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Annuler'),
+                        child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFDC2626),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
+                        style: _stylePrimaire(SSMPalette.rouge),
                         onPressed: () => Navigator.pop(context, true),
                         child: const Text('Retirer'),
                       ),
@@ -2749,9 +2588,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
           return Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
             ),
-            backgroundColor: Colors.white,
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460, maxHeight: 760),
               child: Padding(
@@ -2763,9 +2602,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     Text(
                       'Ajouter une matière',
                       style: GoogleFonts.sora(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
+                        color: SSMPalette.indigo,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -2778,22 +2617,20 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               'Nom de la matière *',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: const Color(0xFF334155),
+                                color: SSMPalette.texte2,
                               ),
                             ),
                             const SizedBox(height: 6),
                             TextField(
                               controller: nomController,
-                              decoration: InputDecoration(
+                              decoration: _decorationChamp('').copyWith(
+                                labelText: null,
                                 hintText: 'ex: Mathématiques, Français, SVT...',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
                               ),
                               style: GoogleFonts.sora(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: const Color(0xFF0F172A),
+                                color: SSMPalette.texte1,
                               ),
                               onChanged: (_) => setStateDialog(() {}),
                             ),
@@ -2813,18 +2650,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                         vertical: 6,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF1E3A8A,
-                                        ).withValues(alpha: 0.08),
+                                        color: SSMPalette.indigoClair,
                                         borderRadius: BorderRadius.circular(
-                                          999,
+                                          SSMRayons.pilule,
                                         ),
                                       ),
                                       child: Text(
                                         label,
                                         style: GoogleFonts.inter(
                                           fontSize: 11,
-                                          color: const Color(0xFF1E3A8A),
+                                          color: SSMPalette.indigo,
                                         ),
                                       ),
                                     ),
@@ -2840,16 +2675,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                       vertical: 6,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF94A3B8,
-                                      ).withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(999),
+                                      color: SSMPalette.texte3.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(SSMRayons.pilule),
                                     ),
                                     child: Text(
                                       '+ Autre',
                                       style: GoogleFonts.inter(
                                         fontSize: 11,
-                                        color: const Color(0xFF334155),
+                                        color: SSMPalette.texte2,
                                       ),
                                     ),
                                   ),
@@ -2861,18 +2694,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               'Code (optionnel)',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: const Color(0xFF334155),
+                                color: SSMPalette.texte2,
                               ),
                             ),
                             const SizedBox(height: 6),
                             TextField(
                               controller: codeController,
                               textCapitalization: TextCapitalization.words,
-                              decoration: InputDecoration(
+                              decoration: _decorationChamp('').copyWith(
+                                labelText: null,
                                 hintText: 'ex: MATH, FR, SVT',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
                               ),
                               style: GoogleFonts.jetBrainsMono(fontSize: 14),
                             ),
@@ -2881,7 +2712,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               'Couleur',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: const Color(0xFF334155),
+                                color: SSMPalette.texte2,
                               ),
                             ),
                             const SizedBox(height: 10),
@@ -2927,7 +2758,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               'Coefficient *',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: const Color(0xFF334155),
+                                color: SSMPalette.texte2,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -2937,11 +2768,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                   const TextInputType.numberWithOptions(
                                     decimal: true,
                                   ),
-                              decoration: InputDecoration(
+                              decoration: _decorationChamp('').copyWith(
+                                labelText: null,
                                 hintText: 'ex: 3, 4.5, 7',
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
                               ),
                               onChanged: (_) => setStateDialog(() {}),
                             ),
@@ -2950,14 +2779,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               'Enseignant responsable',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: const Color(0xFF334155),
+                                color: SSMPalette.texte2,
                               ),
                             ),
                             Text(
                               "(optionnel — peut être défini plus tard)",
                               style: GoogleFonts.inter(
                                 fontSize: 11,
-                                color: const Color(0xFF94A3B8),
+                                color: SSMPalette.texte3,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -2987,20 +2816,15 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                       return TextField(
                                         controller: controller,
                                         focusNode: focusNode,
-                                        decoration: InputDecoration(
-                                          hintText:
-                                              'Rechercher un enseignant...',
+                                        decoration: _decorationChamp('').copyWith(
+                                          labelText: null,
+                                          hintText: 'Rechercher un enseignant...',
                                           prefixIcon: const Icon(
                                             Icons.search,
-                                            color: Color(0xFF1E3A8A),
-                                          ),
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              10,
-                                            ),
+                                            color: SSMPalette.indigo,
                                           ),
                                         ),
-                                        style: GoogleFonts.inter(fontSize: 14),
+                                        style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
                                       );
                                     },
                                 optionsViewBuilder: (context, onSelected, options) {
@@ -3025,31 +2849,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                             final nomAffiche =
                                                 e['name'] as String;
                                             return ListTile(
-                                              leading: CircleAvatar(
-                                                radius: 18,
-                                                backgroundColor: const Color(
-                                                  0xFF0D9488,
-                                                ),
-                                                backgroundImage:
-                                                    photoUrl != null
-                                                    ? NetworkImage(photoUrl)
-                                                    : null,
-                                                child: photoUrl == null
-                                                    ? Text(
-                                                        nomAffiche.isNotEmpty
-                                                            ? nomAffiche[0]
-                                                            : '?',
-                                                        style: const TextStyle(
-                                                          color: Colors.white,
-                                                        ),
-                                                      )
-                                                    : null,
-                                              ),
+                                              leading: SSMAvatar(nom: nomAffiche, photoUrl: photoUrl, couleur: SSMPalette.teal, rayon: 18),
                                               title: Text(
                                                 '${e['name']} ${e['prenom'] ?? ''}',
                                                 style: GoogleFonts.sora(
                                                   fontWeight: FontWeight.w600,
                                                   fontSize: 14,
+                                                  color: SSMPalette.texte1,
                                                 ),
                                               ),
                                               subtitle: Text(
@@ -3058,6 +2864,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                                     '',
                                                 style: GoogleFonts.inter(
                                                   fontSize: 12,
+                                                  color: SSMPalette.texte2,
                                                 ),
                                               ),
                                               onTap: () => onSelected(e),
@@ -3077,43 +2884,16 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(10),
                                 decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF0D9488,
-                                  ).withValues(alpha: 0.08),
+                                  color: SSMPalette.tealClair,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Row(
                                   children: [
-                                    CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: const Color(
-                                        0xFF0D9488,
-                                      ).withValues(alpha: 0.2),
-                                      backgroundImage:
-                                          enseignantSelectionne!['photo_url'] !=
-                                              null
-                                          ? NetworkImage(
-                                              enseignantSelectionne!['photo_url']
-                                                  as String,
-                                            )
-                                          : null,
-                                      child:
-                                          enseignantSelectionne!['photo_url'] ==
-                                              null
-                                          ? Text(
-                                              (enseignantSelectionne!['name']
-                                                          as String)
-                                                      .isNotEmpty
-                                                  ? (enseignantSelectionne!['name']
-                                                            as String)[0]
-                                                        .toUpperCase()
-                                                  : '?',
-                                              style: GoogleFonts.sora(
-                                                fontWeight: FontWeight.w700,
-                                                color: const Color(0xFF0D9488),
-                                              ),
-                                            )
-                                          : null,
+                                    SSMAvatar(
+                                      nom: enseignantSelectionne!['name'] as String,
+                                      photoUrl: enseignantSelectionne!['photo_url'] as String?,
+                                      couleur: SSMPalette.teal,
+                                      rayon: 18,
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
@@ -3126,6 +2906,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                             style: GoogleFonts.inter(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
+                                              color: SSMPalette.texte1,
                                             ),
                                           ),
                                           Text(
@@ -3136,7 +2917,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                                 '',
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
-                                              color: const Color(0xFF334155),
+                                              color: SSMPalette.texte2,
                                             ),
                                           ),
                                         ],
@@ -3146,7 +2927,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                       icon: const Icon(
                                         Icons.close,
                                         size: 18,
-                                        color: Color(0xFF334155),
+                                        color: SSMPalette.texte2,
                                       ),
                                       onPressed: () => setStateDialog(() {
                                         enseignantSelectionne = null;
@@ -3161,9 +2942,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: const Color(
-                                    0xFF1E3A8A,
-                                  ).withValues(alpha: 0.06),
+                                  color: SSMPalette.indigoClair,
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Row(
@@ -3187,14 +2966,14 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                                             style: GoogleFonts.sora(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w600,
-                                              color: const Color(0xFF0F172A),
+                                              color: SSMPalette.texte1,
                                             ),
                                           ),
                                           Text(
                                             'Coefficient ${coef?.toStringAsFixed(1) ?? '—'} · ${enseignantSelectionne != null ? enseignantSelectionne!['name'] : 'Non affecté'}',
                                             style: GoogleFonts.inter(
                                               fontSize: 12,
-                                              color: const Color(0xFF334155),
+                                              color: SSMPalette.texte2,
                                             ),
                                           ),
                                         ],
@@ -3213,20 +2992,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E3A8A),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
+                            style: _stylePrimaire(SSMPalette.indigo),
                             onPressed: () async {
                               if (nom.length < 2) {
                                 _afficherErreur(
@@ -3305,165 +3077,162 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: const Color(0xFFF1F5F9),
-            borderRadius: BorderRadius.circular(10),
+            color: SSMPalette.indigoClair,
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, size: 18, color: Color(0xFF64748B)),
+              const Icon(Icons.info_outline, size: 18, color: SSMPalette.indigo),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Utilisez le module Emploi du Temps pour créer, modifier et exporter la grille de cette classe.',
-                  style: GoogleFonts.inter(fontSize: 12, color: const Color(0xFF334155)),
+                  style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1),
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(14),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-              ),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: 60 + (5 * 120),
-                  child: Column(
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: SSMPalette.blanc,
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: SSMPalette.bordure),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: 60 + (5 * 120),
+              child: Column(
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          const SizedBox(width: 60),
-                          ..._jours.map(
-                            (j) => Expanded(
-                              child: Center(
-                                child: Text(
-                                  j['label']!,
-                                  style: GoogleFonts.sora(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
+                      const SizedBox(width: 60),
+                      ..._jours.map(
+                        (j) => Expanded(
+                          child: Center(
+                            child: Text(
+                              j['label']!,
+                              style: GoogleFonts.sora(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: SSMPalette.texte1,
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      ..._grilleHoraire.map((row) {
-                        final debut = row['debut'] as String;
-                        final fin = row['fin'] as String;
-                        final recreation = row['recreation'] as bool;
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  ..._grilleHoraire.map((row) {
+                    final debut = row['debut'] as String;
+                    final fin = row['fin'] as String;
+                    final recreation = row['recreation'] as bool;
 
-                        if (recreation) {
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 2),
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.amber[100],
-                              borderRadius: BorderRadius.circular(6),
+                    if (recreation) {
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 2),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        decoration: BoxDecoration(
+                          color: SSMPalette.ambreClair,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '🔶 RÉCRÉATION',
+                            style: GoogleFonts.inter(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: SSMPalette.ambre,
                             ),
-                            child: Center(
-                              child: Text(
-                                '🔶 RÉCRÉATION',
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber[900],
+                          ),
+                        ),
+                      );
+                    }
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: 60,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 20),
+                            child: Text(
+                              '$debut\n$fin',
+                              style: GoogleFonts.inter(
+                                fontSize: 10,
+                                color: SSMPalette.texte3,
+                              ),
+                            ),
+                          ),
+                        ),
+                        ..._jours.map((j) {
+                          final c = _creneauPourCellule(j['cle']!, debut);
+                          return Expanded(
+                            child: GestureDetector(
+                              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Utilisez le module Emploi du Temps pour modifier cette grille.'),
                                 ),
+                              ),
+                              child: Container(
+                                height: 60,
+                                margin: const EdgeInsets.all(2),
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: c != null
+                                      ? _couleurMatiere(
+                                          c['matiere_id'] as int,
+                                        )
+                                      : SSMPalette.fond,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: c != null
+                                    ? Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            c['matiere_nom'] as String,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              color: SSMPalette.texte1,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            c['enseignant_nom'] as String,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 9,
+                                              color: SSMPalette.texte1,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      )
+                                    : Center(
+                                        child: Icon(
+                                          Icons.add,
+                                          size: 16,
+                                          color: SSMPalette.texte3,
+                                        ),
+                                      ),
                               ),
                             ),
                           );
-                        }
-
-                        return Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            SizedBox(
-                              width: 60,
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 20),
-                                child: Text(
-                                  '$debut\n$fin',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    color: const Color(0xFF94A3B8),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            ..._jours.map((j) {
-                              final c = _creneauPourCellule(j['cle']!, debut);
-                              return Expanded(
-                                child: GestureDetector(
-                                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Utilisez le module Emploi du Temps pour modifier cette grille.'),
-                                    ),
-                                  ),
-                                  child: Container(
-                                    height: 60,
-                                    margin: const EdgeInsets.all(2),
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: c != null
-                                          ? _couleurMatiere(
-                                              c['matiere_id'] as int,
-                                            )
-                                          : const Color(0xFFF1F5F9),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: c != null
-                                        ? Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                c['matiere_nom'] as String,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              Text(
-                                                c['enseignant_nom'] as String,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 9,
-                                                ),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          )
-                                        : const Center(
-                                            child: Icon(
-                                              Icons.add,
-                                              size: 16,
-                                              color: Colors.grey,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ],
-                        );
-                      }),
-                    ],
-                  ),
-                ),
+                        }),
+                      ],
+                    );
+                  }),
+                ],
               ),
             ),
           ),
@@ -3488,47 +3257,51 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
 
     return RefreshIndicator(
       onRefresh: _chargerTout,
+      color: SSMPalette.indigo,
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          GridView.count(
-            crossAxisCount: 2,
+          GridView.builder(
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              mainAxisExtent: 168,
+            ),
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 1.45,
-            children: [
-              _carteStatGrid(
-                'Effectif',
-                '${garcons + filles}',
-                'G: $garcons · F: $filles',
-                Icons.people,
-                const Color(0xFF1E3A8A),
+            itemCount: 4,
+            itemBuilder: (context, i) => [
+              SSMStatCard(
+                icone: Icons.people_outline,
+                couleur: SSMPalette.indigo,
+                valeur: '${garcons + filles}',
+                label: 'Effectif',
+                sousTexte: 'G: $garcons · F: $filles',
               ),
               _carteStatGraphMoyenne(moyenne),
               _carteStatProgression(
                 'Taux de réussite',
                 tauxReussite / 100,
                 '${tauxReussite.toStringAsFixed(0)}%',
-                const Color(0xFF16A34A),
+                SSMPalette.teal,
               ),
-              _carteStatGrid(
-                'Absences',
-                '$totalAbsences',
-                'total enregistrées',
-                Icons.event_busy,
-                const Color(0xFFEA580C),
+              SSMStatCard(
+                icone: Icons.event_busy_outlined,
+                couleur: SSMPalette.ambre,
+                valeur: '$totalAbsences',
+                label: 'Absences',
+                sousTexte: 'total enregistrées',
               ),
-            ],
+            ][i],
           ),
           const SizedBox(height: 16),
           _carteGlass(
             child: Row(
               children: [
                 const Icon(
-                  Icons.account_balance_wallet,
-                  color: Color(0xFF0D9488),
+                  Icons.account_balance_wallet_outlined,
+                  color: SSMPalette.teal,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -3536,7 +3309,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     'Total encaissé',
                     style: GoogleFonts.inter(
                       fontSize: 13,
-                      color: const Color(0xFF334155),
+                      color: SSMPalette.texte2,
                     ),
                   ),
                 ),
@@ -3545,7 +3318,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   style: GoogleFonts.sora(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0D9488),
+                    color: SSMPalette.teal,
                   ),
                 ),
               ],
@@ -3556,12 +3329,12 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF16A34A).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(12),
+                color: SSMPalette.tealClair,
+                borderRadius: BorderRadius.circular(SSMRayons.grand),
               ),
               child: Text(
                 'Aucun élève en difficulté 🎉',
-                style: GoogleFonts.inter(color: const Color(0xFF166534)),
+                style: GoogleFonts.inter(color: SSMPalette.teal),
               ),
             )
           else
@@ -3573,8 +3346,9 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
+                  color: SSMPalette.blanc,
+                  borderRadius: BorderRadius.circular(SSMRayons.grand),
+                  border: Border.all(color: SSMPalette.bordure),
                 ),
                 child: Row(
                   children: [
@@ -3584,12 +3358,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
+                          color: SSMPalette.texte1,
                         ),
                       ),
                     ),
-                    SSMBadge(
+                    SSMPill.couleur(
                       label: '${e['moyenne']}/20',
-                      couleur: const Color(0xFFDC2626),
+                      couleur: SSMPalette.rouge,
                     ),
                   ],
                 ),
@@ -3599,10 +3374,6 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1E3A8A),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
               onPressed: _voirLeClassement,
               icon: const Icon(Icons.emoji_events_outlined),
               label: const Text('Voir le classement'),
@@ -3649,64 +3420,6 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
     }
   }
 
-  Widget _carteStatGrid(
-    String label,
-    String valeur,
-    String sousLabel,
-    IconData icone,
-    Color couleur,
-  ) {
-    return _carteGlass(
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: couleur.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icone, color: couleur, size: 16),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            valeur,
-            style: GoogleFonts.sora(
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F172A),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            sousLabel,
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              color: const Color(0xFF94A3B8),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _carteStatGraphMoyenne(double? moyenne) {
     return _carteGlass(
       padding: const EdgeInsets.all(12),
@@ -3719,7 +3432,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
+              color: SSMPalette.texte2,
             ),
           ),
           const SizedBox(height: 4),
@@ -3730,7 +3443,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                       '—',
                       style: GoogleFonts.sora(
                         fontSize: 18,
-                        color: const Color(0xFF94A3B8),
+                        color: SSMPalette.texte3,
                       ),
                     ),
                   )
@@ -3748,13 +3461,13 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                               sections: [
                                 PieChartSectionData(
                                   value: moyenne,
-                                  color: const Color(0xFF1E3A8A),
+                                  color: SSMPalette.indigo,
                                   showTitle: false,
                                   radius: 11,
                                 ),
                                 PieChartSectionData(
                                   value: (20 - moyenne).clamp(0, 20),
-                                  color: const Color(0xFFF1F5F9),
+                                  color: SSMPalette.bordure,
                                   showTitle: false,
                                   radius: 11,
                                 ),
@@ -3767,6 +3480,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                           style: GoogleFonts.sora(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
+                            color: SSMPalette.texte1,
                           ),
                         ),
                       ],
@@ -3796,7 +3510,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF334155),
+              color: SSMPalette.texte2,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -3816,7 +3530,7 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
             child: LinearProgressIndicator(
               value: valeur.clamp(0.0, 1.0),
               minHeight: 6,
-              backgroundColor: const Color(0xFFF1F5F9),
+              backgroundColor: SSMPalette.bordure,
               color: couleur,
             ),
           ),
@@ -3824,48 +3538,6 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
       ),
     );
   }
-}
-
-class _BordurePointilleePainter extends CustomPainter {
-  final Color couleur;
-  final double rayon;
-
-  _BordurePointilleePainter({required this.couleur, this.rayon = 12});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final peinture = Paint()
-      ..color = couleur
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
-
-    final contour = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(rayon)),
-      );
-
-    const largeurTrait = 6.0;
-    const espace = 4.0;
-    final chemin = Path();
-
-    for (final metrique in contour.computeMetrics()) {
-      double distance = 0;
-      while (distance < metrique.length) {
-        final fin = (distance + largeurTrait).clamp(0, metrique.length);
-        chemin.addPath(
-          metrique.extractPath(distance, fin.toDouble()),
-          Offset.zero,
-        );
-        distance += largeurTrait + espace;
-      }
-    }
-
-    canvas.drawPath(chemin, peinture);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BordurePointilleePainter oldDelegate) =>
-      oldDelegate.couleur != couleur || oldDelegate.rayon != rayon;
 }
 
 class _TabBarDelegate extends SliverPersistentHeaderDelegate {

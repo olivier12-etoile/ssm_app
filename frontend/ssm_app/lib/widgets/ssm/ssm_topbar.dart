@@ -182,21 +182,14 @@ class SSMTopbar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   Widget _breadcrumbTexte() {
-    return Text.rich(
-      TextSpan(
-        style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
-        children: [
-          TextSpan(text: '$breadcrumb / '),
-          TextSpan(
-            text: breadcrumbActuel ?? '',
-            style: GoogleFonts.inter(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: SSMPalette.texte1,
-            ),
-          ),
-        ],
+    return Text(
+      breadcrumbActuel ?? breadcrumb,
+      style: GoogleFonts.inter(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: SSMPalette.texte1,
       ),
+      maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
   }

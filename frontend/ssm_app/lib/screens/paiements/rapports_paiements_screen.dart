@@ -573,7 +573,7 @@ class _RapportsPaiementsScreenState extends State<RapportsPaiementsScreen> {
           crossAxisCount: colonnes,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          mainAxisExtent: 118,
+          mainAxisExtent: 168,
         ),
         itemBuilder: (context, i) => cartes[i],
       );

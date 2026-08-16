@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/affectation_service.dart';
 import '../../services/classe_matiere_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_pill.dart';
 
 class AffectationsClasseScreen extends StatefulWidget {
   final int classeId;
@@ -51,19 +55,41 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge));
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.green));
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: SSMPalette.teal));
   }
 
   dynamic _affectationPourMatiere(int matiereId) {
     return _affectations.firstWhere(
       (a) => a['matiere_id'] == matiereId,
       orElse: () => null,
+    );
+  }
+
+  InputDecoration _decorationChamp(String label, {IconData? icone}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      prefixIcon: icone != null ? Icon(icone, size: 19, color: SSMPalette.texte3) : null,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+      ),
     );
   }
 
@@ -86,18 +112,19 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
-            title: Text('Affecter un enseignant — $matiereNom'),
+            backgroundColor: SSMPalette.blanc,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            title: Text(
+              'Affecter un enseignant — $matiereNom',
+              style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+            ),
             content: SizedBox(
               width: 400,
               child: DropdownButtonFormField<int>(
-                value: enseignantSelectionne,
+                initialValue: enseignantSelectionne,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Enseignant',
-                  prefixIcon: Icon(Icons.school),
-                  border: OutlineInputBorder(),
-                ),
-                hint: const Text('Choisir un enseignant'),
+                decoration: _decorationChamp('Enseignant', icone: Icons.school_outlined),
+                hint: Text('Choisir un enseignant', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3)),
                 items: _enseignants.map((e) {
                   return DropdownMenuItem<int>(
                     value: e['id'] as int,
@@ -111,12 +138,14 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Annuler'),
+                child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
+                  backgroundColor: SSMPalette.indigo,
                   foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                 ),
                 onPressed: enseignantSelectionne == null
                     ? null
@@ -156,19 +185,27 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Retirer l\'affectation'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text(
+          "Retirer l'affectation",
+          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+        ),
         content: Text(
           'Retirer ${affectation['enseignant_nom']} de "${affectation['matiere_nom']}" ?',
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: SSMPalette.rouge,
               foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
             ),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Retirer'),
@@ -191,12 +228,11 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: SSMPalette.fond,
       appBar: AppBar(
         title: Text(widget.classeNom),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -207,24 +243,25 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
         ],
       ),
       body: _chargement
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
           : _matieresClasse.isEmpty
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.book_outlined, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
+                  Icon(Icons.book_outlined, size: 56, color: SSMPalette.texte3),
+                  const SizedBox(height: 12),
                   Text(
                     'Aucune matière assignée à cette classe',
-                    style: TextStyle(color: Colors.grey),
+                    style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
                   ),
                 ],
               ),
             )
-          : ListView.builder(
+          : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _matieresClasse.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final matiere = _matieresClasse[index];
                 final matiereId = matiere['matiere_id'] as int;
@@ -232,70 +269,60 @@ class _AffectationsClasseScreenState extends State<AffectationsClasseScreen> {
                 final coefficient = matiere['coefficient'];
                 final affectation = _affectationPourMatiere(matiereId);
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: SSMPalette.blanc,
+                    borderRadius: BorderRadius.circular(SSMRayons.grand),
+                    border: Border.all(color: SSMPalette.bordure),
                   ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.indigo,
-                      child: Text(
-                        matiereNom.substring(0, 1),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
+                  child: Row(
+                    children: [
+                      SSMAvatar(nom: matiereNom, rayon: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              matiereNom,
+                              style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Text('Coef. $coefficient', style: GoogleFonts.inter(fontSize: 11.5, color: SSMPalette.texte3)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: affectation != null
+                                      ? Text(
+                                          affectation['enseignant_nom'] as String,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.inter(fontSize: 11.5, color: SSMPalette.texte2),
+                                        )
+                                      : const SSMPill.couleur(label: 'Non affecté', couleur: SSMPalette.ambre),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    title: Text(
-                      matiereNom,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Row(
-                      children: [
-                        Text('Coef. $coefficient'),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: affectation != null
-                              ? Text(
-                                  affectation['enseignant_nom'] as String,
-                                  overflow: TextOverflow.ellipsis,
-                                )
-                              : const Text(
-                                  'Non affecté',
-                                  style: TextStyle(
-                                    color: Colors.orange,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, color: SSMPalette.indigo),
+                        tooltip: "Affecter / changer l'enseignant",
+                        onPressed: () => _afficherDialogAffectation(
+                          matiereId,
+                          matiereNom,
+                          affectation,
                         ),
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
+                      ),
+                      if (affectation != null)
                         IconButton(
-                          icon: const Icon(Icons.edit, color: Colors.blue),
-                          tooltip: 'Affecter / changer l\'enseignant',
-                          onPressed: () => _afficherDialogAffectation(
-                            matiereId,
-                            matiereNom,
-                            affectation,
-                          ),
+                          icon: const Icon(Icons.delete_outline, color: SSMPalette.rouge),
+                          tooltip: "Retirer l'affectation",
+                          onPressed: () => _confirmerRetrait(affectation),
                         ),
-                        if (affectation != null)
-                          IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              color: Colors.red,
-                            ),
-                            tooltip: 'Retirer l\'affectation',
-                            onPressed: () => _confirmerRetrait(affectation),
-                          ),
-                      ],
-                    ),
+                    ],
                   ),
                 );
               },

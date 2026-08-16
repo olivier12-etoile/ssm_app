@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,8 +7,74 @@ import '../../services/utilisateur_service.dart';
 import '../../services/affectation_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/eleve_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
 import 'affectation_enseignant_screen.dart';
+
+Color _couleurRole(String role) {
+  switch (role) {
+    case 'enseignant':
+      return SSMPalette.indigo;
+    case 'censeur':
+      return SSMPalette.ambre;
+    case 'secretaire':
+      return SSMPalette.teal;
+    case 'directeur':
+      return SSMPalette.rouge;
+    default:
+      return SSMPalette.texte3;
+  }
+}
+
+String _labelRole(String role) {
+  switch (role) {
+    case 'enseignant':
+      return 'Enseignant';
+    case 'censeur':
+      return 'Censeur';
+    case 'secretaire':
+      return 'Secrétaire';
+    case 'directeur':
+      return 'Directeur';
+    default:
+      return role;
+  }
+}
+
+// Champ de saisie flat commun aux dialogs de cet écran.
+InputDecoration _decorationChamp(String label, {IconData? icone}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    prefixIcon: icone != null ? Icon(icone, size: 19, color: SSMPalette.texte3) : null,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
+
+ButtonStyle _stylePrimaire(Color couleur) => ElevatedButton.styleFrom(
+      backgroundColor: couleur,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      padding: const EdgeInsets.symmetric(vertical: 13),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+    );
 
 class FicheUtilisateurScreen extends StatefulWidget {
   final int userId;
@@ -105,51 +170,17 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
   }
 
   void _afficherErreur(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFFDC2626),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF16A34A),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
-  }
-
-  Color _couleurRole(String role) {
-    switch (role) {
-      case 'enseignant':
-        return const Color(0xFF1E3A8A);
-      case 'censeur':
-        return const Color(0xFFD97706);
-      case 'secretaire':
-        return const Color(0xFF0D9488);
-      case 'directeur':
-        return const Color(0xFF7C3AED);
-      default:
-        return const Color(0xFF94A3B8);
-    }
-  }
-
-  String _labelRole(String role) {
-    switch (role) {
-      case 'enseignant':
-        return 'Enseignant';
-      case 'censeur':
-        return 'Censeur';
-      case 'secretaire':
-        return 'Secrétaire';
-      case 'directeur':
-        return 'Directeur';
-      default:
-        return role;
-    }
   }
 
   String _tempsRelatif(String? iso) {
@@ -186,32 +217,31 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Nouveau mot de passe temporaire :',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: const Color(0xFF334155),
-              ),
+              style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
             ),
             const SizedBox(height: 8),
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(10),
+                color: const Color(0xFFF9FAFB),
+                borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                border: Border.all(color: SSMPalette.bordure),
               ),
               alignment: Alignment.center,
               child: Text(
                 motDePasse,
                 style: GoogleFonts.jetBrainsMono(
-                  fontSize: 24,
+                  fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF1E3A8A),
+                  color: SSMPalette.indigo,
                 ),
               ),
             ),
@@ -232,8 +262,9 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
+              backgroundColor: SSMPalette.indigo,
               foregroundColor: Colors.white,
+              elevation: 0,
             ),
             child: const Text('Fermer'),
           ),
@@ -248,33 +279,35 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
         title: Row(
           children: [
-            const Icon(Icons.warning_amber, color: Color(0xFFD97706)),
+            const Icon(Icons.warning_amber, color: SSMPalette.ambre),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
                 'Désactiver $nom ?',
-                style: GoogleFonts.sora(fontWeight: FontWeight.w700),
+                style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: SSMPalette.indigo),
               ),
             ),
           ],
         ),
         content: Text(
           'Cet utilisateur ne pourra plus se connecter.',
-          style: GoogleFonts.inter(),
+          style: GoogleFonts.inter(color: SSMPalette.texte2),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Annuler'),
+            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFDC2626),
+              backgroundColor: SSMPalette.rouge,
               foregroundColor: Colors.white,
+              elevation: 0,
             ),
             child: const Text('Désactiver'),
           ),
@@ -305,24 +338,12 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
 
   Future<void> _afficherDialogModifier() async {
     final u = _utilisateur!;
-    final nomController = TextEditingController(
-      text: u['name'] as String? ?? '',
-    );
-    final prenomController = TextEditingController(
-      text: u['prenom'] as String? ?? '',
-    );
-    final emailController = TextEditingController(
-      text: u['email'] as String? ?? '',
-    );
-    final telephoneController = TextEditingController(
-      text: u['telephone'] as String? ?? '',
-    );
-    final adresseController = TextEditingController(
-      text: u['adresse'] as String? ?? '',
-    );
-    final fonctionController = TextEditingController(
-      text: u['fonction'] as String? ?? '',
-    );
+    final nomController = TextEditingController(text: u['name'] as String? ?? '');
+    final prenomController = TextEditingController(text: u['prenom'] as String? ?? '');
+    final emailController = TextEditingController(text: u['email'] as String? ?? '');
+    final telephoneController = TextEditingController(text: u['telephone'] as String? ?? '');
+    final adresseController = TextEditingController(text: u['adresse'] as String? ?? '');
+    final fonctionController = TextEditingController(text: u['fonction'] as String? ?? '');
     String role = u['role'] as String;
     File? photo;
     final photoUrlExistante = u['photo_url'] as String?;
@@ -332,9 +353,8 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 460, maxHeight: 640),
               child: Padding(
@@ -345,14 +365,10 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                   children: [
                     Text(
                       "Modifier l'utilisateur",
-                      style: GoogleFonts.sora(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
-                      ),
+                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                     ),
                     const SizedBox(height: 16),
-                    Expanded(
+                    Flexible(
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -367,34 +383,22 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                                     maxHeight: 800,
                                     imageQuality: 80,
                                   );
-                                  if (image != null)
-                                    setStateDialog(
-                                      () => photo = File(image.path),
-                                    );
+                                  if (image != null) {
+                                    setStateDialog(() => photo = File(image.path));
+                                  }
                                 },
                                 child: Stack(
                                   children: [
                                     CircleAvatar(
                                       radius: 44,
-                                      backgroundColor: const Color(
-                                        0xFF1E3A8A,
-                                      ).withValues(alpha: 0.15),
+                                      backgroundColor: SSMPalette.indigo.withValues(alpha: 0.15),
                                       backgroundImage: photo != null
                                           ? FileImage(photo!)
                                           : (photoUrlExistante != null
-                                                ? NetworkImage(
-                                                        photoUrlExistante,
-                                                      )
-                                                      as ImageProvider
-                                                : null),
-                                      child:
-                                          (photo == null &&
-                                              photoUrlExistante == null)
-                                          ? const Icon(
-                                              Icons.person,
-                                              size: 40,
-                                              color: Color(0xFF1E3A8A),
-                                            )
+                                              ? NetworkImage(photoUrlExistante) as ImageProvider
+                                              : null),
+                                      child: (photo == null && photoUrlExistante == null)
+                                          ? Icon(Icons.person, size: 40, color: SSMPalette.indigo)
                                           : null,
                                     ),
                                     Positioned(
@@ -402,15 +406,8 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                                       bottom: 0,
                                       child: Container(
                                         padding: const EdgeInsets.all(6),
-                                        decoration: const BoxDecoration(
-                                          color: Color(0xFFD97706),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.camera_alt,
-                                          size: 16,
-                                          color: Colors.white,
-                                        ),
+                                        decoration: const BoxDecoration(color: SSMPalette.ambre, shape: BoxShape.circle),
+                                        child: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
                                       ),
                                     ),
                                   ],
@@ -418,79 +415,36 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            TextField(
-                              controller: nomController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nom *',
-                                prefixIcon: Icon(Icons.person),
-                              ),
-                            ),
+                            TextField(controller: nomController, decoration: _decorationChamp('Nom *', icone: Icons.person)),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: prenomController,
-                              decoration: const InputDecoration(
-                                labelText: 'Prénom',
-                                prefixIcon: Icon(Icons.person_outline),
-                              ),
-                            ),
+                            TextField(controller: prenomController, decoration: _decorationChamp('Prénom', icone: Icons.person_outline)),
                             const SizedBox(height: 12),
                             TextField(
                               controller: emailController,
                               keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email *',
-                                prefixIcon: Icon(Icons.email),
-                              ),
+                              decoration: _decorationChamp('Email *', icone: Icons.email_outlined),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: telephoneController,
                               keyboardType: TextInputType.phone,
-                              decoration: const InputDecoration(
-                                labelText: 'Téléphone',
-                                prefixIcon: Icon(Icons.phone),
-                              ),
+                              decoration: _decorationChamp('Téléphone', icone: Icons.phone_outlined),
                             ),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: adresseController,
-                              decoration: const InputDecoration(
-                                labelText: 'Adresse',
-                                prefixIcon: Icon(Icons.location_on),
-                              ),
-                            ),
+                            TextField(controller: adresseController, decoration: _decorationChamp('Adresse', icone: Icons.location_on_outlined)),
                             const SizedBox(height: 12),
-                            TextField(
-                              controller: fonctionController,
-                              decoration: const InputDecoration(
-                                labelText: 'Fonction',
-                                prefixIcon: Icon(Icons.work),
-                              ),
-                            ),
+                            TextField(controller: fonctionController, decoration: _decorationChamp('Fonction', icone: Icons.work_outline)),
                             const SizedBox(height: 12),
                             if (role != 'directeur')
                               DropdownButtonFormField<String>(
-                                value: role,
-                                decoration: const InputDecoration(
-                                  labelText: 'Rôle *',
-                                  prefixIcon: Icon(Icons.badge),
-                                ),
+                                initialValue: role,
+                                decoration: _decorationChamp('Rôle *', icone: Icons.badge_outlined),
                                 items: const [
-                                  DropdownMenuItem(
-                                    value: 'enseignant',
-                                    child: Text('Enseignant'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'censeur',
-                                    child: Text('Censeur'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'secretaire',
-                                    child: Text('Secrétaire'),
-                                  ),
+                                  DropdownMenuItem(value: 'enseignant', child: Text('Enseignant')),
+                                  DropdownMenuItem(value: 'censeur', child: Text('Censeur')),
+                                  DropdownMenuItem(value: 'secretaire', child: Text('Secrétaire')),
                                 ],
-                                onChanged: (v) =>
-                                    setStateDialog(() => role = v ?? role),
+                                onChanged: (v) => setStateDialog(() => role = v ?? role),
                               ),
                           ],
                         ),
@@ -502,54 +456,35 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E3A8A),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                            ),
+                            style: _stylePrimaire(SSMPalette.indigo),
                             onPressed: () async {
-                              if (nomController.text.isEmpty ||
-                                  emailController.text.isEmpty) {
-                                _afficherErreur(
-                                  'Veuillez remplir les champs obligatoires',
-                                );
+                              if (nomController.text.isEmpty || emailController.text.isEmpty) {
+                                _afficherErreur('Veuillez remplir les champs obligatoires');
                                 return;
                               }
                               try {
                                 await UtilisateurService.modifier(
                                   widget.userId,
                                   nom: nomController.text,
-                                  prenom: prenomController.text.isEmpty
-                                      ? null
-                                      : prenomController.text,
+                                  prenom: prenomController.text.isEmpty ? null : prenomController.text,
                                   email: emailController.text,
-                                  telephone: telephoneController.text.isEmpty
-                                      ? null
-                                      : telephoneController.text,
-                                  adresse: adresseController.text.isEmpty
-                                      ? null
-                                      : adresseController.text,
-                                  fonction: fonctionController.text.isEmpty
-                                      ? null
-                                      : fonctionController.text,
+                                  telephone: telephoneController.text.isEmpty ? null : telephoneController.text,
+                                  adresse: adresseController.text.isEmpty ? null : adresseController.text,
+                                  fonction: fonctionController.text.isEmpty ? null : fonctionController.text,
                                   role: role == 'directeur' ? null : role,
                                   photo: photo,
                                 );
                                 if (context.mounted) Navigator.pop(context);
-                                _afficherSucces(
-                                  'Utilisateur modifié avec succès',
-                                );
+                                _afficherSucces('Utilisateur modifié avec succès');
                                 _chargerDonnees();
                               } catch (e) {
-                                _afficherErreur(
-                                  e.toString().replaceAll('Exception: ', ''),
-                                );
+                                _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                               }
                             },
                             child: const Text('Enregistrer'),
@@ -576,55 +511,71 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (_chargement || _utilisateur == null) {
+      return const Scaffold(backgroundColor: SSMPalette.fond, body: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)));
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          'Fiche utilisateur',
-          style: GoogleFonts.sora(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF1E3A8A),
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _chargerDonnees,
-          ),
-        ],
-      ),
-      body: _chargement || _utilisateur == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _breadcrumb(),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _chargerDonnees,
-                    child: ListView(
-                      padding: const EdgeInsets.all(16),
-                      children: [
-                        _sectionIdentite(),
-                        const SizedBox(height: 20),
-                        _sectionActionsRapides(),
-                        if (_utilisateur!['role'] == 'enseignant') ...[
-                          const SizedBox(height: 24),
-                          _sectionAffectations(),
-                        ],
-                        const SizedBox(height: 24),
-                        _sectionHistorique(),
-                      ],
-                    ),
-                  ),
-                ),
+      backgroundColor: SSMPalette.fond,
+      body: RefreshIndicator(
+        onRefresh: _chargerDonnees,
+        color: SSMPalette.indigo,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(child: _enTeteBarre()),
+            SliverToBoxAdapter(child: _breadcrumb()),
+          ],
+          body: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _sectionIdentite(),
+              const SizedBox(height: 16),
+              _sectionActionsRapides(),
+              if (_utilisateur!['role'] == 'enseignant') ...[
+                const SizedBox(height: 20),
+                _sectionAffectations(),
               ],
+              const SizedBox(height: 20),
+              _sectionHistorique(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════
+  // EN-TÊTE — barre plate (remplace l'AppBar bleu)
+  // ══════════════════════════════════════════════════════
+
+  Widget _enTeteBarre() {
+    return Container(
+      color: SSMPalette.blanc,
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      child: Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new, size: 18, color: SSMPalette.texte2),
+              onPressed: () => Navigator.pop(context),
             ),
+            Expanded(
+              child: Text(
+                'Fiche utilisateur',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, color: SSMPalette.texte2),
+              onPressed: _afficherDialogModifier,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -633,31 +584,19 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
     final nomComplet = '${u['name']} ${u['prenom'] ?? ''}'.trim();
     return Container(
       width: double.infinity,
-      color: Colors.white.withValues(alpha: 0.5),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      color: SSMPalette.blanc,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       child: Row(
         children: [
-          TextButton(
-            onPressed: () =>
-                Navigator.popUntil(context, (route) => route.isFirst),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: const Text(
-              'Utilisateurs',
-              style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
-            ),
+          InkWell(
+            onTap: () => Navigator.pop(context),
+            child: Text('Utilisateurs', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.teal)),
           ),
-          const Icon(Icons.chevron_right, size: 14, color: Color(0xFF94A3B8)),
+          const Icon(Icons.chevron_right, size: 14, color: SSMPalette.texte3),
           Text(
             nomComplet,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Color(0xFF334155),
-              fontWeight: FontWeight.w600,
-            ),
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
           ),
         ],
       ),
@@ -676,142 +615,61 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
     final photoUrl = u['photo_url'] as String?;
     final nomComplet = '${u['name']} ${u['prenom'] ?? ''}'.trim();
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                blurRadius: 24,
-                offset: const Offset(0, 8),
-              ),
-            ],
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
+      child: Column(
+        children: [
+          SSMAvatar(nom: nomComplet, photoUrl: photoUrl, couleur: couleur, rayon: 44),
+          const SizedBox(height: 12),
+          Text(
+            nomComplet,
+            style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+            textAlign: TextAlign.center,
           ),
-          child: Column(
+          if (u['fonction'] != null) ...[
+            const SizedBox(height: 2),
+            Text(u['fonction'] as String, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
+          ],
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 6,
+            alignment: WrapAlignment.center,
             children: [
-              Container(
-                width: 100,
-                height: 100,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [couleur, couleur.withValues(alpha: 0.7)],
-                  ),
-                  image: photoUrl != null
-                      ? DecorationImage(
-                          image: NetworkImage(photoUrl),
-                          fit: BoxFit.cover,
-                        )
-                      : null,
-                ),
-                alignment: Alignment.center,
-                child: photoUrl == null
-                    ? Text(
-                        (u['name'] as String).isNotEmpty
-                            ? (u['name'] as String)
-                                  .substring(0, 1)
-                                  .toUpperCase()
-                            : '?',
-                        style: GoogleFonts.sora(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(height: 14),
-              Text(
-                nomComplet,
-                style: GoogleFonts.sora(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F172A),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (u['fonction'] != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  u['fonction'] as String,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    color: const Color(0xFF334155),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                alignment: WrapAlignment.center,
-                children: [
-                  SSMBadge(label: _labelRole(role), couleur: couleur),
-                  SSMBadge(
-                    label: actif ? 'ACTIF' : 'INACTIF',
-                    couleur: actif
-                        ? const Color(0xFF16A34A)
-                        : const Color(0xFFDC2626),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _ligneInfo(Icons.email, u['email'] as String),
-              if (u['telephone'] != null)
-                _ligneInfo(Icons.phone, u['telephone'] as String),
-              if (u['adresse'] != null)
-                _ligneInfo(Icons.location_on, u['adresse'] as String),
-              const SizedBox(height: 8),
-              Text(
-                'Dernière connexion : ${_tempsRelatif(u['derniere_connexion'] as String?)}',
-                style: GoogleFonts.inter(
-                  fontSize: 12,
-                  color: const Color(0xFF94A3B8),
-                ),
-              ),
-              if (role == 'enseignant') ...[
-                const SizedBox(height: 16),
-                _chargementStats
-                    ? const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: _statMini(
-                              '$_totalClasses',
-                              'Classes',
-                              Icons.class_,
-                            ),
-                          ),
-                          Expanded(
-                            child: _statMini(
-                              _totalHeures.toStringAsFixed(1),
-                              'H/semaine',
-                              Icons.schedule,
-                            ),
-                          ),
-                          Expanded(
-                            child: _statMini(
-                              '$_totalEleves',
-                              'Élèves',
-                              Icons.people,
-                            ),
-                          ),
-                        ],
-                      ),
-              ],
+              SSMPill.couleur(label: _labelRole(role), couleur: couleur),
+              SSMPill.couleur(label: actif ? 'Actif' : 'Inactif', couleur: actif ? SSMPalette.teal : SSMPalette.rouge),
             ],
           ),
-        ),
+          const SizedBox(height: 16),
+          _ligneInfo(Icons.email_outlined, u['email'] as String),
+          if (u['telephone'] != null) _ligneInfo(Icons.phone_outlined, u['telephone'] as String),
+          if (u['adresse'] != null) _ligneInfo(Icons.location_on_outlined, u['adresse'] as String),
+          const SizedBox(height: 8),
+          Text(
+            'Dernière connexion : ${_tempsRelatif(u['derniere_connexion'] as String?)}',
+            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
+          ),
+          if (role == 'enseignant') ...[
+            const SizedBox(height: 16),
+            _chargementStats
+                ? const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)),
+                  )
+                : Row(
+                    children: [
+                      Expanded(child: _statMini('$_totalClasses', 'Classes', Icons.class_outlined)),
+                      Expanded(child: _statMini(_totalHeures.toStringAsFixed(1), 'H/semaine', Icons.schedule)),
+                      Expanded(child: _statMini('$_totalEleves', 'Élèves', Icons.people_outline)),
+                    ],
+                  ),
+          ],
+        ],
       ),
     );
   }
@@ -822,16 +680,10 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icone, size: 14, color: const Color(0xFF94A3B8)),
+          Icon(icone, size: 14, color: SSMPalette.texte3),
           const SizedBox(width: 6),
           Flexible(
-            child: Text(
-              valeur,
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                color: const Color(0xFF334155),
-              ),
-            ),
+            child: Text(valeur, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
           ),
         ],
       ),
@@ -839,26 +691,22 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
   }
 
   Widget _statMini(String valeur, String label, IconData icone) {
-    return Column(
-      children: [
-        Icon(icone, size: 18, color: const Color(0xFF1E3A8A)),
-        const SizedBox(height: 4),
-        Text(
-          valeur,
-          style: GoogleFonts.sora(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF0F172A),
-          ),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            fontSize: 11,
-            color: const Color(0xFF334155),
-          ),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        children: [
+          Icon(icone, size: 17, color: SSMPalette.indigo),
+          const SizedBox(height: 4),
+          Text(valeur, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+          Text(label, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+        ],
+      ),
     );
   }
 
@@ -868,47 +716,27 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
 
   Widget _sectionActionsRapides() {
     final actif = _utilisateur!['actif'] == true;
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _afficherDialogModifier,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFF1E3A8A),
-              side: const BorderSide(color: Color(0xFF1E3A8A)),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            icon: const Icon(Icons.edit, size: 16),
-            label: const Text('Modifier'),
-          ),
+        SSMQuickActionButton(
+          icone: Icons.edit_outlined,
+          label: 'Modifier',
+          variante: SSMActionVariante.primaire,
+          onTap: _afficherDialogModifier,
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: _reinitialiserMotDePasse,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.orange,
-              side: const BorderSide(color: Colors.orange),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            icon: const Icon(Icons.lock_reset, size: 16),
-            label: const Text('Réinit. MDP'),
-          ),
+        SSMQuickActionButton(
+          icone: Icons.lock_reset,
+          label: 'Réinit. mot de passe',
+          variante: SSMActionVariante.ambre,
+          onTap: _reinitialiserMotDePasse,
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: actif ? _confirmerDesactivation : _reactiver,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: actif
-                  ? const Color(0xFFDC2626)
-                  : const Color(0xFF16A34A),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-            ),
-            icon: Icon(actif ? Icons.block : Icons.check_circle, size: 16),
-            label: Text(actif ? 'Désactiver' : 'Réactiver'),
-          ),
+        SSMQuickActionButton(
+          icone: actif ? Icons.block : Icons.check_circle,
+          label: actif ? 'Désactiver' : 'Réactiver',
+          variante: actif ? SSMActionVariante.rouge : SSMActionVariante.teal,
+          onTap: actif ? _confirmerDesactivation : _reactiver,
         ),
       ],
     );
@@ -929,142 +757,79 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
       (parClasse[classeId]!['matieres'] as List).add(a);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SSMSectionTitre(titre: 'Classes & matières'),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AffectationEnseignantScreen(
-                    userId: widget.userId,
-                    userName:
-                        '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'
-                            .trim(),
-                  ),
-                ),
-              ).then((_) => _chargerDonnees()),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF1E3A8A),
-              ),
-              icon: const Icon(Icons.edit, size: 16),
-              label: const Text('Modifier les affectations'),
-            ),
-          ],
+    return SSMPanel(
+      titre: 'Classes & matières',
+      lienAction: 'Modifier',
+      onLienAction: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AffectationEnseignantScreen(
+            userId: widget.userId,
+            userName: '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'.trim(),
+          ),
         ),
-        if (parClasse.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFEF9C3),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
+      ).then((_) => _chargerDonnees()),
+      child: parClasse.isEmpty
+          ? Column(
               children: [
-                const Icon(
-                  Icons.warning_amber,
-                  color: Color(0xFFD97706),
-                  size: 32,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Aucune affectation enregistrée',
-                  style: GoogleFonts.inter(color: const Color(0xFF92400E)),
+                SSMAlertItem(
+                  type: SSMAlerteType.avertissement,
+                  icone: Icons.warning_amber_rounded,
+                  titre: 'Aucune affectation enregistrée',
+                  sousTitre: "Cet enseignant n'est encore rattaché à aucune classe.",
                 ),
                 const SizedBox(height: 12),
-                ElevatedButton(
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => AffectationEnseignantScreen(
-                        userId: widget.userId,
-                        userName:
-                            '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'
-                                .trim(),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: _stylePrimaire(SSMPalette.ambre),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AffectationEnseignantScreen(
+                          userId: widget.userId,
+                          userName: '${_utilisateur!['name']} ${_utilisateur!['prenom'] ?? ''}'.trim(),
+                        ),
                       ),
-                    ),
-                  ).then((_) => _chargerDonnees()),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFD97706),
-                    foregroundColor: Colors.white,
+                    ).then((_) => _chargerDonnees()),
+                    child: const Text('Affecter maintenant'),
                   ),
-                  child: const Text('Affecter maintenant'),
                 ),
               ],
+            )
+          : Column(
+              children: parClasse.values.map((c) {
+                final matieres = c['matieres'] as List;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF9FAFB),
+                    borderRadius: BorderRadius.circular(SSMRayons.grand),
+                    border: Border(left: BorderSide(color: SSMPalette.indigo, width: 3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        c['nom'] as String,
+                        style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: matieres.map((m) {
+                          final coef = m['coefficient'];
+                          final label = coef != null ? '${m['matiere_nom']} (coef $coef)' : '${m['matiere_nom']}';
+                          return SSMPill.couleur(label: label, couleur: SSMPalette.teal);
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
-          )
-        else
-          ...parClasse.values.map((c) {
-            final matieres = c['matieres'] as List;
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: const Border(
-                  left: BorderSide(color: Color(0xFF1E3A8A), width: 4),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    c['nom'] as String,
-                    style: GoogleFonts.sora(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: matieres.map((m) {
-                      final coef = m['coefficient'];
-                      final label = coef != null
-                          ? '${m['matiere_nom']} (coef $coef)'
-                          : '${m['matiere_nom']}';
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            0xFF0D9488,
-                          ).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          label,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF0D9488),
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            );
-          }),
-      ],
     );
   }
 
@@ -1074,47 +839,45 @@ class _FicheUtilisateurScreenState extends State<FicheUtilisateurScreen> {
 
   Widget _sectionHistorique() {
     final u = _utilisateur!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SSMSectionTitre(titre: 'Historique'),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return SSMPanel(
+      titre: 'Historique',
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _ligneHistorique(Icons.login, 'Dernière connexion', _tempsRelatif(u['derniere_connexion'] as String?)),
+          _ligneHistorique(Icons.calendar_today_outlined, 'Compte créé le', _formaterDate(u['created_at'] as String?)),
+          _ligneHistorique(Icons.lock_outline, 'Mot de passe changé', u['mot_de_passe_change'] == true ? 'Oui' : 'Non', dernier: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _ligneHistorique(IconData icone, String titre, String valeur, {bool dernier = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        border: dernier ? null : const Border(bottom: BorderSide(color: SSMPalette.bordure)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: SSMPalette.indigo.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(9)),
+            child: Icon(icone, size: 16, color: SSMPalette.indigo),
           ),
-          child: Column(
-            children: [
-              SSMListeTile(
-                titre: 'Dernière connexion',
-                sousTitre: _tempsRelatif(u['derniere_connexion'] as String?),
-                icone: Icons.login,
-                couleurIcone: const Color(0xFF1E3A8A),
-              ),
-              SSMListeTile(
-                titre: 'Compte créé le',
-                sousTitre: _formaterDate(u['created_at'] as String?),
-                icone: Icons.calendar_today,
-                couleurIcone: const Color(0xFF1E3A8A),
-              ),
-              SSMListeTile(
-                titre: 'Mot de passe changé',
-                sousTitre: u['mot_de_passe_change'] == true ? 'Oui' : 'Non',
-                icone: Icons.lock,
-                couleurIcone: const Color(0xFF1E3A8A),
-              ),
-            ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(titre, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+                Text(valeur, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500, color: SSMPalette.texte1)),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

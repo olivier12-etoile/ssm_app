@@ -1,10 +1,17 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/utilisateur.dart';
+import '../../services/auth_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/utilisateur_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_page_scaffold.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sidebar.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 import 'fiche_classe_screen.dart';
 
 const Map<String, List<String>> _niveauxParCycle = {
@@ -32,9 +39,9 @@ const Map<String, String> _emojisCycle = {
 };
 
 const Map<String, Color> _couleursCycle = {
-  'college': Color(0xFF0D9488),
-  'lycee_moderne': Color(0xFF1E3A8A),
-  'lycee_technique': Color(0xFFD97706),
+  'college': SSMPalette.teal,
+  'lycee_moderne': SSMPalette.indigo,
+  'lycee_technique': SSMPalette.ambre,
 };
 
 const List<String> _ordreCycles = [
@@ -66,6 +73,8 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
     'effectif': 'Effectif',
   };
 
+  Utilisateur? _utilisateur;
+
   // college : {niveau: [classes]} — lycées : {niveau: {serie: [classes]}}
   Map<String, dynamic> _groupes = {
     'college': {},
@@ -89,6 +98,9 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   @override
   void initState() {
     super.initState();
+    AuthService.getUtilisateur().then((u) {
+      if (mounted) setState(() => _utilisateur = u);
+    });
     _chargerListe();
     _chargerReferences();
   }
@@ -189,247 +201,228 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   }
 
   void _afficherErreur(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFFDC2626),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF16A34A),
-      ),
+      SnackBar(content: Text(message), backgroundColor: SSMPalette.teal),
     );
+  }
+
+  void _naviguer(BuildContext context, String route) {
+    if (route == '/directeur/classes') return;
+    Navigator.pushNamed(context, route);
+  }
+
+  void _ouvrirFiche(int classeId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => FicheClasseScreen(classeId: classeId)),
+    ).then((_) => _chargerListe());
+  }
+
+  String _libelleRole(String? role) {
+    switch (role) {
+      case 'directeur':
+        return 'Directeur';
+      case 'censeur':
+        return 'Censeur';
+      case 'secretaire':
+        return 'Secrétaire';
+      case 'enseignant':
+        return 'Enseignant';
+      case 'comptable':
+        return 'Comptable';
+      case 'super_admin':
+        return 'Super admin';
+      default:
+        return role ?? '';
+    }
+  }
+
+  List<SSMNavSection> _sections() {
+    return [
+      SSMNavSection(titre: 'Principal', items: [
+        const SSMNavItem(icone: Icons.dashboard_outlined, label: 'Tableau de bord', route: '/tableau-de-bord'),
+        const SSMNavItem(icone: Icons.people_outline, label: 'Élèves', route: '/directeur/eleves'),
+        const SSMNavItem(icone: Icons.grade_outlined, label: 'Notes & évaluations', route: '/notes'),
+        const SSMNavItem(icone: Icons.price_change_outlined, label: 'Frais scolaires', route: '/directeur/frais'),
+        const SSMNavItem(icone: Icons.calendar_view_week_outlined, label: 'Emploi du temps', route: '/emploi-du-temps'),
+        const SSMNavItem(icone: Icons.description_outlined, label: 'Bulletins PDF', route: '/bulletins'),
+      ]),
+      SSMNavSection(titre: 'Pilotage', items: [
+        const SSMNavItem(icone: Icons.bar_chart_outlined, label: 'Statistiques', route: '/statistiques'),
+        const SSMNavItem(icone: Icons.notifications_outlined, label: 'Notifications', route: '/notifications'),
+        const SSMNavItem(icone: Icons.settings_outlined, label: 'Paramètres école', route: '/parametres'),
+      ]),
+      if (_utilisateur?.role == 'directeur')
+        SSMNavSection(titre: 'Administration', items: [
+          const SSMNavItem(icone: Icons.people_alt_outlined, label: 'Utilisateurs', route: '/directeur/utilisateurs'),
+          SSMNavItem(
+            icone: Icons.class_outlined,
+            label: 'Classes',
+            route: '/directeur/classes',
+            badge: (!_chargementListe && _totalClasses > 0) ? _totalClasses : null,
+          ),
+          const SSMNavItem(icone: Icons.menu_book_outlined, label: 'Matières', route: '/directeur/matieres'),
+          const SSMNavItem(icone: Icons.calendar_month_outlined, label: 'Années & Périodes', route: '/directeur/annees'),
+        ]),
+    ];
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+    return SSMPageScaffold(
+      nomEcole: _utilisateur?.codeEcole ?? 'Mon établissement',
+      codeEcole: _utilisateur?.codeEcole ?? '—',
+      nomUtilisateur: _utilisateur?.nom ?? '…',
+      role: _libelleRole(_utilisateur?.role),
+      sections: _sections(),
+      routeActuelle: '/directeur/classes',
+      onNavigate: (route) => _naviguer(context, route),
+      onProfilTap: () => Navigator.pushNamed(context, '/profil'),
+      breadcrumb: 'Accueil',
+      breadcrumbActuel: 'Classes',
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: SSMPalette.indigo,
+        foregroundColor: Colors.white,
         onPressed: _afficherDialogCreation,
-        backgroundColor: const Color(0xFF1E3A8A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(
-          'Nouvelle classe',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        icon: const Icon(Icons.add),
+        label: const Text('Nouvelle classe'),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _enTete(),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _chargerListe,
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _barreOutils(),
-                    const SizedBox(height: 12),
-                    if (_cyclesDisponibles.isNotEmpty) _chipsCycles(),
-                    const SizedBox(height: 16),
-                    if (_chargementListe)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (_totalClasses == 0)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Center(
-                          child: Text(
-                            'Aucune classe trouvée',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF334155),
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      ..._ordreCycles
-                          .where((c) => (_groupes[c] as Map).isNotEmpty)
-                          .where(
-                            (c) => _filtreCycle == null || _filtreCycle == c,
-                          )
-                          .map(
-                            (cycle) =>
-                                _sectionCycle(cycle, _groupes[cycle] as Map),
-                          ),
-                    const SizedBox(height: 80),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════
-  // EN-TÊTE
-  // ══════════════════════════════════════════════════════
-
-  Widget _enTete() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF1E3A8A), Color(0xFF0D9488)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+      child: RefreshIndicator(
+        onRefresh: _chargerListe,
+        color: SSMPalette.indigo,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () {
-                  if (Navigator.canPop(context)) {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacementNamed(context, '/tableau-de-bord');
-                  }
-                },
-              ),
-              const SizedBox(width: 4),
               Text(
-                'Retour',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
+                'Classes',
+                style: GoogleFonts.sora(fontSize: 19, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
               ),
+              const SizedBox(height: 4),
+              Text(
+                '$_totalClasses classes · $_totalActives actives',
+                style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
+              ),
+              const SizedBox(height: 16),
+              _cartesStats(),
+              const SizedBox(height: 16),
+              _barreOutils(),
+              const SizedBox(height: 10),
+              if (_cyclesDisponibles.isNotEmpty) ...[
+                _chipsCycles(),
+                const SizedBox(height: 16),
+              ] else
+                const SizedBox(height: 6),
+              _contenuListe(),
+              const SizedBox(height: 24),
             ],
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Classes',
-                    style: GoogleFonts.sora(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$_totalActives classes actives',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                width: 56,
-                height: 56,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  '$_totalClasses',
-                  style: GoogleFonts.sora(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  // BARRE OUTILS
+  // STATISTIQUES
+  // ══════════════════════════════════════════════════════
+
+  Widget _cartesStats() {
+    final inactives = _totalClasses - _totalActives;
+    final cartes = <(IconData, Color, String, String)>[
+      (Icons.class_outlined, SSMPalette.indigo, '$_totalClasses', 'Total classes'),
+      (Icons.check_circle_outline, SSMPalette.teal, '$_totalActives', 'Classes actives'),
+      (Icons.pause_circle_outline, SSMPalette.ambre, '$inactives', 'Classes inactives'),
+      (Icons.account_tree_outlined, SSMPalette.teal, '${_cyclesDisponibles.length}', 'Cycles utilisés'),
+    ];
+
+    return LayoutBuilder(builder: (context, contraintes) {
+      final colonnes = contraintes.maxWidth >= 760 ? 4 : (contraintes.maxWidth >= 520 ? 2 : 1);
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: cartes.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: colonnes,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 168,
+        ),
+        itemBuilder: (context, i) {
+          final c = cartes[i];
+          return SSMStatCard(icone: c.$1, couleur: c.$2, valeur: c.$3, label: c.$4);
+        },
+      );
+    });
+  }
+
+  // ══════════════════════════════════════════════════════
+  // BARRE OUTILS (recherche + filtres)
   // ══════════════════════════════════════════════════════
 
   Widget _barreOutils() {
-    return Row(
-      children: [
-        Expanded(flex: 2, child: _barreRecherche()),
-        const SizedBox(width: 8),
-        Expanded(child: _dropdownStatut()),
-        const SizedBox(width: 8),
-        Expanded(child: _dropdownTri()),
-      ],
-    );
+    return LayoutBuilder(builder: (context, contraintes) {
+      if (contraintes.maxWidth >= 640) {
+        return Row(
+          children: [
+            Expanded(flex: 2, child: _barreRecherche()),
+            const SizedBox(width: 8),
+            Expanded(child: _dropdownStatut()),
+            const SizedBox(width: 8),
+            Expanded(child: _dropdownTri()),
+          ],
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _barreRecherche(),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: _dropdownStatut()),
+              const SizedBox(width: 8),
+              Expanded(child: _dropdownTri()),
+            ],
+          ),
+        ],
+      );
+    });
   }
 
   Widget _barreRecherche() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(50),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(50),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          child: Row(
-            children: [
-              Icon(
-                Icons.search,
-                size: 16,
-                color: const Color(0xFF334155).withValues(alpha: 0.6),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: TextField(
-                  onChanged: _onRechercheChangee,
-                  decoration: InputDecoration(
-                    hintText: 'Rechercher une classe...',
-                    border: InputBorder.none,
-                    isDense: true,
-                    hintStyle: GoogleFonts.inter(
-                      fontSize: 13,
-                      color: const Color(0xFF334155).withValues(alpha: 0.5),
-                    ),
-                  ),
-                  style: GoogleFonts.inter(fontSize: 13),
-                ),
-              ),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: TextField(
+        onChanged: _onRechercheChangee,
+        style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+        decoration: InputDecoration(
+          hintText: 'Rechercher une classe...',
+          hintStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
+          prefixIcon: const Icon(Icons.search, size: 18, color: SSMPalette.texte3),
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );
   }
 
   Widget _dropdownStatut() {
-    return _dropdownGlass<String?>(
+    return _dropdownFlat<String?>(
       valeur: _filtreStatut,
       items: const [
         DropdownMenuItem(value: null, child: Text('Toutes')),
@@ -444,10 +437,10 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   }
 
   Widget _dropdownTri() {
-    return _dropdownGlass<String>(
+    return _dropdownFlat<String>(
       valeur: _tri,
       items: _labelsTri.entries
-          .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+          .map((e) => DropdownMenuItem(value: e.key, child: Text('Trier : ${e.value}')))
           .toList(),
       onChanged: (v) {
         if (v == null) return;
@@ -457,36 +450,27 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
     );
   }
 
-  Widget _dropdownGlass<T>({
+  Widget _dropdownFlat<T>({
     required T valeur,
     required List<DropdownMenuItem<T>> items,
     required ValueChanged<T?> onChanged,
   }) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(50),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(50),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<T>(
-              value: valeur,
-              isDense: true,
-              isExpanded: true,
-              icon: const Icon(Icons.expand_more, size: 16),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                color: const Color(0xFF334155),
-              ),
-              items: items,
-              onChanged: onChanged,
-            ),
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: valeur,
+          isDense: true,
+          isExpanded: true,
+          icon: const Icon(Icons.expand_more, size: 16, color: SSMPalette.texte3),
+          style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1),
+          items: items,
+          onChanged: onChanged,
         ),
       ),
     );
@@ -497,14 +481,15 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   // ══════════════════════════════════════════════════════
 
   Widget _chipsCycles() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
+    return SizedBox(
+      height: 32,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
         children: [
           _chipCycle(
             label: 'Tous',
             actif: _filtreCycle == null,
-            couleur: const Color(0xFF1E3A8A),
+            couleur: SSMPalette.indigo,
             onTap: () => setState(() => _filtreCycle = null),
           ),
           for (final cycle in _cyclesDisponibles) ...[
@@ -527,44 +512,64 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
     required Color couleur,
     required VoidCallback onTap,
   }) {
-    final chip = Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: actif ? couleur : Colors.white.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(50),
-        border: actif
-            ? null
-            : Border.all(color: Colors.white.withValues(alpha: 0.8)),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 13,
-          fontWeight: FontWeight.w600,
-          color: actif ? Colors.white : const Color(0xFF334155),
+    return Material(
+      color: actif ? couleur : const Color(0xFFF9FAFB),
+      borderRadius: BorderRadius.circular(SSMRayons.pilule),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.pilule),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.pilule),
+            border: actif ? null : Border.all(color: const Color(0xFFE5E7EB)),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: actif ? Colors.white : SSMPalette.texte2,
+            ),
+          ),
         ),
       ),
-    );
-
-    return GestureDetector(
-      onTap: onTap,
-      child: actif
-          ? chip
-          : ClipRRect(
-              borderRadius: BorderRadius.circular(50),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                child: chip,
-              ),
-            ),
     );
   }
 
   // ══════════════════════════════════════════════════════
-  // SECTIONS PAR CYCLE → NIVEAU → (SÉRIE)
+  // LISTE — SECTIONS PAR CYCLE → NIVEAU → (SÉRIE)
   // ══════════════════════════════════════════════════════
 
-  Widget _sectionCycle(String cycle, Map niveauxData) {
+  Widget _contenuListe() {
+    if (_chargementListe) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 60),
+        child: Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
+      );
+    }
+    if (_totalClasses == 0) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Center(child: Text('Aucune classe trouvée', style: GoogleFonts.inter(color: SSMPalette.texte3))),
+      );
+    }
+
+    return LayoutBuilder(builder: (context, contraintes) {
+      final desktop = contraintes.maxWidth >= 760;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _ordreCycles
+            .where((c) => (_groupes[c] as Map).isNotEmpty)
+            .where((c) => _filtreCycle == null || _filtreCycle == c)
+            .map((cycle) => _sectionCycle(cycle, _groupes[cycle] as Map, desktop))
+            .toList(),
+      );
+    });
+  }
+
+  Widget _sectionCycle(String cycle, Map niveauxData, bool desktop) {
     final couleur = _couleursCycle[cycle]!;
     final classesDuCycle = _aplatir(niveauxData);
     final niveauxPresents = _niveauxParCycle[cycle]!
@@ -584,57 +589,34 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
             children: [
               Container(
                 width: 4,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: couleur,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                height: 18,
+                decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(2)),
               ),
               const SizedBox(width: 8),
               Text(
                 _labelsCycle[cycle]!.toUpperCase(),
                 style: GoogleFonts.sora(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
                   color: couleur,
-                  letterSpacing: 1.2,
+                  letterSpacing: 1,
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: couleur.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${classesDuCycle.length} classe(s)',
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: couleur,
-                  ),
-                ),
-              ),
+              SSMPill.couleur(label: '${classesDuCycle.length} classe(s)', couleur: couleur),
             ],
           ),
           const SizedBox(height: 12),
           ...niveauxPresents.map(
-            (niveau) =>
-                _sectionNiveau(cycle, niveau, niveauxData[niveau], couleur),
+            (niveau) => _sectionNiveau(niveau, niveauxData[niveau], couleur, desktop),
           ),
         ],
       ),
     );
   }
 
-  Widget _sectionNiveau(
-    String cycle,
-    String niveau,
-    dynamic donnees,
-    Color couleur,
-  ) {
-    final estCollege = cycle == 'college';
+  Widget _sectionNiveau(String niveau, dynamic donnees, Color couleur, bool desktop) {
+    final estListeSimple = donnees is List;
 
     return Padding(
       padding: const EdgeInsets.only(left: 12, bottom: 12),
@@ -643,21 +625,15 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
         children: [
           Text(
             niveau,
-            style: GoogleFonts.sora(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF334155),
-            ),
+            style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
           ),
           const SizedBox(height: 6),
-          if (estCollege)
-            ...(donnees as List? ?? []).map(
-              (c) => _carteClasseCompacte(c as Map<String, dynamic>, couleur),
-            )
+          if (estListeSimple)
+            _groupeClasses((donnees as List? ?? []).cast<Map<String, dynamic>>(), couleur, desktop)
           else
             ...(donnees is Map ? donnees.entries : <MapEntry>[]).map((entry) {
               final serie = entry.key as String;
-              final classes = entry.value as List;
+              final classes = (entry.value as List).cast<Map<String, dynamic>>();
               return Padding(
                 padding: const EdgeInsets.only(left: 12, bottom: 8),
                 child: Column(
@@ -665,19 +641,10 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                   children: [
                     Text(
                       'Série $serie',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF94A3B8),
-                      ),
+                      style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600, color: SSMPalette.texte3),
                     ),
                     const SizedBox(height: 4),
-                    ...classes.map(
-                      (c) => _carteClasseCompacte(
-                        c as Map<String, dynamic>,
-                        couleur,
-                      ),
-                    ),
+                    _groupeClasses(classes, couleur, desktop),
                   ],
                 ),
               );
@@ -687,7 +654,86 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
     );
   }
 
-  Widget _carteClasseCompacte(Map<String, dynamic> classe, Color couleurCycle) {
+  // ── Regroupe une liste de classes en tableau (desktop) ou cartes (mobile) ──
+  Widget _groupeClasses(List<Map<String, dynamic>> classes, Color couleurCycle, bool desktop) {
+    if (classes.isEmpty) return const SizedBox.shrink();
+    if (desktop) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: SSMDataTable(
+          colonnes: const [
+            SSMDataColumn(''),
+            SSMDataColumn('Classe'),
+            SSMDataColumn('Effectif'),
+            SSMDataColumn('Matières'),
+            SSMDataColumn('Statut'),
+            SSMDataColumn(''),
+          ],
+          onLigneTap: (i) => _ouvrirFiche(classes[i]['id'] as int),
+          lignes: [for (final c in classes) _ligneClasse(c, couleurCycle)],
+        ),
+      );
+    }
+    return Column(children: [for (final c in classes) _carteClasse(c, couleurCycle)]);
+  }
+
+  List<Widget> _ligneClasse(Map<String, dynamic> classe, Color couleurCycle) {
+    final nom = classe['nom'] as String;
+    final salle = classe['salle'] as String?;
+    final statut = classe['statut'] as String? ?? 'active';
+    final actif = statut == 'active';
+    final nombreEleves = (classe['nombre_eleves'] as num?)?.toInt() ?? 0;
+    final nombreMatieres = (classe['nombre_matieres'] as num?)?.toInt() ?? 0;
+    final capaciteMax = (classe['capacite_max'] as num?)?.toInt() ?? 40;
+    final pourcentage = capaciteMax > 0 ? (nombreEleves / capaciteMax).clamp(0.0, 1.0) : 0.0;
+
+    return [
+      Container(
+        width: 30,
+        height: 30,
+        decoration: BoxDecoration(color: couleurCycle.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+        child: Icon(Icons.school, size: 15, color: couleurCycle),
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(nom, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+          if (salle != null)
+            Text(salle, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+        ],
+      ),
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$nombreEleves/$capaciteMax', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1)),
+          const SizedBox(height: 3),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: SizedBox(
+              width: 60,
+              height: 4,
+              child: LinearProgressIndicator(
+                value: pourcentage,
+                backgroundColor: SSMPalette.bordure,
+                color: pourcentage >= 1
+                    ? SSMPalette.rouge
+                    : pourcentage >= 0.8
+                        ? SSMPalette.ambre
+                        : SSMPalette.teal,
+              ),
+            ),
+          ),
+        ],
+      ),
+      Text('$nombreMatieres', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1)),
+      SSMPill.couleur(label: actif ? 'active' : 'inactive', couleur: actif ? SSMPalette.teal : SSMPalette.texte3),
+      const Icon(Icons.chevron_right, size: 18, color: SSMPalette.texte3),
+    ];
+  }
+
+  Widget _carteClasse(Map<String, dynamic> classe, Color couleurCycle) {
     final id = classe['id'] as int;
     final nom = classe['nom'] as String;
     final salle = classe['salle'] as String?;
@@ -696,175 +742,56 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
     final nombreEleves = (classe['nombre_eleves'] as num?)?.toInt() ?? 0;
     final nombreMatieres = (classe['nombre_matieres'] as num?)?.toInt() ?? 0;
     final capaciteMax = (classe['capacite_max'] as num?)?.toInt() ?? 40;
-    final pourcentage = capaciteMax > 0
-        ? (nombreEleves / capaciteMax).clamp(0.0, 1.0)
-        : 0.0;
 
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => FicheClasseScreen(classeId: id)),
-      ).then((_) => _chargerListe()),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            constraints: const BoxConstraints(maxHeight: 90),
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(12),
-              border: Border(left: BorderSide(color: couleurCycle, width: 4)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return Material(
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => _ouvrirFiche(id),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border(
+              top: BorderSide(color: SSMPalette.bordure),
+              right: BorderSide(color: SSMPalette.bordure),
+              bottom: BorderSide(color: SSMPalette.bordure),
+              left: BorderSide(color: couleurCycle, width: 3),
             ),
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: couleurCycle.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.school, color: couleurCycle, size: 22),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        nom,
-                        style: GoogleFonts.sora(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF0F172A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (salle != null)
-                        Text(
-                          salle,
-                          style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: const Color(0xFF334155),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.people,
-                            size: 12,
-                            color: const Color(0xFF94A3B8),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '$nombreEleves',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: const Color(0xFF94A3B8),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            Icons.book,
-                            size: 12,
-                            color: const Color(0xFF94A3B8),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            '$nombreMatieres matières',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: const Color(0xFF94A3B8),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            actif ? Icons.check_circle : Icons.pause_circle,
-                            size: 12,
-                            color: actif
-                                ? const Color(0xFF16A34A)
-                                : const Color(0xFF94A3B8),
-                          ),
-                          const SizedBox(width: 2),
-                          Text(
-                            actif ? 'active' : 'inactive',
-                            style: GoogleFonts.inter(
-                              fontSize: 10,
-                              color: const Color(0xFF94A3B8),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.center,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(color: couleurCycle.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(10)),
+                child: Icon(Icons.school, color: couleurCycle, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '$nombreEleves/$capaciteMax',
-                      style: GoogleFonts.sora(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E3A8A),
-                      ),
-                    ),
-                    Text(
-                      'élèves',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        color: const Color(0xFF94A3B8),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(2),
-                      child: SizedBox(
-                        width: 60,
-                        height: 4,
-                        child: LinearProgressIndicator(
-                          value: pourcentage,
-                          backgroundColor: const Color(0xFFF1F5F9),
-                          color: pourcentage >= 1
-                              ? const Color(0xFFDC2626)
-                              : pourcentage >= 0.8
-                              ? const Color(0xFFEA580C)
-                              : const Color(0xFF16A34A),
-                        ),
-                      ),
+                    Text(nom, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                    if (salle != null)
+                      Text(salle, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        SSMPill.couleur(label: '$nombreEleves/$capaciteMax élèves', couleur: SSMPalette.indigo),
+                        SSMPill.couleur(label: '$nombreMatieres matières', couleur: SSMPalette.texte2),
+                        SSMPill.couleur(label: actif ? 'active' : 'inactive', couleur: actif ? SSMPalette.teal : SSMPalette.texte3),
+                      ],
                     ),
                   ],
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.chevron_right,
-                    color: Color(0xFF94A3B8),
-                  ),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => FicheClasseScreen(classeId: id),
-                    ),
-                  ).then((_) => _chargerListe()),
-                ),
-              ],
-            ),
+              ),
+              const Icon(Icons.chevron_right, color: SSMPalette.texte3),
+            ],
           ),
         ),
       ),
@@ -874,6 +801,28 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
   // ══════════════════════════════════════════════════════
   // DIALOG CRÉATION — nom généré automatiquement
   // ══════════════════════════════════════════════════════
+
+  InputDecoration _decorationChamp(String label, {IconData? icone}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      prefixIcon: icone != null ? Icon(icone, color: SSMPalette.texte3, size: 20) : null,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+      ),
+    );
+  }
 
   Future<void> _afficherDialogCreation() async {
     final salleController = TextEditingController();
@@ -909,9 +858,8 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
           );
 
           return Dialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 540, maxHeight: 760),
               child: Padding(
@@ -922,19 +870,12 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                   children: [
                     Text(
                       'Nouvelle classe',
-                      style: GoogleFonts.sora(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
-                      ),
+                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Le nom est généré automatiquement',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        color: const Color(0xFF334155),
-                      ),
+                      style: GoogleFonts.inter(fontSize: 12.5, color: SSMPalette.texte3),
                     ),
                     const SizedBox(height: 16),
                     Expanded(
@@ -947,29 +888,20 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                               width: double.infinity,
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: const Color(
-                                  0xFF1E3A8A,
-                                ).withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(10),
+                                color: SSMPalette.indigoClair,
+                                borderRadius: BorderRadius.circular(SSMRayons.grand),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     'Nom généré :',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: const Color(0xFF334155),
-                                    ),
+                                    style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     nomGenere.isEmpty ? '—' : nomGenere,
-                                    style: GoogleFonts.sora(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF1E3A8A),
-                                    ),
+                                    style: GoogleFonts.sora(fontSize: 22, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                                   ),
                                 ],
                               ),
@@ -1047,13 +979,13 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                         serie = s;
                                         serieEstPersonnalisee = false;
                                       }),
-                                      selectedColor: const Color(0xFF1E3A8A),
+                                      selectedColor: SSMPalette.indigo,
                                       labelStyle: GoogleFonts.inter(
                                         fontWeight: FontWeight.w600,
                                         color:
                                             !serieEstPersonnalisee && serie == s
-                                            ? Colors.white
-                                            : const Color(0xFF334155),
+                                                ? Colors.white
+                                                : SSMPalette.texte2,
                                       ),
                                     ),
                                   ),
@@ -1064,12 +996,12 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                       serieEstPersonnalisee = true;
                                       serie = null;
                                     }),
-                                    selectedColor: const Color(0xFFD97706),
+                                    selectedColor: SSMPalette.ambre,
                                     labelStyle: GoogleFonts.inter(
                                       fontWeight: FontWeight.w600,
                                       color: serieEstPersonnalisee
                                           ? Colors.white
-                                          : const Color(0xFF334155),
+                                          : SSMPalette.texte2,
                                     ),
                                   ),
                                 ],
@@ -1078,12 +1010,8 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                 const SizedBox(height: 8),
                                 TextField(
                                   controller: serieCustomController,
-                                  textCapitalization:
-                                      TextCapitalization.characters,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Série personnalisée',
-                                    prefixIcon: Icon(Icons.edit),
-                                  ),
+                                  textCapitalization: TextCapitalization.characters,
+                                  decoration: _decorationChamp('Série personnalisée', icone: Icons.edit),
                                   onChanged: (_) => setStateDialog(() {}),
                                 ),
                               ],
@@ -1091,9 +1019,7 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
 
                             const SizedBox(height: 20),
                             // ── Étape 4 : Indice ─────────────────
-                            _titreSection(
-                              'Étape 4 — Numéro de la classe (si plusieurs)',
-                            ),
+                            _titreSection('Étape 4 — Numéro de la classe (si plusieurs)'),
                             SegmentedButton<String>(
                               segments: indices
                                   .map(
@@ -1108,34 +1034,23 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                             const SizedBox(height: 20),
 
                             // ── Étape 5 : Informations complémentaires ──
-                            _titreSection(
-                              'Étape 5 — Informations complémentaires',
-                            ),
+                            _titreSection('Étape 5 — Informations complémentaires'),
                             TextField(
                               controller: salleController,
-                              decoration: const InputDecoration(
-                                labelText: 'Salle (ex: Salle 101)',
-                                prefixIcon: Icon(Icons.room),
-                              ),
+                              decoration: _decorationChamp('Salle (ex: Salle 101)', icone: Icons.room_outlined),
                             ),
                             const SizedBox(height: 12),
                             TextField(
                               controller: capaciteController,
                               keyboardType: TextInputType.number,
-                              decoration: const InputDecoration(
-                                labelText: 'Capacité max *',
-                                prefixIcon: Icon(Icons.people),
-                              ),
+                              decoration: _decorationChamp('Capacité max *', icone: Icons.people_outline),
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
-                              value: professeurPrincipalId,
+                              initialValue: professeurPrincipalId,
                               isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Professeur principal',
-                                prefixIcon: Icon(Icons.school),
-                              ),
-                              hint: const Text('Aucun'),
+                              decoration: _decorationChamp('Professeur principal', icone: Icons.school_outlined),
+                              hint: Text('Aucun', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3)),
                               items: _enseignants
                                   .map(
                                     (e) => DropdownMenuItem<int>(
@@ -1150,13 +1065,10 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                             ),
                             const SizedBox(height: 12),
                             DropdownButtonFormField<int>(
-                              value: anneeAcademiqueId,
+                              initialValue: anneeAcademiqueId,
                               isExpanded: true,
-                              decoration: const InputDecoration(
-                                labelText: 'Année académique',
-                                prefixIcon: Icon(Icons.calendar_month),
-                              ),
-                              hint: const Text('Aucune'),
+                              decoration: _decorationChamp('Année académique', icone: Icons.calendar_month_outlined),
+                              hint: Text('Aucune', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3)),
                               items: _annees
                                   .map(
                                     (a) => DropdownMenuItem<int>(
@@ -1178,16 +1090,18 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E3A8A),
+                              backgroundColor: SSMPalette.indigo,
                               foregroundColor: Colors.white,
+                              elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                             ),
                             onPressed: () async {
                               if (!estCollege &&
@@ -1208,7 +1122,7 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
                                       : salleController.text,
                                   capaciteMax:
                                       int.tryParse(capaciteController.text) ??
-                                      40,
+                                          40,
                                   statut: 'active',
                                   cycle: cycle,
                                   professeurPrincipalId: professeurPrincipalId,
@@ -1252,7 +1166,7 @@ class _GestionClassesScreenState extends State<GestionClassesScreen> {
         style: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF1E3A8A),
+          color: SSMPalette.indigo,
           letterSpacing: 0.4,
         ),
       ),

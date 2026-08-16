@@ -357,7 +357,7 @@ class _DashboardNotesScreenState extends State<DashboardNotesScreen> {
           crossAxisCount: colonnes,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
-          mainAxisExtent: 118,
+          mainAxisExtent: 168,
         ),
         itemBuilder: (context, i) => cartes[i],
       );

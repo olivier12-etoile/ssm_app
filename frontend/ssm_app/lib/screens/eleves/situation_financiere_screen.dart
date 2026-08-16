@@ -397,7 +397,7 @@ class _SituationFinanciereScreenState extends State<SituationFinanciereScreen> {
           crossAxisCount: colonnes,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
-          mainAxisExtent: 108,
+          mainAxisExtent: 168,
         ),
         itemBuilder: (context, i) => cartes[i],
       );

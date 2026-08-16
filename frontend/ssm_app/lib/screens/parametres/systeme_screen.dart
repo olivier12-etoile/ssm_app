@@ -128,7 +128,7 @@ class _SystemeScreenState extends State<SystemeScreen> {
               crossAxisCount: colonnes,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              mainAxisExtent: 110,
+              mainAxisExtent: 168,
             ),
             itemBuilder: (context, i) => cartes[i],
           );

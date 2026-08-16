@@ -6,6 +6,8 @@ import '../../services/eleve_service.dart';
 import '../../services/classe_service.dart';
 import '../../theme/ssm_theme.dart';
 import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_pill.dart';
 
 class ElevesParClasseScreen extends StatefulWidget {
   final int classeId;
@@ -314,70 +316,121 @@ class _ElevesParClasseScreenState extends State<ElevesParClasseScreen> {
                     ],
                   ),
                 )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _eleves.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final e = _eleves[index];
-                    final sexe = e['sexe'] as String;
-                    final eleveId = e['id'] as int;
-                    final photoUrl = e['photo_url'] as String?;
-
-                    return Material(
-                      color: SSMPalette.blanc,
-                      borderRadius: BorderRadius.circular(SSMRayons.grand),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(SSMRayons.grand),
-                        onTap: () => Navigator.pushNamed(
-                          context,
-                          '/eleve/fiche',
-                          arguments: {'eleveId': eleveId},
-                        ),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(SSMRayons.grand),
-                            border: Border.all(color: SSMPalette.bordure),
-                          ),
-                          child: Row(
-                            children: [
-                              SSMAvatar(
-                                nom: e['prenom'].toString(),
-                                photoUrl: photoUrl,
-                                sexe: sexe,
-                                rayon: 24,
-                                afficherBoutonCamera: true,
-                                onTap: () => _changerPhoto(eleveId),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${e['nom']} ${e['prenom']}',
-                                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Matricule : ${e['matricule']}',
-                                      style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte2),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                sexe == 'M' ? Icons.boy : Icons.girl,
-                                color: sexe == 'M' ? SSMPalette.indigo : SSMPalette.teal,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+              : LayoutBuilder(
+                  builder: (context, contraintes) {
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: contraintes.maxWidth >= 760 ? _tableEleves() : _listeEleves(),
                     );
                   },
                 ),
     );
+  }
+
+  Widget _listeEleves() {
+    return Column(
+      children: [
+        for (final e in _eleves) ...[
+          _carteEleve(e as Map<String, dynamic>),
+          const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+
+  Widget _carteEleve(Map<String, dynamic> e) {
+    final sexe = e['sexe'] as String;
+    final eleveId = e['id'] as int;
+    final photoUrl = e['photo_url'] as String?;
+    final couleurSexe = sexe == 'M' ? SSMPalette.indigo : SSMPalette.teal;
+
+    return Material(
+      color: SSMPalette.blanc,
+      borderRadius: BorderRadius.circular(SSMRayons.grand),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        onTap: () => Navigator.pushNamed(
+          context,
+          '/eleve/fiche',
+          arguments: {'eleveId': eleveId},
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: SSMPalette.bordure),
+          ),
+          child: Row(
+            children: [
+              SSMAvatar(
+                nom: e['prenom'].toString(),
+                photoUrl: photoUrl,
+                sexe: sexe,
+                rayon: 24,
+                afficherBoutonCamera: true,
+                onTap: () => _changerPhoto(eleveId),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${e['nom']} ${e['prenom']}',
+                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Matricule : ${e['matricule']}',
+                      style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte2),
+                    ),
+                    const SizedBox(height: 4),
+                    SSMPill.couleur(label: sexe == 'M' ? 'Masculin' : 'Féminin', couleur: couleurSexe),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: SSMPalette.texte3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _tableEleves() {
+    return SSMDataTable(
+      colonnes: const [
+        SSMDataColumn(''),
+        SSMDataColumn('Élève'),
+        SSMDataColumn('Matricule'),
+        SSMDataColumn('Sexe'),
+        SSMDataColumn(''),
+      ],
+      onLigneTap: (i) => Navigator.pushNamed(
+        context,
+        '/eleve/fiche',
+        arguments: {'eleveId': _eleves[i]['id'] as int},
+      ),
+      lignes: [
+        for (final e in _eleves) _ligneEleve(e as Map<String, dynamic>),
+      ],
+    );
+  }
+
+  List<Widget> _ligneEleve(Map<String, dynamic> e) {
+    final sexe = e['sexe'] as String;
+    final photoUrl = e['photo_url'] as String?;
+    final couleurSexe = sexe == 'M' ? SSMPalette.indigo : SSMPalette.teal;
+
+    return [
+      SSMAvatar(nom: e['prenom'].toString(), photoUrl: photoUrl, sexe: sexe, rayon: 16),
+      Text(
+        '${e['nom']} ${e['prenom']}',
+        style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+      ),
+      Text('${e['matricule']}', style: GoogleFonts.jetBrainsMono(fontSize: 10.5, color: SSMPalette.texte3)),
+      SSMPill.couleur(label: sexe == 'M' ? 'Masculin' : 'Féminin', couleur: couleurSexe),
+      Icon(Icons.chevron_right, size: 18, color: SSMPalette.texte3),
+    ];
   }
 }

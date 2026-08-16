@@ -359,14 +359,17 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  GridView.count(
-                    crossAxisCount: 2,
+                  GridView.builder(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      mainAxisExtent: 160,
+                    ),
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.4,
-                    children: [
+                    itemCount: 4,
+                    itemBuilder: (context, i) => [
                       SSMStatCard(
                         titre: 'Brouillon',
                         valeur: '${notes['brouillon'] ?? 0}',
@@ -391,7 +394,7 @@ class _DashboardEnseignantScreenState extends State<DashboardEnseignantScreen> {
                         icone: Icons.cancel,
                         couleurIcone: _couleurStatut('rejete'),
                       ),
-                    ],
+                    ][i],
                   ),
                   const SizedBox(height: 24),
 

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/affectation_service.dart';
 import '../../services/classe_matiere_service.dart';
 import '../../services/classe_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_avatar.dart';
+import '../../widgets/ssm/ssm_pill.dart';
 import 'affectations_classe_screen.dart';
 
 class GestionAffectationsScreen extends StatefulWidget {
@@ -84,7 +88,7 @@ class _GestionAffectationsScreenState extends State<GestionAffectationsScreen> {
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: Colors.red));
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge));
   }
 
   void _ouvrirClasse(dynamic classe) {
@@ -103,12 +107,11 @@ class _GestionAffectationsScreenState extends State<GestionAffectationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: SSMPalette.fond,
       appBar: AppBar(
         title: const Text('Affectations enseignants'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
@@ -119,24 +122,25 @@ class _GestionAffectationsScreenState extends State<GestionAffectationsScreen> {
         ],
       ),
       body: _chargement
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
           : _classes.isEmpty
-          ? const Center(
+          ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.class_outlined, size: 64, color: Colors.grey),
-                  SizedBox(height: 16),
+                  Icon(Icons.class_outlined, size: 56, color: SSMPalette.texte3),
+                  const SizedBox(height: 12),
                   Text(
-                    'Aucune classe pour l\'instant',
-                    style: TextStyle(color: Colors.grey),
+                    "Aucune classe pour l'instant",
+                    style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
                   ),
                 ],
               ),
             )
-          : ListView.builder(
+          : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _classes.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final classe = _classes[index];
                 final classeId = classe['id'] as int;
@@ -147,58 +151,66 @@ class _GestionAffectationsScreenState extends State<GestionAffectationsScreen> {
                     total > 0 &&
                     affectees != null &&
                     affectees >= total;
+                final couleurStatut = complet ? SSMPalette.teal : SSMPalette.ambre;
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(12),
+                return Material(
+                  color: SSMPalette.blanc,
+                  borderRadius: BorderRadius.circular(SSMRayons.grand),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(SSMRayons.grand),
                     onTap: () => _ouvrirClasse(classe),
-                    leading: CircleAvatar(
-                      backgroundColor: Colors.indigo,
-                      child: Text(
-                        classe['niveau'].toString().substring(0, 1),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(SSMRayons.grand),
+                        border: Border.all(color: SSMPalette.bordure),
+                      ),
+                      child: Row(
+                        children: [
+                          SSMAvatar(nom: classe['niveau'].toString(), rayon: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  classe['nom'] as String,
+                                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Niveau : ${classe['niveau']}',
+                                  style: GoogleFonts.inter(fontSize: 11.5, color: SSMPalette.texte3),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _chargementCompteurs
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo),
+                                )
+                              : Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      complet ? Icons.check_circle : Icons.warning_amber,
+                                      size: 15,
+                                      color: couleurStatut,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    SSMPill.couleur(
+                                      label: '${affectees ?? 0}/${total ?? 0} affectées',
+                                      couleur: couleurStatut,
+                                    ),
+                                  ],
+                                ),
+                          const SizedBox(width: 6),
+                          Icon(Icons.chevron_right, size: 18, color: SSMPalette.texte3),
+                        ],
                       ),
                     ),
-                    title: Text(
-                      classe['nom'] as String,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    subtitle: Text('Niveau : ${classe['niveau']}'),
-                    trailing: _chargementCompteurs
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                complet
-                                    ? Icons.check_circle
-                                    : Icons.warning_amber,
-                                size: 16,
-                                color: complet ? Colors.green : Colors.orange,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${affectees ?? 0}/${total ?? 0} affectées',
-                                style: TextStyle(
-                                  color: complet ? Colors.green : Colors.orange,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(Icons.chevron_right),
-                            ],
-                          ),
                   ),
                 );
               },

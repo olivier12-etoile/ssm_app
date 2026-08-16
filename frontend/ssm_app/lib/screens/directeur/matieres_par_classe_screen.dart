@@ -1,15 +1,14 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/classe_matiere_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/matiere_service.dart';
 import '../../services/affectation_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _orange = Color(0xFFEA580C);
-const Color _rouge = Color(0xFFDC2626);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 
 class MatieresParClasseScreen extends StatefulWidget {
   final int classeId;
@@ -79,12 +78,12 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
+    ).showSnackBar(SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge));
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: const Color(0xFF16A34A)),
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -98,11 +97,11 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
       orElse: () => null,
     );
     final couleur = matiere?['couleur'] as String?;
-    if (couleur == null || couleur.isEmpty) return _indigo;
+    if (couleur == null || couleur.isEmpty) return SSMPalette.indigo;
     try {
       return Color(int.parse(couleur.replaceAll('#', '0xFF')));
     } catch (_) {
-      return _indigo;
+      return SSMPalette.indigo;
     }
   }
 
@@ -117,6 +116,28 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
   double _coefficient(dynamic ligne) =>
       double.tryParse(ligne['coefficient'].toString()) ?? 1.0;
 
+  InputDecoration _decorationChamp(String label, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final nombreEnseignants = _affectations
@@ -130,124 +151,80 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: SSMPalette.fond,
+      appBar: AppBar(
+        backgroundColor: SSMPalette.blanc,
+        foregroundColor: SSMPalette.texte1,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+        iconTheme: const IconThemeData(color: SSMPalette.texte2),
+        title: Text(
+          'Matières de ${_nomClasse ?? '...'}',
+          style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(28),
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              '${_matieresClasse.length} matière${_matieresClasse.length > 1 ? 's' : ''} configurée${_matieresClasse.length > 1 ? 's' : ''}',
+              style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
+            ),
+          ),
+        ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _afficherDialogAjout,
-        backgroundColor: _indigo,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text(
-          'Ajouter une matière',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        backgroundColor: SSMPalette.indigo,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add),
+        label: const Text('Ajouter une matière'),
       ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            _enTete(),
-            Expanded(
-              child: _chargement
-                  ? const Center(child: CircularProgressIndicator())
-                  : RefreshIndicator(
-                      onRefresh: _chargerDonnees,
-                      child: ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          _resume(nombreEnseignants, coefTotal),
-                          const SizedBox(height: 16),
-                          if (_matieresClasse.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.book_outlined,
-                                      size: 64,
-                                      color: Color(0xFF94A3B8),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'Aucune matière assignée à cette classe',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        color: const Color(0xFF334155),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          else
-                            ..._matieresClasse.map(
-                              (l) => _carteMatiereClasse(l),
+      body: _chargement
+          ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+          : RefreshIndicator(
+              onRefresh: _chargerDonnees,
+              color: SSMPalette.indigo,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 88),
+                children: [
+                  _resume(nombreEnseignants, coefTotal),
+                  const SizedBox(height: 16),
+                  if (_matieresClasse.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            const Icon(Icons.menu_book_outlined, size: 56, color: SSMPalette.texte3),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Aucune matière assignée à cette classe',
+                              style: GoogleFonts.inter(fontSize: 13.5, color: SSMPalette.texte2),
                             ),
-                          const SizedBox(height: 12),
-                          _carteAjouter(),
-                          const SizedBox(height: 80),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    SSMPanel(
+                      titre: 'Matières assignées',
+                      padding: EdgeInsets.zero,
+                      child: SSMDataTable(
+                        colonnes: const [
+                          SSMDataColumn('Matière'),
+                          SSMDataColumn('Enseignant'),
+                          SSMDataColumn('Coefficient'),
+                          SSMDataColumn('Actions'),
                         ],
+                        lignes: [for (final l in _matieresClasse) _ligneMatiereClasse(l)],
                       ),
                     ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ══════════════════════════════════════════════════════
-  // EN-TÊTE
-  // ══════════════════════════════════════════════════════
-
-  Widget _enTete() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      color: _indigo,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () =>
-                    Navigator.canPop(context) ? Navigator.pop(context) : null,
+                  const SizedBox(height: 12),
+                  _carteAjouter(),
+                ],
               ),
-              const SizedBox(width: 4),
-              Text(
-                'Retour',
-                style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: Colors.white.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Matières de ${_nomClasse ?? '...'}',
-            style: GoogleFonts.sora(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${_matieresClasse.length} matières configurées',
-            style: GoogleFonts.inter(
-              fontSize: 13,
-              color: Colors.white.withValues(alpha: 0.7),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -259,179 +236,82 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
     return Row(
       children: [
         Expanded(
-          child: _miniCard('${_matieresClasse.length}', 'matières', Icons.book),
+          child: SSMStatCard(
+            icone: Icons.menu_book_outlined,
+            couleur: SSMPalette.indigo,
+            valeur: '${_matieresClasse.length}',
+            label: 'matières',
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _miniCard('$nombreEnseignants', 'enseignants', Icons.person),
+          child: SSMStatCard(
+            icone: Icons.person_outline,
+            couleur: SSMPalette.teal,
+            valeur: '$nombreEnseignants',
+            label: 'enseignants',
+          ),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _miniCard(
-            coefTotal.toStringAsFixed(1),
-            'coef. total',
-            Icons.calculate,
+          child: SSMStatCard(
+            icone: Icons.calculate_outlined,
+            couleur: SSMPalette.ambre,
+            valeur: coefTotal.toStringAsFixed(1),
+            label: 'coef. total',
           ),
         ),
       ],
     );
   }
 
-  Widget _miniCard(String valeur, String label, IconData icone) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Icon(icone, size: 18, color: _indigo),
-              const SizedBox(height: 6),
-              Text(
-                valeur,
-                style: GoogleFonts.sora(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 11,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // ══════════════════════════════════════════════════════
-  // CARTE MATIÈRE DE LA CLASSE
+  // LIGNE MATIÈRE DE LA CLASSE (tableau)
   // ══════════════════════════════════════════════════════
 
-  Widget _carteMatiereClasse(dynamic ligne) {
+  List<Widget> _ligneMatiereClasse(dynamic ligne) {
     final matiereId = ligne['matiere_id'] as int;
     final nom = ligne['matiere_nom'] as String;
     final coef = _coefficient(ligne);
     final couleur = _couleurMatiere(matiereId);
     final enseignant = _enseignantMatiere(matiereId);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(14),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(14),
-            border: Border(left: BorderSide(color: couleur, width: 4)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+    return [
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(color: couleur, shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: Text(
+              nom.isNotEmpty ? nom.characters.first.toUpperCase() : '?',
+              style: GoogleFonts.sora(fontSize: 12.5, fontWeight: FontWeight.w700, color: Colors.white),
+            ),
           ),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: couleur,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    nom.isNotEmpty ? nom.characters.first.toUpperCase() : '?',
-                    style: GoogleFonts.sora(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      nom,
-                      style: GoogleFonts.sora(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF0F172A),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      enseignant != null ? 'M. $enseignant' : 'Non affecté',
-                      style: GoogleFonts.inter(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: enseignant != null ? _teal : _orange,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Coef.',
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      color: const Color(0xFF94A3B8),
-                    ),
-                  ),
-                  Text(
-                    coef.toStringAsFixed(1),
-                    style: GoogleFonts.sora(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: _indigo,
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                icon: const Icon(Icons.edit, size: 20, color: _indigo),
-                onPressed: () =>
-                    _afficherDialogModifierCoefficient(matiereId, nom, coef),
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete, size: 20, color: _rouge),
-                onPressed: () => _confirmerSuppression(ligne),
-              ),
-            ],
-          ),
-        ),
+          const SizedBox(width: 10),
+          Text(nom, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+        ],
       ),
-    );
+      enseignant != null
+          ? SSMPill.couleur(label: enseignant, couleur: SSMPalette.teal)
+          : const SSMPill.couleur(label: 'Non affecté', couleur: SSMPalette.ambre),
+      Text(coef.toStringAsFixed(1), style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, size: 18, color: SSMPalette.indigo),
+            onPressed: () => _afficherDialogModifierCoefficient(matiereId, nom, coef),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18, color: SSMPalette.rouge),
+            onPressed: () => _confirmerSuppression(ligne),
+          ),
+        ],
+      ),
+    ];
   }
 
   // ══════════════════════════════════════════════════════
@@ -443,27 +323,23 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
       onTap: _afficherDialogAjout,
       child: CustomPaint(
         painter: _BordurePointilleePainter(
-          couleur: _indigo.withValues(alpha: 0.3),
-          rayon: 12,
+          couleur: SSMPalette.indigo.withValues(alpha: 0.3),
+          rayon: SSMRayons.grand,
         ),
         child: Container(
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 20),
           decoration: BoxDecoration(
-            color: _indigo.withValues(alpha: 0.04),
-            borderRadius: BorderRadius.circular(12),
+            color: SSMPalette.indigo.withValues(alpha: 0.04),
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
           ),
           child: Column(
             children: [
-              const Icon(Icons.add_circle_outline, color: _indigo, size: 28),
+              const Icon(Icons.add_circle_outline, color: SSMPalette.indigo, size: 26),
               const SizedBox(height: 8),
               Text(
                 'Ajouter une matière',
-                style: GoogleFonts.inter(
-                  fontSize: 14,
-                  color: _indigo,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: GoogleFonts.inter(fontSize: 13.5, color: SSMPalette.indigo, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -508,9 +384,9 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
 
           return Dialog(
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(SSMRayons.grand),
             ),
-            backgroundColor: Colors.white,
+            backgroundColor: SSMPalette.blanc,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Padding(
@@ -521,22 +397,13 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                   children: [
                     Text(
                       'Ajouter une matière',
-                      style: GoogleFonts.sora(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
-                      ),
+                      style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                     ),
                     const SizedBox(height: 20),
                     DropdownButtonFormField<int>(
-                      value: matiereSelectionnee,
+                      initialValue: matiereSelectionnee,
                       isExpanded: true,
-                      decoration: InputDecoration(
-                        labelText: 'Matière',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
+                      decoration: _decorationChamp('Matière'),
                       hint: const Text('Choisir une matière'),
                       items: matieresDisponibles.map((m) {
                         final couleur = _couleurDepuisHex(
@@ -564,30 +431,20 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                       onChanged: (v) =>
                           setStateDialog(() => matiereSelectionnee = v),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: coefficientController,
                       keyboardType: const TextInputType.numberWithOptions(
                         decimal: true,
                       ),
-                      decoration: InputDecoration(
-                        labelText: 'Coefficient',
-                        hintText: 'ex: 3, 4.5, 7',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
+                      decoration: _decorationChamp('Coefficient', hint: 'ex: 3, 4.5, 7'),
                       onChanged: (_) => setStateDialog(() {}),
                     ),
                     const SizedBox(height: 16),
                     if (matiere != null)
                       Text(
                         '${matiere['nom']} · Coefficient ${coef?.toStringAsFixed(1) ?? '—'}',
-                        style: GoogleFonts.sora(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: _indigo,
-                        ),
+                        style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.indigo),
                       ),
                     const SizedBox(height: 20),
                     Row(
@@ -595,18 +452,19 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                         Expanded(
                           child: TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('Annuler'),
+                            child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                           ),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: ElevatedButton(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: _indigo,
+                              backgroundColor: SSMPalette.indigo,
                               foregroundColor: Colors.white,
+                              elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(SSMRayons.moyen),
                               ),
                             ),
                             onPressed: matiereSelectionnee == null
@@ -626,8 +484,9 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                                         matiereId: matiereSelectionnee!,
                                         coefficient: coef,
                                       );
-                                      if (context.mounted)
+                                      if (context.mounted) {
                                         Navigator.pop(context);
+                                      }
                                       _afficherSucces(
                                         'Matière ajoutée à la classe',
                                       );
@@ -664,11 +523,11 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
   }
 
   Color _couleurDepuisHex(String? hex) {
-    if (hex == null || hex.isEmpty) return _indigo;
+    if (hex == null || hex.isEmpty) return SSMPalette.indigo;
     try {
       return Color(int.parse(hex.replaceAll('#', '0xFF')));
     } catch (_) {
-      return _indigo;
+      return SSMPalette.indigo;
     }
   }
 
@@ -688,8 +547,8 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
     await showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        backgroundColor: SSMPalette.blanc,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 380),
           child: Padding(
@@ -700,11 +559,7 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
               children: [
                 Text(
                   'Modifier le coefficient de $nom',
-                  style: GoogleFonts.sora(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
+                  style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -712,13 +567,7 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                   keyboardType: const TextInputType.numberWithOptions(
                     decimal: true,
                   ),
-                  decoration: InputDecoration(
-                    labelText: 'Coefficient',
-                    hintText: 'ex: 3, 4.5, 7',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
+                  decoration: _decorationChamp('Coefficient', hint: 'ex: 3, 4.5, 7'),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -726,18 +575,19 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Annuler'),
+                        child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _indigo,
+                          backgroundColor: SSMPalette.indigo,
                           foregroundColor: Colors.white,
+                          elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(SSMRayons.moyen),
                           ),
                         ),
                         onPressed: () async {
@@ -788,8 +638,8 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        backgroundColor: SSMPalette.blanc,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 380),
           child: Padding(
@@ -799,18 +649,14 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
               children: [
                 const Icon(
                   Icons.warning_amber_rounded,
-                  color: Color(0xFFD97706),
+                  color: SSMPalette.ambre,
                   size: 48,
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Retirer "${ligne['matiere_nom']}" de cette classe ?',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.sora(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF0F172A),
-                  ),
+                  style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
                 ),
                 const SizedBox(height: 20),
                 Row(
@@ -818,18 +664,19 @@ class _MatieresParClasseScreenState extends State<MatieresParClasseScreen> {
                     Expanded(
                       child: TextButton(
                         onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Annuler'),
+                        child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2)),
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: _rouge,
+                          backgroundColor: SSMPalette.rouge,
                           foregroundColor: Colors.white,
+                          elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(SSMRayons.moyen),
                           ),
                         ),
                         onPressed: () => Navigator.pop(context, true),
