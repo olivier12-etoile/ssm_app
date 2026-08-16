@@ -4,14 +4,9 @@ import '../../models/notification_model.dart';
 import '../../models/utilisateur.dart';
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFF8FAFC);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 const Map<String, String> _descriptions = {
   'notes_validees':
@@ -111,7 +106,7 @@ class _ParametresDeclencheursScreenState extends State<ParametresDeclencheursScr
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge),
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SSMPalette.rouge),
         );
       }
     } finally {
@@ -122,33 +117,41 @@ class _ParametresDeclencheursScreenState extends State<ParametresDeclencheursScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Déclencheurs automatiques', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Déclencheurs automatiques', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : !_estAutorise
+                      ? _vueNonAutorise()
+                      : _erreur != null
+                          ? _vueErreur(_erreur!)
+                          : RefreshIndicator(
+                              onRefresh: _charger,
+                              color: SSMPalette.indigo,
+                              child: ListView(
+                                padding: const EdgeInsets.all(16),
+                                children: [
+                                  Text(
+                                    "Ces déclencheurs envoient automatiquement une notification WhatsApp aux parents "
+                                    "lorsqu'un événement précis se produit dans les autres modules de SSM.",
+                                    style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2, height: 1.4),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  for (final d in _declencheurs) ...[
+                                    _carteDeclencheur(d),
+                                    const SizedBox(height: 12),
+                                  ],
+                                ],
+                              ),
+                            ),
+            ),
+          ],
+        ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : !_estAutorise
-              ? _vueNonAutorise()
-              : _erreur != null
-                  ? _vueErreur(_erreur!)
-                  : RefreshIndicator(
-                      onRefresh: _charger,
-                      child: ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          Text(
-                            "Ces déclencheurs envoient automatiquement une notification WhatsApp aux parents "
-                            "lorsqu'un événement précis se produit dans les autres modules de SSM.",
-                            style: GoogleFonts.inter(fontSize: 13, color: _texte, height: 1.4),
-                          ),
-                          const SizedBox(height: 16),
-                          ..._declencheurs.map(_carteDeclencheur),
-                        ],
-                      ),
-                    ),
     );
   }
 
@@ -159,12 +162,12 @@ class _ParametresDeclencheursScreenState extends State<ParametresDeclencheursScr
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.lock_outline, color: _gris, size: 40),
+            const Icon(Icons.lock_outline, color: SSMPalette.texte3, size: 40),
             const SizedBox(height: 12),
             Text(
               'Seul le directeur peut configurer les déclencheurs automatiques.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: _texte),
+              style: GoogleFonts.inter(color: SSMPalette.texte2),
             ),
           ],
         ),
@@ -179,9 +182,9 @@ class _ParametresDeclencheursScreenState extends State<ParametresDeclencheursScr
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             OutlinedButton(onPressed: _charger, child: const Text('Réessayer')),
           ],
@@ -194,46 +197,31 @@ class _ParametresDeclencheursScreenState extends State<ParametresDeclencheursScr
     final icone = _icones[d.cle] ?? Icons.notifications_active_outlined;
     final description = _descriptions[d.cle] ?? '';
     final enCours = _enCoursDeMaj.contains(d.cle);
+    final couleurEtat = d.actif ? SSMPalette.teal : SSMPalette.texte3;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
+    return SSMPanel(
+      titre: d.libelle,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: (d.actif ? _vert : _gris).withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icone, color: d.actif ? _vert : _gris, size: 20),
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(color: couleurEtat.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(SSMRayons.petit)),
+            child: Icon(icone, color: couleurEtat, size: 17),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(d.libelle, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce)),
-                if (description.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(description, style: GoogleFonts.inter(fontSize: 12, color: _gris, height: 1.4)),
-                ],
-              ],
-            ),
+            child: description.isEmpty
+                ? const SizedBox.shrink()
+                : Text(description, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2, height: 1.4)),
           ),
           const SizedBox(width: 8),
           enCours
-              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+              ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo))
               : Switch(
                   value: d.actif,
-                  activeThumbColor: _vert,
+                  activeThumbColor: SSMPalette.teal,
                   onChanged: (v) => _basculer(d, v),
                 ),
         ],

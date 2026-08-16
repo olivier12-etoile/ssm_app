@@ -2,17 +2,44 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/notification_model.dart';
 import '../../services/notification_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_quick_action_button.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFF8FAFC);
+// Couleurs de catégorie alignées sur la palette générale du thème (indigo /
+// teal / ambre / rouge uniquement — voir SSMPalette).
+const Map<CategorieNotification, Color> _couleursCategorie = {
+  CategorieNotification.scolarite: SSMPalette.indigo,
+  CategorieNotification.finances: SSMPalette.teal,
+  CategorieNotification.presence: SSMPalette.ambre,
+  CategorieNotification.administration: SSMPalette.indigo,
+  CategorieNotification.discipline: SSMPalette.rouge,
+  CategorieNotification.vieScolaire: SSMPalette.teal,
+};
+
+InputDecoration _decorationChamp(String label, {IconData? icone}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    prefixIcon: icone != null ? Icon(icone, size: 20, color: SSMPalette.texte3) : null,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
 
 // Variables couramment proposées à l'insertion rapide dans un modèle
 // (union des variables utilisées par les modèles système du seeder).
@@ -36,9 +63,9 @@ class _ControleurVariables extends TextEditingController {
         spans.add(TextSpan(
           text: m[0],
           style: (style ?? const TextStyle()).copyWith(
-            color: _ambre,
+            color: SSMPalette.ambre,
             fontWeight: FontWeight.w700,
-            backgroundColor: _ambre.withValues(alpha: 0.14),
+            backgroundColor: SSMPalette.ambre.withValues(alpha: 0.14),
           ),
         ));
         return '';
@@ -95,7 +122,7 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
   }
 
   void _afficherErreur(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: _rouge));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge));
   }
 
   Future<void> _ouvrirFormulaire({ModeleMessage? modele}) async {
@@ -110,7 +137,7 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(m.nom, style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+        title: Text(m.nom, style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -119,21 +146,21 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
               Container(
                 padding: const EdgeInsets.all(10),
                 margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(color: _gris.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(SSMRayons.petit)),
                 child: Row(
                   children: [
-                    const Icon(Icons.lock_outline, size: 16, color: _gris),
+                    const Icon(Icons.lock_outline, size: 16, color: SSMPalette.texte3),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Modèle système, non modifiable',
-                        style: GoogleFonts.inter(fontSize: 12, color: _texte, fontStyle: FontStyle.italic),
+                        style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2, fontStyle: FontStyle.italic),
                       ),
                     ),
                   ],
                 ),
               ),
-              Text(m.contenu, style: GoogleFonts.inter(fontSize: 14, height: 1.5)),
+              Text(m.contenu, style: GoogleFonts.inter(fontSize: 14, height: 1.5, color: SSMPalette.texte1)),
             ],
           ),
         ),
@@ -153,7 +180,7 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Supprimer'),
           ),
@@ -181,54 +208,67 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Modèles de messages', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Modèles de messages', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? Center(child: Text(_erreur!, style: GoogleFonts.inter(color: SSMPalette.rouge)))
+                      : _modeles.isEmpty
+                          ? Center(
+                              child: Text('Aucun modèle enregistré pour le moment.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+                            )
+                          : RefreshIndicator(
+                              onRefresh: _charger,
+                              color: SSMPalette.indigo,
+                              child: ListView(
+                                padding: const EdgeInsets.all(16),
+                                children: [
+                                  for (final categorie in CategorieNotification.values)
+                                    if (_modelesParCategorie[categorie]?.isNotEmpty ?? false) ...[
+                                      _sectionCategorie(categorie, _modelesParCategorie[categorie]!),
+                                      const SizedBox(height: 16),
+                                    ],
+                                ],
+                              ),
+                            ),
+            ),
+          ],
+        ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _erreur != null
-              ? Center(child: Text(_erreur!, style: GoogleFonts.inter(color: _rouge)))
-              : _modeles.isEmpty
-                  ? Center(
-                      child: Text('Aucun modèle enregistré pour le moment.', style: GoogleFonts.inter(color: _gris)),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _charger,
-                      child: ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          for (final categorie in CategorieNotification.values)
-                            if (_modelesParCategorie[categorie]?.isNotEmpty ?? false)
-                              _sectionCategorie(categorie, _modelesParCategorie[categorie]!),
-                        ],
-                      ),
-                    ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _ouvrirFormulaire(),
-        backgroundColor: _indigo,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: Text('Nouveau modèle', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.w600)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 4, right: 4),
+        child: SSMQuickActionButton(
+          icone: Icons.add,
+          label: 'Nouveau modèle',
+          variante: SSMActionVariante.primaire,
+          onTap: () => _ouvrirFormulaire(),
+        ),
       ),
     );
   }
 
   Widget _sectionCategorie(CategorieNotification categorie, List<ModeleMessage> modeles) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+    final couleur = _couleursCategorie[categorie] ?? SSMPalette.indigo;
+    return SSMPanel(
+      titre: categorie.libelle,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(categorie.icone, size: 18, color: _teal),
-              const SizedBox(width: 8),
-              Text(
-                categorie.libelle,
-                style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce),
+              Container(
+                width: 26,
+                height: 26,
+                decoration: BoxDecoration(color: couleur.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(SSMRayons.petit)),
+                child: Icon(categorie.icone, size: 14, color: couleur),
               ),
+              const SizedBox(width: 8),
+              Text('${modeles.length} modèle(s)', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
             ],
           ),
           const SizedBox(height: 10),
@@ -242,30 +282,30 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(SSMRayons.moyen),
           onTap: () => m.modifiable ? _ouvrirFormulaire(modele: m) : _ouvrirLectureSeule(m),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
                     Expanded(
-                      child: Text(m.nom, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce)),
+                      child: Text(m.nom, style: GoogleFonts.inter(fontSize: 13.5, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
                     ),
-                    if (!m.modifiable) SSMBadge(label: 'Système', couleur: _gris, icone: Icons.lock_outline),
+                    if (!m.modifiable) SSMPill.couleur(label: 'Système', couleur: SSMPalette.texte2),
                     if (!m.actif) ...[
                       const SizedBox(width: 6),
-                      SSMBadge(label: 'Inactif', couleur: _rouge),
+                      SSMPill.couleur(label: 'Inactif', couleur: SSMPalette.rouge),
                     ],
                   ],
                 ),
@@ -274,10 +314,10 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
                   m.contenu,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(fontSize: 12, color: _texte, height: 1.4),
+                  style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2, height: 1.4),
                 ),
                 if (m.modifiable) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       const Spacer(),
@@ -285,13 +325,13 @@ class _ModelesMessagesScreenState extends State<ModelesMessagesScreen> {
                         onPressed: () => _ouvrirFormulaire(modele: m),
                         icon: const Icon(Icons.edit_outlined, size: 16),
                         label: const Text('Modifier'),
-                        style: TextButton.styleFrom(foregroundColor: _indigo),
+                        style: TextButton.styleFrom(foregroundColor: SSMPalette.indigo),
                       ),
                       TextButton.icon(
                         onPressed: () => _supprimer(m),
                         icon: const Icon(Icons.delete_outline, size: 16),
                         label: const Text('Supprimer'),
-                        style: TextButton.styleFrom(foregroundColor: _rouge),
+                        style: TextButton.styleFrom(foregroundColor: SSMPalette.rouge),
                       ),
                     ],
                   ),
@@ -402,109 +442,107 @@ class _FormulaireModeleScreenState extends State<_FormulaireModeleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text(_modification ? 'Modifier le modèle' : 'Nouveau modèle', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          TextField(
-            controller: _nomController,
-            style: GoogleFonts.inter(fontSize: 14),
-            decoration: const InputDecoration(
-              labelText: 'Nom *',
-              prefixIcon: Icon(Icons.label_outline),
-              border: OutlineInputBorder(),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: _modification ? 'Modifier le modèle' : 'Nouveau modèle',
+              onRetour: () => Navigator.pop(context),
             ),
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<CategorieNotification>(
-            initialValue: _categorie,
-            decoration: const InputDecoration(
-              labelText: 'Catégorie *',
-              prefixIcon: Icon(Icons.category_outlined),
-              border: OutlineInputBorder(),
-            ),
-            items: CategorieNotification.values
-                .map((c) => DropdownMenuItem(value: c, child: Text(c.libelle)))
-                .toList(),
-            onChanged: (v) => setState(() => _categorie = v ?? _categorie),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'VARIABLES DISPONIBLES — TOUCHEZ POUR INSÉRER',
-            style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: _variablesCourantes.map((v) {
-              return ActionChip(
-                label: Text('{$v}', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600)),
-                backgroundColor: _ambre.withValues(alpha: 0.12),
-                labelStyle: const TextStyle(color: _ambre),
-                onPressed: () => _insererVariable(v),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _contenuController,
-            focusNode: _contenuFocusNode,
-            maxLines: 10,
-            minLines: 6,
-            style: GoogleFonts.inter(fontSize: 14, height: 1.5),
-            decoration: const InputDecoration(
-              labelText: 'Contenu *',
-              alignLabelWithHint: true,
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            value: _actif,
-            onChanged: (v) => setState(() => _actif = v),
-            activeThumbColor: _vert,
-            title: const Text('Actif'),
-            subtitle: const Text('Un modèle inactif ne peut plus être sélectionné pour un envoi.'),
-          ),
-          if (_erreur != null) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: _rouge.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-              child: Row(
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
                 children: [
-                  const Icon(Icons.warning_amber, color: _rouge, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: _rouge))),
+                  TextField(
+                    controller: _nomController,
+                    style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+                    decoration: _decorationChamp('Nom *', icone: Icons.label_outline),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<CategorieNotification>(
+                    initialValue: _categorie,
+                    decoration: _decorationChamp('Catégorie *', icone: Icons.category_outlined),
+                    items: CategorieNotification.values
+                        .map((c) => DropdownMenuItem(value: c, child: Text(c.libelle)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _categorie = v ?? _categorie),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'VARIABLES DISPONIBLES — TOUCHEZ POUR INSÉRER',
+                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: _variablesCourantes.map((v) {
+                      return ActionChip(
+                        label: Text('{$v}', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600)),
+                        backgroundColor: SSMPalette.ambreClair,
+                        labelStyle: const TextStyle(color: SSMPalette.ambre),
+                        side: BorderSide.none,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
+                        onPressed: () => _insererVariable(v),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _contenuController,
+                    focusNode: _contenuFocusNode,
+                    maxLines: 10,
+                    minLines: 6,
+                    style: GoogleFonts.inter(fontSize: 14, height: 1.5, color: SSMPalette.texte1),
+                    decoration: _decorationChamp('Contenu *').copyWith(alignLabelWithHint: true),
+                    onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 8),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    value: _actif,
+                    onChanged: (v) => setState(() => _actif = v),
+                    activeThumbColor: SSMPalette.teal,
+                    title: const Text('Actif'),
+                    subtitle: const Text('Un modèle inactif ne peut plus être sélectionné pour un envoi.'),
+                  ),
+                  if (_erreur != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(color: SSMPalette.rougeClair, borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber, color: SSMPalette.rouge, size: 18),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.rouge))),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SSMPalette.indigo,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                      ),
+                      onPressed: _enregistrement ? null : _enregistrer,
+                      child: _enregistrement
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Enregistrer'),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _indigo,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              onPressed: _enregistrement ? null : _enregistrer,
-              child: _enregistrement
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Enregistrer'),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

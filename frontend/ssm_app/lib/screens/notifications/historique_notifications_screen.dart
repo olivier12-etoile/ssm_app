@@ -4,15 +4,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:open_file/open_file.dart';
 import '../../models/notification_model.dart';
 import '../../services/notification_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'detail_notification_screen.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _rouge = Color(0xFFDC2626);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFF8FAFC);
 
 String _formatDate(DateTime? d) {
   if (d == null) return '—';
@@ -184,7 +180,7 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
       if (!mounted) return;
       setState(() => _exportEnCours = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SSMPalette.rouge),
       );
     }
   }
@@ -197,48 +193,39 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Historique des notifications', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-        actions: [
-          IconButton(
-            icon: _exportEnCours
-                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.file_download_outlined),
-            tooltip: 'Exporter Excel',
-            onPressed: _exportEnCours ? null : _exporter,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          _panneauFiltres(),
-          Expanded(child: _corpsListe()),
-        ],
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(
+              titre: 'Historique des notifications',
+              onRetour: () => Navigator.pop(context),
+              actions: [
+                IconButton(
+                  icon: _exportEnCours
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo))
+                      : const Icon(Icons.file_download_outlined, color: SSMPalette.texte2),
+                  tooltip: 'Exporter Excel',
+                  onPressed: _exportEnCours ? null : _exporter,
+                ),
+              ],
+            ),
+            _panneauFiltres(),
+            Expanded(child: _corpsListe()),
+          ],
+        ),
       ),
     );
   }
 
   Widget _panneauFiltres() {
     return Container(
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       child: Column(
         children: [
-          TextField(
-            controller: _rechercheController,
-            onChanged: _onRechercheChangee,
-            style: GoogleFonts.inter(fontSize: 13),
-            decoration: const InputDecoration(
-              hintText: 'Rechercher par titre',
-              prefixIcon: Icon(Icons.search, size: 20),
-              border: OutlineInputBorder(),
-              isDense: true,
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            ),
-          ),
+          _rechercheTopbar(),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -296,7 +283,7 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
                 ),
               ),
               if (_dateDebut != null)
-                IconButton(icon: const Icon(Icons.close, size: 18, color: _gris), onPressed: _effacerDates),
+                IconButton(icon: const Icon(Icons.close, size: 18, color: SSMPalette.texte3), onPressed: _effacerDates),
               const SizedBox(width: 4),
               _segmentTri(),
             ],
@@ -306,9 +293,41 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
     );
   }
 
+  // Recherche restylée à l'identique de la barre de recherche de SSMTopbar
+  // (fond gris clair F9FAFB, bordure E5E7EB, icône loupe).
+  Widget _rechercheTopbar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+        borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.search, size: 16, color: SSMPalette.texte3),
+          const SizedBox(width: 8),
+          Expanded(
+            child: TextField(
+              controller: _rechercheController,
+              onChanged: _onRechercheChangee,
+              style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: 'Rechercher par titre',
+                hintStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte3),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _segmentTri() {
     return Container(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: _gris.withValues(alpha: 0.4))),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(SSMRayons.moyen), border: Border.all(color: SSMPalette.bordure)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -330,8 +349,8 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
         },
         child: Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: actif ? _indigo : Colors.transparent, borderRadius: BorderRadius.circular(6)),
-          child: Icon(icone, size: 16, color: actif ? Colors.white : _gris),
+          decoration: BoxDecoration(color: actif ? SSMPalette.indigo : Colors.transparent, borderRadius: BorderRadius.circular(SSMRayons.petit)),
+          child: Icon(icone, size: 16, color: actif ? Colors.white : SSMPalette.texte3),
         ),
       ),
     );
@@ -345,13 +364,13 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(8), border: Border.all(color: _gris.withValues(alpha: 0.4))),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(SSMRayons.moyen), border: Border.all(color: SSMPalette.bordure)),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String?>(
           isExpanded: true,
           value: valeur,
-          hint: Text(hint, style: GoogleFonts.inter(fontSize: 12, color: _gris)),
-          style: GoogleFonts.inter(fontSize: 12, color: _texteFonce),
+          hint: Text(hint, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3)),
+          style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte1),
           items: [
             DropdownMenuItem<String?>(value: null, child: Text('Tout ($hint)')),
             ...options.entries.map((e) => DropdownMenuItem<String?>(value: e.key, child: Text(e.value))),
@@ -364,7 +383,7 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
 
   Widget _corpsListe() {
     if (_chargementInitial) {
-      return const Center(child: CircularProgressIndicator(color: _indigo));
+      return const Center(child: CircularProgressIndicator(color: SSMPalette.indigo));
     }
     if (_erreur != null) {
       return Center(
@@ -373,9 +392,9 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline, color: _rouge, size: 40),
+              const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
               const SizedBox(height: 12),
-              Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+              Text(_erreur!, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
               const SizedBox(height: 16),
               OutlinedButton(onPressed: _charger, child: const Text('Réessayer')),
             ],
@@ -388,9 +407,9 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.inbox_outlined, size: 48, color: _gris),
+            const Icon(Icons.inbox_outlined, size: 40, color: SSMPalette.texte3),
             const SizedBox(height: 12),
-            Text('Aucune notification ne correspond à ces filtres.', style: GoogleFonts.inter(color: _gris)),
+            Text('Aucune notification ne correspond à ces filtres.', style: GoogleFonts.inter(color: SSMPalette.texte2)),
           ],
         ),
       );
@@ -398,89 +417,85 @@ class _HistoriqueNotificationsScreenState extends State<HistoriqueNotificationsS
 
     return RefreshIndicator(
       onRefresh: _charger,
-      child: ListView.builder(
+      color: SSMPalette.indigo,
+      child: SingleChildScrollView(
         controller: _scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
-        itemCount: _items.length + 1,
-        itemBuilder: (context, i) {
-          if (i == _items.length) {
-            return Padding(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _table(),
+            Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: _chargementPage
-                    ? const CircularProgressIndicator(color: _indigo)
+                    ? const CircularProgressIndicator(color: SSMPalette.indigo)
                     : _pageActuelle >= _dernierePage
-                        ? Text('${_items.length} notification(s) au total', style: GoogleFonts.inter(fontSize: 12, color: _gris))
+                        ? Text('${_items.length} notification(s) au total', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3))
                         : const SizedBox.shrink(),
               ),
-            );
-          }
-          return _carteNotification(_items[i]);
-        },
-      ),
-    );
-  }
-
-  Widget _carteNotification(NotificationSSM n) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2))],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _ouvrirDetail(n.id!),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    if (n.urgent) ...[const Icon(Icons.priority_high, color: _rouge, size: 14), const SizedBox(width: 2)],
-                    Expanded(
-                      child: Text(
-                        n.titre,
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    SSMBadge(label: n.statut.libelle, couleur: n.statut.couleur),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 4,
-                  children: [
-                    _infoLigne(n.canal.icone, n.canal.libelle),
-                    _infoLigne(n.typeCible.icone, n.typeCible.libelle),
-                    _infoLigne(Icons.groups_outlined, '${n.nombreDestinataires} destinataire(s)'),
-                    _infoLigne(Icons.schedule, _formatDate(n.createdAt)),
-                  ],
-                ),
-              ],
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _infoLigne(IconData icone, String texte) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icone, size: 13, color: _gris),
-        const SizedBox(width: 4),
-        Text(texte, style: GoogleFonts.inter(fontSize: 11, color: _gris)),
-      ],
+  Widget _table() {
+    return Container(
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: SSMDataTable(
+        colonnes: const [
+          SSMDataColumn('Titre'),
+          SSMDataColumn('Canal'),
+          SSMDataColumn('Cible'),
+          SSMDataColumn('Destinataires'),
+          SSMDataColumn('Date'),
+          SSMDataColumn('Statut'),
+        ],
+        onLigneTap: (i) => _ouvrirDetail(_items[i].id!),
+        lignes: [
+          for (final n in _items)
+            [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (n.urgent) ...[
+                    const Icon(Icons.priority_high, size: 13, color: SSMPalette.rouge),
+                    const SizedBox(width: 3),
+                  ],
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 200),
+                    child: Text(
+                      n.titre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(n.canal.icone, size: 13, color: n.canal.couleur),
+                  const SizedBox(width: 5),
+                  Text(n.canal.libelle, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+                ],
+              ),
+              Text(n.typeCible.libelle, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
+              Text('${n.nombreDestinataires}', style: GoogleFonts.jetBrainsMono(fontSize: 12, color: SSMPalette.texte2)),
+              Text(_formatDate(n.createdAt), style: GoogleFonts.jetBrainsMono(fontSize: 11, color: SSMPalette.texte3)),
+              SSMPill.couleur(label: n.statut.libelle, couleur: n.statut.couleur),
+            ],
+        ],
+      ),
     );
   }
 }

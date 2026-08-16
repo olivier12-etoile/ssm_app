@@ -2,17 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/notification_model.dart';
 import '../../services/notification_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_data_table.dart';
+import '../../widgets/ssm/ssm_pill.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 import 'notifications_attente_screen.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFF8FAFC);
+// Couleurs de catégorie alignées sur la palette générale du thème (indigo /
+// teal / ambre / rouge uniquement — voir SSMPalette) : 6 catégories pour 4
+// teintes de base, réparties par famille (pédagogie/administratif en indigo,
+// finances/vie scolaire en teal, présence en ambre, discipline en rouge).
+const Map<CategorieNotification, Color> _couleursCategorie = {
+  CategorieNotification.scolarite: SSMPalette.indigo,
+  CategorieNotification.finances: SSMPalette.teal,
+  CategorieNotification.presence: SSMPalette.ambre,
+  CategorieNotification.administration: SSMPalette.indigo,
+  CategorieNotification.discipline: SSMPalette.rouge,
+  CategorieNotification.vieScolaire: SSMPalette.teal,
+};
 
 String _formatDateHeure(DateTime? d) {
   if (d == null) return '—';
@@ -68,13 +76,13 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: _rouge),
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: _vert),
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -82,7 +90,7 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Annuler l\'envoi ?', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+        title: Text('Annuler l\'envoi ?', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: Text(
           "Cette notification programmée sera annulée et ne sera jamais envoyée.",
           style: GoogleFonts.inter(),
@@ -90,7 +98,7 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Retour')),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Annuler l\'envoi'),
           ),
@@ -123,78 +131,78 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
     final notif = _notification;
 
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Détail de la notification', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Détail de la notification', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _vueErreur(_erreur!)
+                      : notif == null
+                          ? const SizedBox.shrink()
+                          : RefreshIndicator(
+                              onRefresh: _charger,
+                              color: SSMPalette.indigo,
+                              child: ListView(
+                                padding: const EdgeInsets.all(16),
+                                children: [
+                                  _carteEntete(notif),
+                                  const SizedBox(height: 16),
+                                  _carteStatistiques(notif),
+                                  if (notif.statut == StatutNotification.programmee) ...[
+                                    const SizedBox(height: 16),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: _actionEnCours ? null : _annulerProgrammee,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: SSMPalette.rouge,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                                        ),
+                                        icon: const Icon(Icons.cancel_outlined),
+                                        label: const Text("Annuler l'envoi"),
+                                      ),
+                                    ),
+                                  ],
+                                  if (notif.canal == CanalNotification.whatsapp &&
+                                      notif.destinataires.any((d) => d.statut == StatutDestinataire.envoye)) ...[
+                                    const SizedBox(height: 16),
+                                    SizedBox(
+                                      width: double.infinity,
+                                      child: ElevatedButton.icon(
+                                        onPressed: _reprendreEnvoiChaine,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: SSMPalette.teal,
+                                          foregroundColor: Colors.white,
+                                          elevation: 0,
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                                        ),
+                                        icon: const Icon(Icons.send),
+                                        label: const Text('Reprendre l\'envoi WhatsApp (chaîne)'),
+                                      ),
+                                    ),
+                                  ],
+                                  const SizedBox(height: 24),
+                                  Text(
+                                    'DESTINATAIRES (${notif.destinataires.length})',
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _tableDestinataires(notif),
+                                ],
+                              ),
+                            ),
+            ),
+          ],
+        ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _erreur != null
-              ? _vueErreur(_erreur!)
-              : notif == null
-                  ? const SizedBox.shrink()
-                  : RefreshIndicator(
-                      onRefresh: _charger,
-                      child: ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          _carteEntete(notif),
-                          const SizedBox(height: 16),
-                          _carteStatistiques(notif),
-                          if (notif.statut == StatutNotification.programmee) ...[
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: _actionEnCours ? null : _annulerProgrammee,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _rouge,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                                icon: const Icon(Icons.cancel_outlined),
-                                label: const Text("Annuler l'envoi"),
-                              ),
-                            ),
-                          ],
-                          if (notif.canal == CanalNotification.whatsapp &&
-                              notif.destinataires.any((d) => d.statut == StatutDestinataire.envoye)) ...[
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: _reprendreEnvoiChaine,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: _vert,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                                icon: const Icon(Icons.send),
-                                label: const Text('Reprendre l\'envoi WhatsApp (chaîne)'),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-                          SSMSectionTitre(titre: 'Destinataires (${notif.destinataires.length})'),
-                          if (notif.destinataires.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 24),
-                              child: Center(
-                                child: Text(
-                                  'Aucun destinataire enregistré.',
-                                  style: GoogleFonts.inter(color: _gris),
-                                ),
-                              ),
-                            )
-                          else
-                            ...notif.destinataires.map(_carteDestinataire),
-                        ],
-                      ),
-                    ),
     );
   }
 
@@ -205,9 +213,9 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             OutlinedButton(onPressed: _charger, child: const Text('Réessayer')),
           ],
@@ -218,13 +226,11 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
 
   Widget _carteEntete(NotificationSSM notif) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3)),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,13 +238,13 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
           Row(
             children: [
               if (notif.urgent) ...[
-                const Icon(Icons.priority_high, color: _rouge, size: 18),
+                const Icon(Icons.priority_high, color: SSMPalette.rouge, size: 18),
                 const SizedBox(width: 4),
               ],
               Expanded(
                 child: Text(
                   notif.titre,
-                  style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: _texteFonce),
+                  style: GoogleFonts.sora(fontSize: 18, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
                 ),
               ),
             ],
@@ -248,17 +254,17 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              SSMBadge(label: notif.statut.libelle, couleur: notif.statut.couleur, icone: Icons.circle),
-              SSMBadge(label: notif.canal.libelle, couleur: notif.canal.couleur, icone: notif.canal.icone),
-              SSMBadge(label: notif.typeCible.libelle, couleur: _indigo, icone: notif.typeCible.icone),
+              SSMPill.couleur(label: notif.statut.libelle, couleur: notif.statut.couleur),
+              SSMPill.couleur(label: notif.canal.libelle, couleur: notif.canal.couleur),
+              SSMPill.couleur(label: notif.typeCible.libelle, couleur: SSMPalette.indigo),
               if (notif.categorie != null)
-                SSMBadge(label: notif.categorie!.libelle, couleur: _teal, icone: notif.categorie!.icone),
+                SSMPill.couleur(label: notif.categorie!.libelle, couleur: _couleursCategorie[notif.categorie!] ?? SSMPalette.teal),
             ],
           ),
-          const Divider(height: 28),
+          const Divider(height: 28, color: SSMPalette.bordure),
           Text(
             notif.message,
-            style: GoogleFonts.inter(fontSize: 14, color: _texte, height: 1.5),
+            style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1, height: 1.5),
           ),
           const SizedBox(height: 14),
           Text(
@@ -266,7 +272,7 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
                 ? 'Programmée pour le ${_formatDateHeure(notif.dateEnvoiPrevue)}'
                 : 'Créée le ${_formatDateHeure(notif.createdAt)}'
                     '${notif.auteurNom != null ? ' par ${notif.auteurNom}' : ''}',
-            style: GoogleFonts.inter(fontSize: 12, color: _gris),
+            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3),
           ),
         ],
       ),
@@ -279,13 +285,11 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
     final echoues = notif.destinataires.where((d) => d.statut == StatutDestinataire.echec).length;
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3)),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,10 +297,10 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Progression de l\'envoi', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: _texteFonce)),
+              Text('Progression de l\'envoi', style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
               Text(
                 '${notif.nombreEnvoyes} / ${notif.nombreDestinataires}',
-                style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: _indigo),
+                style: GoogleFonts.jetBrainsMono(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.indigo),
               ),
             ],
           ),
@@ -307,15 +311,23 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
               value: notif.progressionEnvoi,
               minHeight: 8,
               backgroundColor: const Color(0xFFF1F5F9),
-              color: notif.estEnEchec ? _rouge : _vert,
+              color: notif.estEnEchec ? SSMPalette.rouge : SSMPalette.teal,
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Row(
             children: [
-              _statChiffre('Envoyés', envoyes, const Color(0xFF0284C7)),
-              _statChiffre('Délivrés', delivres, _vert),
-              _statChiffre('Échoués', echoues, _rouge),
+              Expanded(
+                child: SSMStatCard(icone: Icons.send_outlined, couleur: const Color(0xFF0284C7), valeur: '$envoyes', label: 'Envoyés'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SSMStatCard(icone: Icons.check_circle_outline, couleur: SSMPalette.teal, valeur: '$delivres', label: 'Délivrés'),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: SSMStatCard(icone: Icons.error_outline, couleur: SSMPalette.rouge, valeur: '$echoues', label: 'Échoués'),
+              ),
             ],
           ),
         ],
@@ -323,65 +335,54 @@ class _DetailNotificationScreenState extends State<DetailNotificationScreen> {
     );
   }
 
-  Widget _statChiffre(String label, int valeur, Color couleur) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(
-            '$valeur',
-            style: GoogleFonts.jetBrainsMono(fontSize: 22, fontWeight: FontWeight.w700, color: couleur),
-          ),
-          const SizedBox(height: 2),
-          Text(label, style: GoogleFonts.inter(fontSize: 11, color: _texte)),
-        ],
-      ),
-    );
-  }
+  Widget _tableDestinataires(NotificationSSM notif) {
+    if (notif.destinataires.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text('Aucun destinataire enregistré.', style: GoogleFonts.inter(color: SSMPalette.texte3)),
+        ),
+      );
+    }
 
-  Widget _carteDestinataire(NotificationDestinataire d) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 6, offset: const Offset(0, 2)),
-        ],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: d.statut.couleur.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              d.eleveId != null ? Icons.family_restroom : Icons.person,
-              color: d.statut.couleur,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  d.nomDestinataire,
-                  style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
-                ),
-                if (d.telephone != null)
-                  Text(
-                    d.telephone!,
-                    style: GoogleFonts.jetBrainsMono(fontSize: 11, color: _gris),
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: SSMDataTable(
+        colonnes: const [
+          SSMDataColumn('Destinataire'),
+          SSMDataColumn('Statut'),
+        ],
+        lignes: [
+          for (final d in notif.destinataires)
+            [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(color: d.statut.couleur.withValues(alpha: 0.12), shape: BoxShape.circle),
+                    child: Icon(d.eleveId != null ? Icons.family_restroom : Icons.person, color: d.statut.couleur, size: 15),
                   ),
-              ],
-            ),
-          ),
-          SSMBadge(label: d.statut.libelle, couleur: d.statut.couleur),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(d.nomDestinataire, style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600, color: SSMPalette.texte1)),
+                      if (d.telephone != null)
+                        Text(d.telephone!, style: GoogleFonts.jetBrainsMono(fontSize: 10.5, color: SSMPalette.texte3)),
+                    ],
+                  ),
+                ],
+              ),
+              SSMPill.couleur(label: d.statut.libelle, couleur: d.statut.couleur),
+            ],
         ],
       ),
     );

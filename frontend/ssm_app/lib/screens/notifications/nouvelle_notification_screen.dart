@@ -7,17 +7,34 @@ import '../../services/auth_service.dart';
 import '../../services/classe_service.dart';
 import '../../services/eleve_service.dart';
 import '../../services/notification_service.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 import 'notifications_attente_screen.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFF8FAFC);
+InputDecoration _decorationChamp(String label, {IconData? icone, String? hint}) {
+  return InputDecoration(
+    labelText: label,
+    hintText: hint,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    prefixIcon: icone != null ? Icon(icone, size: 20, color: SSMPalette.texte3) : null,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(SSMRayons.moyen),
+      borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5),
+    ),
+  );
+}
 
 // Met en surbrillance les {variables} détectées dans le texte du message,
 // sans dépendance externe (surcharge de buildTextSpan).
@@ -33,9 +50,9 @@ class _ControleurVariables extends TextEditingController {
         spans.add(TextSpan(
           text: m[0],
           style: (style ?? const TextStyle()).copyWith(
-            color: _ambre,
+            color: SSMPalette.ambre,
             fontWeight: FontWeight.w700,
-            backgroundColor: _ambre.withValues(alpha: 0.14),
+            backgroundColor: SSMPalette.ambre.withValues(alpha: 0.14),
           ),
         ));
         return '';
@@ -163,13 +180,13 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
 
   void _afficherErreur(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: _rouge),
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.rouge),
     );
   }
 
   void _afficherSucces(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg), backgroundColor: _vert),
+      SnackBar(content: Text(msg), backgroundColor: SSMPalette.teal),
     );
   }
 
@@ -285,14 +302,31 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
       if (!mounted) return;
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Aperçu — ${resultat['eleve']}', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-          content: SingleChildScrollView(
-            child: Text(resultat['apercu'] as String? ?? '', style: GoogleFonts.inter(fontSize: 14, height: 1.5)),
+        builder: (context) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: SSMPanel(
+              titre: 'Aperçu — ${resultat['eleve']}',
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      resultat['apercu'] as String? ?? '',
+                      style: GoogleFonts.inter(fontSize: 14, height: 1.5, color: SSMPalette.texte1),
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer')),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Fermer')),
-          ],
         ),
       );
     } catch (e) {
@@ -331,7 +365,7 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           }
 
           return AlertDialog(
-            title: Text('Choisir un élève exemple', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+            title: Text('Choisir un élève exemple', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
             content: SizedBox(
               width: 360,
               height: 320,
@@ -340,15 +374,11 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
                   TextField(
                     controller: controleur,
                     autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'Nom, prénom ou matricule',
-                      prefixIcon: Icon(Icons.search),
-                      border: OutlineInputBorder(),
-                    ),
+                    decoration: _decorationChamp('Nom, prénom ou matricule', icone: Icons.search),
                     onChanged: chercher,
                   ),
                   const SizedBox(height: 8),
-                  if (recherche) const LinearProgressIndicator(),
+                  if (recherche) const LinearProgressIndicator(color: SSMPalette.indigo),
                   Expanded(
                     child: ListView.builder(
                       itemCount: resultats.length,
@@ -416,25 +446,25 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
     }
 
     if (_nombreDestinataires != null && _nombreDestinataires! > 10) {
+      final n = _nombreDestinataires!;
+      final grandVolume = n > 50;
       final confirme = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Row(
-            children: const [
-              Icon(Icons.warning_amber_rounded, color: _ambre),
-              SizedBox(width: 8),
-              Text('Confirmation'),
-            ],
-          ),
-          content: Text(
-            '⚠️ Vous êtes sur le point d\'envoyer cette notification à $_nombreDestinataires destinataires. '
-            'Cette action ne peut pas être annulée.',
-            style: GoogleFonts.inter(),
+          title: Text('Confirmation', style: GoogleFonts.sora(fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+          content: SizedBox(
+            width: 380,
+            child: SSMAlertItem(
+              type: grandVolume ? SSMAlerteType.danger : SSMAlerteType.avertissement,
+              icone: grandVolume ? Icons.error_outline : Icons.warning_amber_rounded,
+              titre: 'Envoi à $n destinataires',
+              sousTitre: "Cette notification sera envoyée à $n destinataires. Cette action ne peut pas être annulée.",
+            ),
           ),
           actions: [
             TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.indigo, foregroundColor: Colors.white, elevation: 0),
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Confirmer'),
             ),
@@ -495,32 +525,36 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Nouvelle notification', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Nouvelle notification', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargementInitial
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : !_estAutorise
+                      ? _vueNonAutorise()
+                      : Column(
+                          children: [
+                            _indicateurEtapes(),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(16),
+                                child: switch (_etape) {
+                                  0 => _etapeContenu(),
+                                  1 => _etapeCiblage(),
+                                  _ => _etapeEnvoi(),
+                                },
+                              ),
+                            ),
+                            _barreNavigation(),
+                          ],
+                        ),
+            ),
+          ],
+        ),
       ),
-      body: _chargementInitial
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : !_estAutorise
-              ? _vueNonAutorise()
-              : Column(
-                  children: [
-                    _indicateurEtapes(),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(16),
-                        child: switch (_etape) {
-                          0 => _etapeContenu(),
-                          1 => _etapeCiblage(),
-                          _ => _etapeEnvoi(),
-                        },
-                      ),
-                    ),
-                    _barreNavigation(),
-                  ],
-                ),
     );
   }
 
@@ -531,12 +565,12 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.block, color: _gris, size: 40),
+            const Icon(Icons.block, color: SSMPalette.texte3, size: 40),
             const SizedBox(height: 12),
             Text(
               "Vous n'êtes pas autorisé à envoyer de notification libre.",
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: _texte),
+              style: GoogleFonts.inter(color: SSMPalette.texte2),
             ),
           ],
         ),
@@ -550,13 +584,14 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
   Widget _indicateurEtapes() {
     const labels = ['Contenu', 'Ciblage', 'Envoi'];
     return Container(
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       child: Row(
         children: List.generate(labels.length, (i) {
           final actif = i == _etape;
           final complet = i < _etape;
-          final couleur = actif || complet ? _indigo : _gris;
+          final couleur = actif || complet ? SSMPalette.indigo : SSMPalette.texte3;
           return Expanded(
             child: Row(
               children: [
@@ -575,7 +610,7 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (i < labels.length - 1) Container(width: 16, height: 2, color: complet ? _indigo : const Color(0xFFE2E8F0)),
+                if (i < labels.length - 1) Container(width: 16, height: 2, color: complet ? SSMPalette.indigo : SSMPalette.bordure),
               ],
             ),
           );
@@ -587,9 +622,9 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
   Widget _barreNavigation() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, -3))],
+      decoration: const BoxDecoration(
+        color: SSMPalette.blanc,
+        border: Border(top: BorderSide(color: SSMPalette.bordure)),
       ),
       child: SafeArea(
         top: false,
@@ -607,10 +642,11 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
               flex: 2,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _indigo,
+                  backgroundColor: SSMPalette.indigo,
                   foregroundColor: Colors.white,
+                  elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
                 ),
                 onPressed: _envoiEnCours
                     ? null
@@ -631,7 +667,7 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
       padding: const EdgeInsets.only(bottom: 10, top: 4),
       child: Text(
         titre.toUpperCase(),
-        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4),
+        style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4),
       ),
     );
   }
@@ -652,8 +688,11 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
                   selected: _utiliserModele,
                   onSelected: (_) => setState(() => _utiliserModele = true),
                   label: const Text('Utiliser un modèle'),
-                  selectedColor: _indigo,
-                  labelStyle: GoogleFonts.inter(color: _utiliserModele ? Colors.white : _texte, fontWeight: FontWeight.w600),
+                  selectedColor: SSMPalette.indigo,
+                  backgroundColor: const Color(0xFFF3F4F6),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
+                  labelStyle: GoogleFonts.inter(color: _utiliserModele ? Colors.white : SSMPalette.texte2, fontWeight: FontWeight.w600),
                 ),
               ),
               const SizedBox(width: 8),
@@ -665,8 +704,11 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
                     _modeleSelectionne = null;
                   }),
                   label: const Text('Message libre'),
-                  selectedColor: _indigo,
-                  labelStyle: GoogleFonts.inter(color: !_utiliserModele ? Colors.white : _texte, fontWeight: FontWeight.w600),
+                  selectedColor: SSMPalette.indigo,
+                  backgroundColor: const Color(0xFFF3F4F6),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
+                  labelStyle: GoogleFonts.inter(color: !_utiliserModele ? Colors.white : SSMPalette.texte2, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -674,10 +716,10 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
         else
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: _teal.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: SSMPalette.tealClair, borderRadius: BorderRadius.circular(SSMRayons.moyen)),
             child: Text(
               'Votre rôle vous limite à des modèles prédéfinis pour cette catégorie.',
-              style: GoogleFonts.inter(fontSize: 12, color: _teal),
+              style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.teal),
             ),
           ),
         if (_utiliserModele) ...[
@@ -685,11 +727,7 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           DropdownButtonFormField<ModeleMessage>(
             initialValue: _modeleSelectionne,
             isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Modèle de message',
-              prefixIcon: Icon(Icons.article_outlined),
-              border: OutlineInputBorder(),
-            ),
+            decoration: _decorationChamp('Modèle de message', icone: Icons.article_outlined),
             hint: const Text('Choisir un modèle'),
             items: _modelesDisponibles.map((m) {
               return DropdownMenuItem(
@@ -704,12 +742,8 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
         _titreSection('Titre'),
         TextField(
           controller: _titreController,
-          style: GoogleFonts.inter(fontSize: 14),
-          decoration: const InputDecoration(
-            labelText: 'Titre de la notification *',
-            prefixIcon: Icon(Icons.title),
-            border: OutlineInputBorder(),
-          ),
+          style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+          decoration: _decorationChamp('Titre de la notification *', icone: Icons.title),
         ),
         const SizedBox(height: 20),
         _titreSection('Message'),
@@ -717,20 +751,17 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           controller: _messageController,
           maxLines: 8,
           minLines: 4,
-          style: GoogleFonts.inter(fontSize: 14, height: 1.5),
-          decoration: const InputDecoration(
-            labelText: 'Message *',
-            alignLabelWithHint: true,
-            border: OutlineInputBorder(),
-            hintText: 'Utilisez {parent}, {eleve}, {classe}... pour personnaliser automatiquement.',
-          ),
-          onChanged: (_) => setState(() {}),
+          style: GoogleFonts.inter(fontSize: 14, height: 1.5, color: SSMPalette.texte1),
+          decoration: _decorationChamp(
+            'Message *',
+            hint: 'Utilisez {parent}, {eleve}, {classe}... pour personnaliser automatiquement.',
+          ).copyWith(alignLabelWithHint: true),
         ),
         if (_messageContientVariables) ...[
           const SizedBox(height: 12),
           OutlinedButton.icon(
             onPressed: _ouvrirApercuMessage,
-            style: OutlinedButton.styleFrom(foregroundColor: _teal),
+            style: OutlinedButton.styleFrom(foregroundColor: SSMPalette.teal, side: const BorderSide(color: SSMPalette.teal)),
             icon: const Icon(Icons.visibility_outlined),
             label: const Text('Aperçu avec un élève exemple'),
           ),
@@ -755,11 +786,13 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
             return ChoiceChip(
               selected: selectionne,
               onSelected: (_) => _choisirTypeCible(type),
-              avatar: Icon(type.icone, size: 16, color: selectionne ? Colors.white : _indigo),
+              avatar: Icon(type.icone, size: 16, color: selectionne ? Colors.white : SSMPalette.indigo),
               label: Text(type.libelle),
-              labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: selectionne ? Colors.white : _texte),
-              selectedColor: _indigo,
+              labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: selectionne ? Colors.white : SSMPalette.texte2),
+              selectedColor: SSMPalette.indigo,
               backgroundColor: const Color(0xFFF1F5F9),
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
             );
           }).toList(),
         ),
@@ -769,11 +802,7 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           DropdownButtonFormField<int>(
             initialValue: _classeSelectionneeId,
             isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Choisir une classe',
-              prefixIcon: Icon(Icons.class_outlined),
-              border: OutlineInputBorder(),
-            ),
+            decoration: _decorationChamp('Choisir une classe', icone: Icons.class_outlined),
             items: _classes.map((c) {
               return DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['nom'] as String));
             }).toList(),
@@ -804,9 +833,12 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
                   _rafraichirApercuDestinataires();
                 },
                 label: Text(c['nom'] as String),
-                selectedColor: _indigo.withValues(alpha: 0.15),
-                checkmarkColor: _indigo,
-                labelStyle: GoogleFonts.inter(fontSize: 12, color: selectionne ? _indigo : _texte, fontWeight: FontWeight.w600),
+                selectedColor: SSMPalette.indigo.withValues(alpha: 0.15),
+                checkmarkColor: SSMPalette.indigo,
+                backgroundColor: const Color(0xFFF1F5F9),
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
+                labelStyle: GoogleFonts.inter(fontSize: 12, color: selectionne ? SSMPalette.indigo : SSMPalette.texte2, fontWeight: FontWeight.w600),
               );
             }).toList(),
           ),
@@ -816,19 +848,19 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           if (_eleveSelectionne != null)
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+              decoration: BoxDecoration(color: SSMPalette.indigoClair, borderRadius: BorderRadius.circular(SSMRayons.moyen)),
               child: Row(
                 children: [
-                  const Icon(Icons.person, color: _indigo),
+                  const Icon(Icons.person, color: SSMPalette.indigo),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       '${_eleveSelectionne!['nom']} ${_eleveSelectionne!['prenom']}',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: _texteFonce),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: _rouge),
+                    icon: const Icon(Icons.close, color: SSMPalette.rouge),
                     onPressed: () {
                       setState(() {
                         _eleveSelectionne = null;
@@ -842,14 +874,11 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           else ...[
             TextField(
               controller: _rechercheEleveController,
-              decoration: InputDecoration(
-                labelText: 'Rechercher par nom ou matricule',
-                prefixIcon: const Icon(Icons.search),
-                border: const OutlineInputBorder(),
+              decoration: _decorationChamp('Rechercher par nom ou matricule', icone: Icons.search).copyWith(
                 suffixIcon: _rechercheEnCours
                     ? const Padding(
                         padding: EdgeInsets.all(12),
-                        child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                        child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo)),
                       )
                     : null,
               ),
@@ -859,9 +888,10 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
               Container(
                 margin: const EdgeInsets.only(top: 8),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 2))],
+                  color: SSMPalette.blanc,
+                  borderRadius: BorderRadius.circular(SSMRayons.moyen),
+                  border: Border.all(color: SSMPalette.bordure),
+                  boxShadow: SSMOmbres.legere,
                 ),
                 constraints: const BoxConstraints(maxHeight: 260),
                 child: ListView.builder(
@@ -871,7 +901,7 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
                     final e = _resultatsRechercheEleve[i] as Map<String, dynamic>;
                     final classe = (e['classe_actuelle'] as Map<String, dynamic>?)?['nom'];
                     return ListTile(
-                      leading: const Icon(Icons.person_outline, color: _indigo),
+                      leading: const Icon(Icons.person_outline, color: SSMPalette.indigo),
                       title: Text('${e['nom']} ${e['prenom']}'),
                       subtitle: Text([?classe, ?e['matricule']].join(' · ')),
                       onTap: () {
@@ -898,19 +928,19 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.06), borderRadius: BorderRadius.circular(12)),
+      decoration: BoxDecoration(color: SSMPalette.indigoClair, borderRadius: BorderRadius.circular(SSMRayons.grand)),
       child: Row(
         children: [
-          const Icon(Icons.groups_outlined, color: _indigo),
+          const Icon(Icons.groups_outlined, color: SSMPalette.indigo),
           const SizedBox(width: 12),
           Expanded(
             child: _chargementApercu
-                ? Text('Calcul en cours…', style: GoogleFonts.inter(fontSize: 13, color: _texte))
+                ? Text('Calcul en cours…', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2))
                 : Text(
                     _nombreDestinataires != null
                         ? '$_nombreDestinataires destinataire(s) concerné(s)'
                         : 'Complétez le ciblage pour voir le nombre de destinataires.',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                   ),
           ),
         ],
@@ -941,9 +971,11 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
                   onSelected: disponible ? (_) => setState(() => _canal = canal) : null,
                   avatar: Icon(canal.icone, size: 16, color: selectionne ? Colors.white : canal.couleur),
                   label: Text(canal.libelle),
-                  labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: selectionne ? Colors.white : _texte),
+                  labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: selectionne ? Colors.white : SSMPalette.texte2),
                   selectedColor: canal.couleur,
                   backgroundColor: const Color(0xFFF1F5F9),
+                  side: BorderSide.none,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
                 ),
               ),
             );
@@ -954,7 +986,7 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           contentPadding: EdgeInsets.zero,
           value: _urgent,
           onChanged: (v) => setState(() => _urgent = v),
-          activeThumbColor: _rouge,
+          activeThumbColor: SSMPalette.rouge,
           title: const Text('Urgent'),
           subtitle: const Text('Signale la notification comme prioritaire'),
         ),
@@ -963,21 +995,21 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             margin: const EdgeInsets.only(bottom: 8),
-            decoration: BoxDecoration(color: _rouge.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: SSMPalette.rougeClair, borderRadius: BorderRadius.circular(SSMRayons.moyen)),
             child: Row(
               children: [
-                const Icon(Icons.priority_high, color: _rouge),
+                const Icon(Icons.priority_high, color: SSMPalette.rouge),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     'Cette notification sera marquée URGENTE.',
-                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _rouge),
+                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.rouge),
                   ),
                 ),
               ],
             ),
           ),
-        const Divider(height: 28),
+        const Divider(height: 28, color: SSMPalette.bordure),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           value: _programmee,
@@ -985,14 +1017,14 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
             _programmee = v;
             if (!v) _dateEnvoiProgrammee = null;
           }),
-          activeThumbColor: _indigo,
+          activeThumbColor: SSMPalette.indigo,
           title: const Text("Programmer l'envoi"),
           subtitle: const Text("Envoyer à une date/heure ultérieure"),
         ),
         if (_programmee)
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.event, color: _indigo),
+            leading: const Icon(Icons.event, color: SSMPalette.indigo),
             title: Text(_dateEnvoiProgrammee != null
                 ? '${_dateEnvoiProgrammee!.day}/${_dateEnvoiProgrammee!.month}/${_dateEnvoiProgrammee!.year} à '
                     '${_dateEnvoiProgrammee!.hour.toString().padLeft(2, '0')}:${_dateEnvoiProgrammee!.minute.toString().padLeft(2, '0')}'
@@ -1006,12 +1038,12 @@ class _NouvelleNotificationScreenState extends State<NouvelleNotificationScreen>
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(color: _rouge.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(color: SSMPalette.rougeClair, borderRadius: BorderRadius.circular(SSMRayons.moyen)),
             child: Row(
               children: [
-                const Icon(Icons.warning_amber, color: _rouge, size: 18),
+                const Icon(Icons.warning_amber, color: SSMPalette.rouge, size: 18),
                 const SizedBox(width: 8),
-                Expanded(child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: _rouge))),
+                Expanded(child: Text(_erreur!, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.rouge))),
               ],
             ),
           ),

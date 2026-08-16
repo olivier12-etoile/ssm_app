@@ -4,27 +4,23 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../models/notification_model.dart';
 import '../../models/statistique_notification_model.dart';
 import '../../services/statistique_notification_service.dart';
-import '../../widgets/ssm_widgets.dart';
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
+import '../../widgets/ssm/ssm_stat_card.dart';
 
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _ambre = Color(0xFFD97706);
-const Color _vert = Color(0xFF16A34A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _violet = Color(0xFF7C3AED);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFF8FAFC);
-
+// Couleurs de catégorie alignées sur la palette générale du thème (indigo /
+// teal / ambre / rouge uniquement — voir SSMPalette).
 const Map<CategorieNotification, Color> _couleursCategorie = {
-  CategorieNotification.scolarite: _indigo,
-  CategorieNotification.finances: _vert,
-  CategorieNotification.presence: _ambre,
-  CategorieNotification.administration: _violet,
-  CategorieNotification.discipline: _rouge,
-  CategorieNotification.vieScolaire: _teal,
+  CategorieNotification.scolarite: SSMPalette.indigo,
+  CategorieNotification.finances: SSMPalette.teal,
+  CategorieNotification.presence: SSMPalette.ambre,
+  CategorieNotification.administration: SSMPalette.indigo,
+  CategorieNotification.discipline: SSMPalette.rouge,
+  CategorieNotification.vieScolaire: SSMPalette.teal,
 };
+
+const Color _bleuInfo = Color(0xFF0284C7);
 
 String _formatDateCourt(DateTime d) => '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
@@ -113,52 +109,50 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Statistiques des notifications', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-      ),
-      body: Column(
-        children: [
-          _selecteurPeriode(),
-          Expanded(
-            child: _chargement
-                ? const Center(child: CircularProgressIndicator(color: _indigo))
-                : _erreur != null
-                    ? _vueErreur(_erreur!)
-                    : _stats == null
-                        ? const SizedBox.shrink()
-                        : RefreshIndicator(
-                            onRefresh: _charger,
-                            child: ListView(
-                              padding: const EdgeInsets.all(16),
-                              children: [
-                                _cartesResume(_stats!),
-                                const SizedBox(height: 24),
-                                SSMSectionTitre(titre: 'Répartition par canal'),
-                                _cartePie(
-                                  _stats!.parCanal.map((k, v) => MapEntry(
-                                        CanalNotification.depuisApi(k).libelle,
-                                        _EntreePie(v, CanalNotification.depuisApi(k).couleur),
-                                      )),
-                                ),
-                                const SizedBox(height: 24),
-                                SSMSectionTitre(titre: 'Répartition par catégorie'),
-                                _cartePie(
-                                  _stats!.parCategorie.map((k, v) => MapEntry(
-                                        CategorieNotification.depuisApi(k).libelle,
-                                        _EntreePie(v, _couleursCategorie[CategorieNotification.depuisApi(k)] ?? _gris),
-                                      )),
-                                ),
-                                const SizedBox(height: 24),
-                                SSMSectionTitre(titre: 'Évolution sur la période'),
-                                _carteEvolution(_stats!.parPeriode),
-                              ],
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Statistiques des notifications', onRetour: () => Navigator.pop(context)),
+            _selecteurPeriode(),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null
+                      ? _vueErreur(_erreur!)
+                      : _stats == null
+                          ? const SizedBox.shrink()
+                          : RefreshIndicator(
+                              onRefresh: _charger,
+                              color: SSMPalette.indigo,
+                              child: ListView(
+                                padding: const EdgeInsets.all(16),
+                                children: [
+                                  _cartesResume(_stats!),
+                                  const SizedBox(height: 20),
+                                  _cartePie(
+                                    titre: 'Répartition par canal',
+                                    donnees: _stats!.parCanal.map((k, v) => MapEntry(
+                                          CanalNotification.depuisApi(k).libelle,
+                                          _EntreePie(v, CanalNotification.depuisApi(k).couleur),
+                                        )),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _cartePie(
+                                    titre: 'Répartition par catégorie',
+                                    donnees: _stats!.parCategorie.map((k, v) => MapEntry(
+                                          CategorieNotification.depuisApi(k).libelle,
+                                          _EntreePie(v, _couleursCategorie[CategorieNotification.depuisApi(k)] ?? SSMPalette.teal),
+                                        )),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  _carteEvolution(_stats!.parPeriode),
+                                ],
+                              ),
                             ),
-                          ),
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -170,9 +164,9 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 40),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 16),
             OutlinedButton(onPressed: _charger, child: const Text('Réessayer')),
           ],
@@ -183,8 +177,9 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
 
   Widget _selecteurPeriode() {
     return Container(
-      color: Colors.white,
+      color: SSMPalette.blanc,
       padding: const EdgeInsets.all(12),
+      decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: SSMPalette.bordure))),
       child: Row(
         children: [
           Expanded(child: _chipPeriode('semaine', 'Semaine')),
@@ -202,8 +197,11 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
                 style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
               ),
-              selectedColor: _indigo,
-              labelStyle: TextStyle(color: _periode == 'personnalise' ? Colors.white : _texte),
+              selectedColor: SSMPalette.indigo,
+              backgroundColor: const Color(0xFFF1F5F9),
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
+              labelStyle: TextStyle(color: _periode == 'personnalise' ? Colors.white : SSMPalette.texte2),
             ),
           ),
         ],
@@ -220,63 +218,69 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
         _charger();
       },
       label: Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
-      selectedColor: _indigo,
-      labelStyle: TextStyle(color: selectionne ? Colors.white : _texte),
+      selectedColor: SSMPalette.indigo,
+      backgroundColor: const Color(0xFFF1F5F9),
+      side: BorderSide.none,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.pilule)),
+      labelStyle: TextStyle(color: selectionne ? Colors.white : SSMPalette.texte2),
     );
   }
 
   Widget _cartesResume(StatistiqueNotification s) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: [
-        SSMStatCard(titre: 'Total envoyées', valeur: '${s.totalEnvoyees}', icone: Icons.send_outlined, couleurIcone: const Color(0xFF0284C7)),
-        SSMStatCard(titre: 'Délivrées', valeur: '${s.totalDelivrees}', icone: Icons.check_circle_outline, couleurIcone: _vert),
-        SSMStatCard(titre: 'Échouées', valeur: '${s.totalEchouees}', icone: Icons.error_outline, couleurIcone: _rouge),
-        SSMStatCard(
-          titre: 'Taux de réussite',
-          valeur: '${s.tauxReussite.toStringAsFixed(1)}%',
-          icone: Icons.trending_up,
-          couleurIcone: _teal,
+    final cartes = <Widget>[
+      SSMStatCard(icone: Icons.send_outlined, couleur: _bleuInfo, valeur: '${s.totalEnvoyees}', label: 'Total envoyées'),
+      SSMStatCard(icone: Icons.check_circle_outline, couleur: SSMPalette.teal, valeur: '${s.totalDelivrees}', label: 'Délivrées'),
+      SSMStatCard(icone: Icons.error_outline, couleur: SSMPalette.rouge, valeur: '${s.totalEchouees}', label: 'Échouées'),
+      SSMStatCard(
+        icone: Icons.trending_up,
+        couleur: SSMPalette.ambre,
+        valeur: '${s.tauxReussite.toStringAsFixed(1)}%',
+        label: 'Taux de réussite',
+      ),
+    ];
+
+    return LayoutBuilder(builder: (context, contraintes) {
+      final colonnes = contraintes.maxWidth >= 760 ? 4 : (contraintes.maxWidth >= 480 ? 2 : 1);
+      return GridView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: cartes.length,
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: colonnes,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          mainAxisExtent: 118,
         ),
-      ],
-    );
+        itemBuilder: (context, i) => cartes[i],
+      );
+    });
   }
 
-  Widget _cartePie(Map<String, _EntreePie> donnees) {
+  Widget _cartePie({required String titre, required Map<String, _EntreePie> donnees}) {
     final total = donnees.values.fold<int>(0, (s, e) => s + e.valeur);
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
+    return SSMPanel(
+      titre: titre,
       child: total == 0
           ? Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: Text('Aucune donnée sur cette période.', style: GoogleFonts.inter(color: _gris))),
+              child: Center(child: Text('Aucune donnée sur cette période.', style: GoogleFonts.inter(color: SSMPalette.texte3))),
             )
           : Row(
               children: [
                 SizedBox(
-                  width: 120,
-                  height: 120,
+                  width: 110,
+                  height: 110,
                   child: PieChart(
                     PieChartData(
                       sectionsSpace: 2,
-                      centerSpaceRadius: 30,
+                      centerSpaceRadius: 28,
                       sections: donnees.entries.map((e) {
                         return PieChartSectionData(
                           value: e.value.valeur.toDouble(),
                           color: e.value.couleur,
                           showTitle: false,
-                          radius: 24,
+                          radius: 22,
                         );
                       }).toList(),
                     ),
@@ -292,14 +296,14 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         child: Row(
                           children: [
-                            Container(width: 10, height: 10, decoration: BoxDecoration(color: e.value.couleur, shape: BoxShape.circle)),
+                            Container(width: 9, height: 9, decoration: BoxDecoration(color: e.value.couleur, shape: BoxShape.circle)),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Text(e.key, style: GoogleFonts.inter(fontSize: 12, color: _texte), overflow: TextOverflow.ellipsis),
+                              child: Text(e.key, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2), overflow: TextOverflow.ellipsis),
                             ),
                             Text(
                               '${e.value.valeur} (${pourcentage.toStringAsFixed(0)}%)',
-                              style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: _texteFonce),
+                              style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w600, color: SSMPalette.texte1),
                             ),
                           ],
                         ),
@@ -313,101 +317,92 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
   }
 
   Widget _carteEvolution(List<PointEvolution> points) {
-    if (points.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-        child: Center(child: Text('Aucune donnée sur cette période.', style: GoogleFonts.inter(color: _gris))),
-      );
-    }
+    return SSMPanel(
+      titre: 'Évolution sur la période',
+      child: points.isEmpty
+          ? Center(child: Text('Aucune donnée sur cette période.', style: GoogleFonts.inter(color: SSMPalette.texte3)))
+          : _graphiqueEvolution(points),
+    );
+  }
 
+  Widget _graphiqueEvolution(List<PointEvolution> points) {
     final maxY = points
         .expand((p) => [p.envoyees, p.delivrees, p.echouees])
         .fold<int>(0, (m, v) => v > m ? v : m)
         .toDouble();
     final plafond = maxY <= 0 ? 5.0 : maxY * 1.3;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 10, offset: const Offset(0, 3))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 8, bottom: 12),
-            child: Wrap(
-              spacing: 14,
-              children: [
-                _legendeLigne('Envoyées', const Color(0xFF0284C7)),
-                _legendeLigne('Délivrées', _vert),
-                _legendeLigne('Échouées', _rouge),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 14,
+          children: [
+            _legendeLigne('Envoyées', _bleuInfo),
+            _legendeLigne('Délivrées', SSMPalette.teal),
+            _legendeLigne('Échouées', SSMPalette.rouge),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 220,
+          child: LineChart(
+            LineChartData(
+              minY: 0,
+              maxY: plafond,
+              gridData: FlGridData(
+                drawVerticalLine: false,
+                horizontalInterval: plafond / 4,
+                getDrawingHorizontalLine: (v) => FlLine(color: SSMPalette.bordure, strokeWidth: 1),
+              ),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 32,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toInt().toString(),
+                      style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte3),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    interval: (points.length / 5).clamp(1, points.length).toDouble(),
+                    getTitlesWidget: (value, meta) {
+                      final i = value.toInt();
+                      if (i < 0 || i >= points.length) return const SizedBox();
+                      final d = points[i].date;
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text('${d.day}/${d.month}', style: GoogleFonts.inter(fontSize: 9, color: SSMPalette.texte3)),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              lineTouchData: LineTouchData(
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (_) => SSMPalette.indigo,
+                  getTooltipItems: (spots) => spots
+                      .map((s) => LineTooltipItem('${s.y.toInt()}', const TextStyle(color: Colors.white, fontSize: 11)))
+                      .toList(),
+                ),
+              ),
+              lineBarsData: [
+                _ligne(points, (p) => p.envoyees.toDouble(), _bleuInfo),
+                _ligne(points, (p) => p.delivrees.toDouble(), SSMPalette.teal),
+                _ligne(points, (p) => p.echouees.toDouble(), SSMPalette.rouge),
               ],
             ),
+            duration: const Duration(milliseconds: 400),
           ),
-          SizedBox(
-            height: 220,
-            child: LineChart(
-              LineChartData(
-                minY: 0,
-                maxY: plafond,
-                gridData: FlGridData(
-                  drawVerticalLine: false,
-                  horizontalInterval: plafond / 4,
-                  getDrawingHorizontalLine: (v) => FlLine(color: _texteFonce.withValues(alpha: 0.05), strokeWidth: 1),
-                ),
-                borderData: FlBorderData(show: false),
-                titlesData: FlTitlesData(
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 32,
-                      getTitlesWidget: (value, meta) => Text(
-                        value.toInt().toString(),
-                        style: GoogleFonts.inter(fontSize: 9, color: _gris),
-                      ),
-                    ),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      interval: (points.length / 5).clamp(1, points.length).toDouble(),
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= points.length) return const SizedBox();
-                        final d = points[i].date;
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text('${d.day}/${d.month}', style: GoogleFonts.inter(fontSize: 9, color: _gris)),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                lineTouchData: LineTouchData(
-                  touchTooltipData: LineTouchTooltipData(
-                    getTooltipColor: (_) => _indigo,
-                    getTooltipItems: (spots) => spots
-                        .map((s) => LineTooltipItem('${s.y.toInt()}', const TextStyle(color: Colors.white, fontSize: 11)))
-                        .toList(),
-                  ),
-                ),
-                lineBarsData: [
-                  _ligne(points, (p) => p.envoyees.toDouble(), const Color(0xFF0284C7)),
-                  _ligne(points, (p) => p.delivrees.toDouble(), _vert),
-                  _ligne(points, (p) => p.echouees.toDouble(), _rouge),
-                ],
-              ),
-              duration: const Duration(milliseconds: 400),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -427,7 +422,7 @@ class _StatistiquesNotificationsScreenState extends State<StatistiquesNotificati
       children: [
         Container(width: 10, height: 3, color: couleur),
         const SizedBox(width: 6),
-        Text(label, style: GoogleFonts.inter(fontSize: 11, color: _texte)),
+        Text(label, style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte2)),
       ],
     );
   }
