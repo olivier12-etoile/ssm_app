@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,15 +6,10 @@ import '../../models/utilisateur.dart';
 import '../../models/parametre_ecole_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/parametre_ecole_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 const List<Color> _paletteCouleurs = [
   Color(0xFF1E3A8A), // Indigo
@@ -36,7 +30,7 @@ Color _hexVersColor(String hex) {
   try {
     return Color(int.parse(hex.replaceAll('#', '0xFF')));
   } catch (_) {
-    return _indigo;
+    return SSMPalette.indigo;
   }
 }
 
@@ -50,7 +44,9 @@ String _colorVersHex(Color c) {
 // (IdentiteVisuelleController::uploadLogo/uploadCachet/uploadSignature/
 // supprimerLogo) et couleurs (updateCouleurs). Ces éléments sont ensuite
 // injectés automatiquement dans les PDF (bulletins, reçus) via
-// IdentiteEcoleHelper côté backend.
+// IdentiteEcoleHelper côté backend. Les couleurs choisies ici sont celles
+// de l'ÉCOLE (utilisées sur les documents) — distinctes du thème de
+// l'application SSM elle-même (indigo/teal/amber), qui reste fixe.
 // ══════════════════════════════════════════════════════════
 class IdentiteVisuelleScreen extends StatefulWidget {
   const IdentiteVisuelleScreen({super.key});
@@ -209,7 +205,7 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
       if (!mounted) return;
       setState(() => _enregistrementCouleursEnCours = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Couleurs enregistrées avec succès'), backgroundColor: _vert),
+        const SnackBar(content: Text('Couleurs enregistrées avec succès'), backgroundColor: SSMPalette.teal),
       );
     } catch (e) {
       if (!mounted) return;
@@ -220,24 +216,28 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
 
   void _afficherErreur(Object e) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge),
+      SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SSMPalette.rouge),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Identité visuelle', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Identité visuelle', sousTitre: 'Logo, cachet, signature et couleurs', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null && _identite == null
+                      ? _carteErreur(_erreur!, _charger)
+                      : _corps(),
+            ),
+          ],
+        ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _erreur != null && _identite == null
-              ? _carteErreur(_erreur!, _charger)
-              : _corps(),
     );
   }
 
@@ -245,25 +245,20 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-          child: Row(
-            children: [
-              const Icon(Icons.info_outline, color: _indigo, size: 18),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Ces éléments seront utilisés automatiquement sur les bulletins et reçus.',
-                  style: GoogleFonts.inter(fontSize: 12, color: _texte),
-                ),
-              ),
-            ],
-          ),
+        const SSMAlertItem(
+          type: SSMAlerteType.succes,
+          icone: Icons.info_outline,
+          titre: 'Utilisation automatique',
+          sousTitre: 'Ces éléments seront utilisés automatiquement sur les bulletins et reçus.',
         ),
         if (_lectureSeule) ...[
           const SizedBox(height: 12),
-          _bandeauLectureSeule(),
+          const SSMAlertItem(
+            type: SSMAlerteType.avertissement,
+            icone: Icons.lock_outline,
+            titre: 'Lecture seule',
+            sousTitre: "Seul le directeur peut modifier l'identité visuelle.",
+          ),
         ],
         const SizedBox(height: 20),
         _titreSection('Logos, cachet et signature'),
@@ -287,10 +282,18 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
         ),
         const SizedBox(height: 24),
         _titreSection('Couleurs'),
-        _ligneCouleur('Couleur principale', _couleurPrincipale, () => _choisirCouleur('principale')),
-        _ligneCouleur('Couleur secondaire', _couleurSecondaire, () => _choisirCouleur('secondaire')),
-        _ligneCouleur('Couleur des boutons', _couleurBoutons, () => _choisirCouleur('boutons')),
-        _ligneCouleur('Couleur des en-têtes', _couleurEntetes, () => _choisirCouleur('entetes')),
+        SSMPanel(
+          titre: "Couleurs de l'école",
+          padding: EdgeInsets.zero,
+          child: Column(
+            children: [
+              _ligneCouleur('Couleur principale', _couleurPrincipale, () => _choisirCouleur('principale')),
+              _ligneCouleur('Couleur secondaire', _couleurSecondaire, () => _choisirCouleur('secondaire')),
+              _ligneCouleur('Couleur des boutons', _couleurBoutons, () => _choisirCouleur('boutons')),
+              _ligneCouleur('Couleur des en-têtes', _couleurEntetes, () => _choisirCouleur('entetes'), dernier: true),
+            ],
+          ),
+        ),
         const SizedBox(height: 16),
         _apercuLive(),
         const SizedBox(height: 20),
@@ -299,10 +302,11 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: _indigo,
+                backgroundColor: SSMPalette.indigo,
                 foregroundColor: Colors.white,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
               ),
               onPressed: _enregistrementCouleursEnCours ? null : _enregistrerCouleurs,
               child: _enregistrementCouleursEnCours
@@ -320,7 +324,7 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: _texte)),
+        Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: SSMPalette.texte2)),
         const SizedBox(height: 6),
         GestureDetector(
           onTap: _lectureSeule || enCours ? null : () => _choisirEtUploader(cible),
@@ -330,13 +334,13 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
                 height: 110,
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _gris.withValues(alpha: 0.3), style: BorderStyle.solid),
+                  color: const Color(0xFFF9FAFB),
+                  borderRadius: BorderRadius.circular(SSMRayons.grand),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: enCours
-                    ? const Center(child: CircularProgressIndicator(color: _indigo, strokeWidth: 2))
+                    ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo, strokeWidth: 2))
                     : url != null
                         ? Image.network(url, fit: BoxFit.contain, errorBuilder: (_, _, _) => _placeholderUpload())
                         : _placeholderUpload(),
@@ -349,7 +353,7 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
                     onTap: () => _supprimerLogo(cible),
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(color: _rouge, shape: BoxShape.circle),
+                      decoration: const BoxDecoration(color: SSMPalette.rouge, shape: BoxShape.circle),
                       child: const Icon(Icons.close, color: Colors.white, size: 14),
                     ),
                   ),
@@ -366,27 +370,27 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.add_photo_alternate_outlined, color: _gris.withValues(alpha: 0.7), size: 28),
+          const Icon(Icons.add_photo_alternate_outlined, color: SSMPalette.texte3, size: 28),
           const SizedBox(height: 4),
-          Text('Ajouter', style: GoogleFonts.inter(fontSize: 11, color: _gris)),
+          Text('Ajouter', style: GoogleFonts.inter(fontSize: 11, color: SSMPalette.texte3)),
         ],
       ),
     );
   }
 
-  Widget _ligneCouleur(String label, String hex, VoidCallback onTap) {
+  Widget _ligneCouleur(String label, String hex, VoidCallback onTap, {bool dernier = false}) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
         onTap: _lectureSeule ? null : onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(border: dernier ? null : const Border(bottom: BorderSide(color: SSMPalette.bordure))),
           child: Row(
             children: [
               Container(
-                width: 32,
-                height: 32,
+                width: 30,
+                height: 30,
                 decoration: BoxDecoration(
                   color: _hexVersColor(hex),
                   shape: BoxShape.circle,
@@ -395,11 +399,11 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce))),
-              Text(hex, style: GoogleFonts.jetBrainsMono(fontSize: 12, color: _texte)),
+              Expanded(child: Text(label, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1))),
+              Text(hex, style: GoogleFonts.jetBrainsMono(fontSize: 12, color: SSMPalette.texte2)),
               if (!_lectureSeule) ...[
                 const SizedBox(width: 6),
-                const Icon(Icons.chevron_right, color: _gris, size: 18),
+                const Icon(Icons.chevron_right, color: SSMPalette.texte3, size: 18),
               ],
             ],
           ),
@@ -409,53 +413,26 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
   }
 
   Widget _apercuLive() {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.65),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.7)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Aperçu', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _texte, letterSpacing: 0.4)),
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-                decoration: BoxDecoration(color: _hexVersColor(_couleurEntetes), borderRadius: BorderRadius.circular(8)),
-                child: Text("En-tête de l'école", style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
-              ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
-                  decoration: BoxDecoration(color: _hexVersColor(_couleurBoutons), borderRadius: BorderRadius.circular(8)),
-                  child: Text('Bouton exemple', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _bandeauLectureSeule() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: _ambre.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10), border: Border.all(color: _ambre.withValues(alpha: 0.3))),
-      child: Row(
+    return SSMPanel(
+      titre: 'Aperçu',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.lock_outline, color: _ambre, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text('Lecture seule — seul le directeur peut modifier l\'identité visuelle.', style: GoogleFonts.inter(fontSize: 12, color: _texte))),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+            decoration: BoxDecoration(color: _hexVersColor(_couleurEntetes), borderRadius: BorderRadius.circular(SSMRayons.petit)),
+            child: Text("En-tête de l'école", style: GoogleFonts.sora(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 18),
+              decoration: BoxDecoration(color: _hexVersColor(_couleurBoutons), borderRadius: BorderRadius.circular(SSMRayons.petit)),
+              child: Text('Bouton exemple', style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white)),
+            ),
+          ),
         ],
       ),
     );
@@ -468,15 +445,11 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 36),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 36),
             const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: onReessayer,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-              child: const Text('Réessayer'),
-            ),
+            ElevatedButton(onPressed: onReessayer, child: const Text('Réessayer')),
           ],
         ),
       ),
@@ -486,7 +459,7 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
   Widget _titreSection(String titre) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, top: 4),
-      child: Text(titre.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4)),
+      child: Text(titre.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4)),
     );
   }
 }
@@ -494,8 +467,8 @@ class _IdentiteVisuelleScreenState extends State<IdentiteVisuelleScreen> {
 // ══════════════════════════════════════════════════════════
 // Feuille de sélection d'une couleur : palette de suggestions + saisie hex
 // manuelle (pas de dépendance color-picker externe, ce projet n'en utilise
-// pas — voir _couleursSuggerees dans fiche_classe_screen.dart pour le
-// précédent).
+// pas). Cette feuille reste volontairement libre de toute couleur SSM (elle
+// choisit la couleur de l'ÉCOLE, pas celle de l'application).
 // ══════════════════════════════════════════════════════════
 class _FeuilleChoixCouleur extends StatefulWidget {
   final String couleurActuelle;
@@ -534,9 +507,9 @@ class _FeuilleChoixCouleurState extends State<_FeuilleChoixCouleur> {
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(SSMRayons.grand)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -544,7 +517,7 @@ class _FeuilleChoixCouleurState extends State<_FeuilleChoixCouleur> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Choisir une couleur', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce)),
+            Text('Choisir une couleur', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
             const SizedBox(height: 16),
             Wrap(
               spacing: 12,
@@ -559,7 +532,7 @@ class _FeuilleChoixCouleurState extends State<_FeuilleChoixCouleur> {
                             color: c,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: _colorVersHex(c) == _hexController.text.trim().toUpperCase() ? _texteFonce : Colors.white,
+                              color: _colorVersHex(c) == _hexController.text.trim().toUpperCase() ? SSMPalette.texte1 : Colors.white,
                               width: 2,
                             ),
                             boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
@@ -572,12 +545,17 @@ class _FeuilleChoixCouleurState extends State<_FeuilleChoixCouleur> {
             TextField(
               controller: _hexController,
               textCapitalization: TextCapitalization.characters,
-              style: GoogleFonts.jetBrainsMono(fontSize: 14),
+              style: GoogleFonts.jetBrainsMono(fontSize: 14, color: SSMPalette.texte1),
               decoration: InputDecoration(
                 labelText: 'Code hexadécimal',
+                labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
                 hintText: '#1E3A8A',
-                prefixIcon: const Icon(Icons.tag),
-                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.tag, color: SSMPalette.texte3),
+                filled: true,
+                fillColor: const Color(0xFFF9FAFB),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5)),
                 errorText: _erreur,
               ),
               onChanged: (_) => setState(() => _erreur = null),
@@ -586,7 +564,13 @@ class _FeuilleChoixCouleurState extends State<_FeuilleChoixCouleur> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SSMPalette.indigo,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                ),
                 onPressed: _valider,
                 child: const Text('Valider'),
               ),

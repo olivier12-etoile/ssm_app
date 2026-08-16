@@ -4,15 +4,10 @@ import '../../models/utilisateur.dart';
 import '../../models/parametre_ecole_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/parametre_ecole_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 const Map<String, String> _modelesBulletin = {
   'standard': 'Standard',
@@ -20,11 +15,47 @@ const Map<String, String> _modelesBulletin = {
   'detaille': 'Détaillé',
 };
 
+InputDecoration _decorationChamp(String label, {IconData? icone, String? aide}) {
+  return InputDecoration(
+    labelText: label,
+    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+    helperText: aide,
+    prefixIcon: icone != null ? Icon(icone, size: 20, color: SSMPalette.texte3) : null,
+    filled: true,
+    fillColor: const Color(0xFFF9FAFB),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5)),
+  );
+}
+
+Widget _boutonEnregistrer({required bool enCours, required bool visible, required VoidCallback onPressed}) {
+  if (!visible) return const SizedBox.shrink();
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: SSMPalette.indigo,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+      ),
+      onPressed: enCours ? null : onPressed,
+      child: enCours
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+          : const Text('Enregistrer'),
+    ),
+  );
+}
+
 // ══════════════════════════════════════════════════════════
-// Section Scolarité : 4 onglets (Organisation académique, Notes &
-// moyennes, Bulletins, Règles de validation) — 3 ressources API
-// indépendantes (parametres/academique, /bulletins, /validation-notes),
-// chacune avec son propre bouton "Enregistrer".
+// Section Scolarité : 4 sous-sections (Organisation académique, Notes &
+// moyennes, Bulletins, Règles de validation) empilées en ssm_panel — 3
+// ressources API indépendantes (parametres/academique, /bulletins,
+// /validation-notes), chacune avec son propre bouton "Enregistrer".
+// ongletInitial fait défiler automatiquement vers la section demandée
+// lorsqu'on arrive depuis un sous-item du menu Paramètres.
 // ══════════════════════════════════════════════════════════
 class ScolariteScreen extends StatefulWidget {
   final int ongletInitial;
@@ -34,8 +65,11 @@ class ScolariteScreen extends StatefulWidget {
   State<ScolariteScreen> createState() => _ScolariteScreenState();
 }
 
-class _ScolariteScreenState extends State<ScolariteScreen> with SingleTickerProviderStateMixin {
-  late final TabController _tabController;
+class _ScolariteScreenState extends State<ScolariteScreen> {
+  final _cleOrganisation = GlobalKey();
+  final _cleNotesMoyennes = GlobalKey();
+  final _cleBulletins = GlobalKey();
+  final _cleValidation = GlobalKey();
 
   Utilisateur? _utilisateur;
   bool _chargement = true;
@@ -50,14 +84,7 @@ class _ScolariteScreenState extends State<ScolariteScreen> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this, initialIndex: widget.ongletInitial);
     _charger();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _charger() async {
@@ -80,6 +107,7 @@ class _ScolariteScreenState extends State<ScolariteScreen> with SingleTickerProv
         _validation = resultats[3] as ParametreValidationNote;
         _chargement = false;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) => _allerVersSection(widget.ongletInitial));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -89,55 +117,79 @@ class _ScolariteScreenState extends State<ScolariteScreen> with SingleTickerProv
     }
   }
 
+  void _allerVersSection(int index) {
+    final cle = switch (index) {
+      1 => _cleNotesMoyennes,
+      2 => _cleBulletins,
+      3 => _cleValidation,
+      _ => _cleOrganisation,
+    };
+    final contexteCible = cle.currentContext;
+    if (contexteCible != null) {
+      Scrollable.ensureVisible(contexteCible, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
   void _snack(String message, {bool erreur = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: erreur ? _rouge : _vert),
+      SnackBar(content: Text(message), backgroundColor: erreur ? SSMPalette.rouge : SSMPalette.teal),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Scolarité', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
-          tabs: const [
-            Tab(text: 'Organisation'),
-            Tab(text: 'Notes & moyennes'),
-            Tab(text: 'Bulletins'),
-            Tab(text: 'Validation'),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Scolarité', sousTitre: 'Organisation, notes, bulletins et validation', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _erreur != null && _academique == null
+                      ? _carteErreur(_erreur!, _charger)
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                          children: [
+                            if (_lectureSeule) ...[
+                              const SSMAlertItem(
+                                type: SSMAlerteType.avertissement,
+                                icone: Icons.lock_outline,
+                                titre: 'Lecture seule',
+                                sousTitre: 'Seul le directeur peut modifier ces paramètres.',
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            SSMPanel(
+                              key: _cleOrganisation,
+                              titre: 'Organisation académique',
+                              child: _SectionOrganisation(academique: _academique!, lectureSeule: _lectureSeule, onSnack: _snack),
+                            ),
+                            const SizedBox(height: 16),
+                            SSMPanel(
+                              key: _cleNotesMoyennes,
+                              titre: 'Notes & moyennes',
+                              child: _SectionNotesMoyennes(academique: _academique!, lectureSeule: _lectureSeule, onSnack: _snack),
+                            ),
+                            const SizedBox(height: 16),
+                            SSMPanel(
+                              key: _cleBulletins,
+                              titre: 'Bulletins',
+                              child: _SectionBulletins(bulletin: _bulletin!, lectureSeule: _lectureSeule, onSnack: _snack),
+                            ),
+                            const SizedBox(height: 16),
+                            SSMPanel(
+                              key: _cleValidation,
+                              titre: 'Règles de validation',
+                              child: _SectionValidation(validation: _validation!, lectureSeule: _lectureSeule, onSnack: _snack),
+                            ),
+                          ],
+                        ),
+            ),
           ],
         ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _erreur != null && _academique == null
-              ? _carteErreur(_erreur!, _charger)
-              : Column(
-                  children: [
-                    if (_lectureSeule) Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 0), child: _bandeauLectureSeule()),
-                    Expanded(
-                      child: TabBarView(
-                        controller: _tabController,
-                        children: [
-                          _OngletOrganisation(academique: _academique!, lectureSeule: _lectureSeule, onSnack: _snack, onRecharge: _charger),
-                          _OngletNotesMoyennes(academique: _academique!, lectureSeule: _lectureSeule, onSnack: _snack),
-                          _OngletBulletins(bulletin: _bulletin!, lectureSeule: _lectureSeule, onSnack: _snack),
-                          _OngletValidation(validation: _validation!, lectureSeule: _lectureSeule, onSnack: _snack),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
     );
   }
 
@@ -148,15 +200,11 @@ class _ScolariteScreenState extends State<ScolariteScreen> with SingleTickerProv
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 36),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 36),
             const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: onReessayer,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-              child: const Text('Réessayer'),
-            ),
+            ElevatedButton(onPressed: onReessayer, child: const Text('Réessayer')),
           ],
         ),
       ),
@@ -164,60 +212,21 @@ class _ScolariteScreenState extends State<ScolariteScreen> with SingleTickerProv
   }
 }
 
-Widget _bandeauLectureSeule() {
-  return Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(color: _ambre.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10), border: Border.all(color: _ambre.withValues(alpha: 0.3))),
-    child: Row(
-      children: [
-        const Icon(Icons.lock_outline, color: _ambre, size: 18),
-        const SizedBox(width: 8),
-        Expanded(child: Text('Lecture seule — seul le directeur peut modifier ces paramètres.', style: GoogleFonts.inter(fontSize: 12, color: _texte))),
-      ],
-    ),
-  );
-}
-
-Widget _boutonEnregistrer({required bool enCours, required bool visible, required VoidCallback onPressed}) {
-  if (!visible) return const SizedBox.shrink();
-  return SizedBox(
-    width: double.infinity,
-    child: ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-      onPressed: enCours ? null : onPressed,
-      child: enCours
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : const Text('Enregistrer'),
-    ),
-  );
-}
-
 // ══════════════════════════════════════════════════════════
-// Onglet 1 — Organisation académique (type de découpage)
+// Organisation académique (type de découpage)
 // ══════════════════════════════════════════════════════════
-class _OngletOrganisation extends StatefulWidget {
+class _SectionOrganisation extends StatefulWidget {
   final ParametreAcademique academique;
   final bool lectureSeule;
   final void Function(String, {bool erreur}) onSnack;
-  final Future<void> Function() onRecharge;
 
-  const _OngletOrganisation({
-    required this.academique,
-    required this.lectureSeule,
-    required this.onSnack,
-    required this.onRecharge,
-  });
+  const _SectionOrganisation({required this.academique, required this.lectureSeule, required this.onSnack});
 
   @override
-  State<_OngletOrganisation> createState() => _OngletOrganisationState();
+  State<_SectionOrganisation> createState() => _SectionOrganisationState();
 }
 
-class _OngletOrganisationState extends State<_OngletOrganisation> {
+class _SectionOrganisationState extends State<_SectionOrganisation> {
   late String? _typeDecoupage;
   bool _enregistrementEnCours = false;
 
@@ -233,15 +242,18 @@ class _OngletOrganisationState extends State<_OngletOrganisation> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Changer le découpage académique ?'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        title: Text('Changer le découpage académique ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
         content: Text(
           'Le découpage passera de "${_libelleDecoupage(_typeDecoupage)}" à "${_libelleDecoupage(nouveauType)}" pour '
           "l'année scolaire active.\n\nSi des périodes existent déjà pour cette année, le changement sera bloqué.",
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _ambre, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.ambre, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Confirmer'),
           ),
@@ -282,21 +294,21 @@ class _OngletOrganisationState extends State<_OngletOrganisation> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           "Ce réglage détermine le découpage de l'année scolaire active (trimestres ou semestres). "
           "Il est géré ici pour la commodité, mais reste stocké au niveau de l'année scolaire elle-même.",
-          style: GoogleFonts.inter(fontSize: 12, color: _texte),
+          style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _optionDecoupage('trimestres', 'Trimestres', 'Découpage en 3 périodes'),
         const SizedBox(height: 10),
         _optionDecoupage('semestres', 'Semestres', 'Découpage en 2 périodes'),
         if (_enregistrementEnCours) ...[
           const SizedBox(height: 16),
-          const Center(child: CircularProgressIndicator(color: _indigo)),
+          const Center(child: CircularProgressIndicator(color: SSMPalette.indigo)),
         ],
       ],
     );
@@ -307,25 +319,25 @@ class _OngletOrganisationState extends State<_OngletOrganisation> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
         onTap: widget.lectureSeule || _enregistrementEnCours ? null : () => _demanderChangement(valeur),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: selectionne ? _indigo.withValues(alpha: 0.08) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: selectionne ? _indigo : _gris.withValues(alpha: 0.3), width: selectionne ? 1.5 : 1),
+            color: selectionne ? SSMPalette.indigoClair : const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: selectionne ? SSMPalette.indigo : const Color(0xFFE5E7EB), width: selectionne ? 1.5 : 1),
           ),
           child: Row(
             children: [
-              Icon(selectionne ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: selectionne ? _indigo : _gris),
+              Icon(selectionne ? Icons.radio_button_checked : Icons.radio_button_unchecked, color: selectionne ? SSMPalette.indigo : SSMPalette.texte3),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(titre, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce)),
-                    Text(sousTitre, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+                    Text(titre, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.texte1)),
+                    Text(sousTitre, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
                   ],
                 ),
               ),
@@ -338,20 +350,20 @@ class _OngletOrganisationState extends State<_OngletOrganisation> {
 }
 
 // ══════════════════════════════════════════════════════════
-// Onglet 2 — Notes & moyennes
+// Notes & moyennes
 // ══════════════════════════════════════════════════════════
-class _OngletNotesMoyennes extends StatefulWidget {
+class _SectionNotesMoyennes extends StatefulWidget {
   final ParametreAcademique academique;
   final bool lectureSeule;
   final void Function(String, {bool erreur}) onSnack;
 
-  const _OngletNotesMoyennes({required this.academique, required this.lectureSeule, required this.onSnack});
+  const _SectionNotesMoyennes({required this.academique, required this.lectureSeule, required this.onSnack});
 
   @override
-  State<_OngletNotesMoyennes> createState() => _OngletNotesMoyennesState();
+  State<_SectionNotesMoyennes> createState() => _SectionNotesMoyennesState();
 }
 
-class _OngletNotesMoyennesState extends State<_OngletNotesMoyennes> {
+class _SectionNotesMoyennesState extends State<_SectionNotesMoyennes> {
   late final TextEditingController _baremeController;
   late bool _coefMatiere;
   late bool _coefClasse;
@@ -409,55 +421,54 @@ class _OngletNotesMoyennesState extends State<_OngletNotesMoyennes> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
           controller: _baremeController,
           enabled: !widget.lectureSeule,
           keyboardType: TextInputType.number,
-          style: GoogleFonts.jetBrainsMono(fontSize: 14),
-          decoration: const InputDecoration(
-            labelText: 'Barème maximal des notes',
-            prefixIcon: Icon(Icons.grade_outlined),
-            helperText: "S'applique uniquement aux futures saisies de notes.",
-            border: OutlineInputBorder(),
+          style: GoogleFonts.jetBrainsMono(fontSize: 14, color: SSMPalette.texte1),
+          decoration: _decorationChamp(
+            'Barème maximal des notes',
+            icone: Icons.grade_outlined,
+            aide: "S'applique uniquement aux futures saisies de notes.",
           ),
         ),
-        const SizedBox(height: 16),
-        Text('COEFFICIENTS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4)),
+        const SizedBox(height: 14),
+        Text('COEFFICIENTS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4)),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          activeThumbColor: _indigo,
+          activeThumbColor: SSMPalette.indigo,
           value: _coefMatiere,
-          title: const Text('Coefficients par matière'),
+          title: Text('Coefficients par matière', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
           onChanged: widget.lectureSeule ? null : (v) => setState(() => _coefMatiere = v),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          activeThumbColor: _indigo,
+          activeThumbColor: SSMPalette.indigo,
           value: _coefClasse,
-          title: const Text('Coefficients par classe'),
+          title: Text('Coefficients par classe', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
           onChanged: widget.lectureSeule ? null : (v) => setState(() => _coefClasse = v),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          activeThumbColor: _indigo,
+          activeThumbColor: SSMPalette.indigo,
           value: _coefNiveau,
-          title: const Text('Coefficients par niveau'),
+          title: Text('Coefficients par niveau', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
           onChanged: widget.lectureSeule ? null : (v) => setState(() => _coefNiveau = v),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _modeCalcul,
-          decoration: const InputDecoration(labelText: 'Mode de calcul de la moyenne', prefixIcon: Icon(Icons.calculate_outlined), border: OutlineInputBorder()),
-          items: const [
-            DropdownMenuItem(value: 'simple', child: Text('Simple (moyenne devoir + composition)')),
-            DropdownMenuItem(value: 'ponderee', child: Text('Pondérée')),
+          decoration: _decorationChamp('Mode de calcul de la moyenne', icone: Icons.calculate_outlined),
+          items: [
+            DropdownMenuItem(value: 'simple', child: Text('Simple (moyenne devoir + composition)', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1))),
+            DropdownMenuItem(value: 'ponderee', child: Text('Pondérée', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1))),
           ],
           onChanged: widget.lectureSeule ? null : (v) => setState(() => _modeCalcul = v ?? _modeCalcul),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _boutonEnregistrer(enCours: _enregistrementEnCours, visible: !widget.lectureSeule, onPressed: _enregistrer),
       ],
     );
@@ -465,20 +476,20 @@ class _OngletNotesMoyennesState extends State<_OngletNotesMoyennes> {
 }
 
 // ══════════════════════════════════════════════════════════
-// Onglet 3 — Bulletins
+// Bulletins
 // ══════════════════════════════════════════════════════════
-class _OngletBulletins extends StatefulWidget {
+class _SectionBulletins extends StatefulWidget {
   final ParametreBulletin bulletin;
   final bool lectureSeule;
   final void Function(String, {bool erreur}) onSnack;
 
-  const _OngletBulletins({required this.bulletin, required this.lectureSeule, required this.onSnack});
+  const _SectionBulletins({required this.bulletin, required this.lectureSeule, required this.onSnack});
 
   @override
-  State<_OngletBulletins> createState() => _OngletBulletinsState();
+  State<_SectionBulletins> createState() => _SectionBulletinsState();
 }
 
-class _OngletBulletinsState extends State<_OngletBulletins> {
+class _SectionBulletinsState extends State<_SectionBulletins> {
   late ParametreBulletin _valeur;
   bool _enregistrementEnCours = false;
 
@@ -507,18 +518,18 @@ class _OngletBulletinsState extends State<_OngletBulletins> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('MODÈLE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4)),
+        Text('MODÈLE', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4)),
         const SizedBox(height: 10),
         Row(
           children: _modelesBulletin.entries
               .map((e) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 8), child: _carteModele(e.key, e.value))))
               .toList(),
         ),
-        const SizedBox(height: 20),
-        Text('ÉLÉMENTS AFFICHÉS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4)),
+        const SizedBox(height: 18),
+        Text('ÉLÉMENTS AFFICHÉS', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4)),
         _switch('Logo de l\'établissement', _valeur.afficherLogo, (v) => setState(() => _valeur = _valeur.copyWith(afficherLogo: v))),
         _switch('Matricule des élèves', _valeur.afficherMatricule, (v) => setState(() => _valeur = _valeur.copyWith(afficherMatricule: v))),
         _switch('Effectif de la classe', _valeur.afficherEffectif, (v) => setState(() => _valeur = _valeur.copyWith(afficherEffectif: v))),
@@ -530,7 +541,7 @@ class _OngletBulletinsState extends State<_OngletBulletins> {
         _switch('Décision du conseil de classe', _valeur.afficherDecisionConseil, (v) => setState(() => _valeur = _valeur.copyWith(afficherDecisionConseil: v))),
         _switch('Signature du directeur', _valeur.afficherSignatureDirecteur, (v) => setState(() => _valeur = _valeur.copyWith(afficherSignatureDirecteur: v))),
         _switch('Cachet de l\'établissement', _valeur.afficherCachet, (v) => setState(() => _valeur = _valeur.copyWith(afficherCachet: v))),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _boutonEnregistrer(enCours: _enregistrementEnCours, visible: !widget.lectureSeule, onPressed: _enregistrer),
       ],
     );
@@ -540,9 +551,9 @@ class _OngletBulletinsState extends State<_OngletBulletins> {
     return SwitchListTile(
       contentPadding: EdgeInsets.zero,
       dense: true,
-      activeThumbColor: _indigo,
+      activeThumbColor: SSMPalette.indigo,
       value: valeur,
-      title: Text(label, style: GoogleFonts.inter(fontSize: 13)),
+      title: Text(label, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
       onChanged: widget.lectureSeule ? null : onChanged,
     );
   }
@@ -560,34 +571,34 @@ class _OngletBulletinsState extends State<_OngletBulletins> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
         onTap: widget.lectureSeule ? null : () => setState(() => _valeur = _valeur.copyWith(modeleBulletin: cle)),
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: selectionne ? _indigo.withValues(alpha: 0.08) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: selectionne ? _indigo : _gris.withValues(alpha: 0.3), width: selectionne ? 1.5 : 1),
+            color: selectionne ? SSMPalette.indigoClair : const Color(0xFFF9FAFB),
+            borderRadius: BorderRadius.circular(SSMRayons.grand),
+            border: Border.all(color: selectionne ? SSMPalette.indigo : const Color(0xFFE5E7EB), width: selectionne ? 1.5 : 1),
           ),
           child: Column(
             children: [
               Container(
                 height: 70,
                 padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(6)),
+                decoration: BoxDecoration(color: SSMPalette.blanc, borderRadius: BorderRadius.circular(SSMRayons.petit)),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
                     nombreLignes,
                     (i) => Padding(
                       padding: const EdgeInsets.symmetric(vertical: 1.5),
-                      child: Container(height: 3, width: double.infinity, color: (selectionne ? _indigo : _gris).withValues(alpha: 0.4)),
+                      child: Container(height: 3, width: double.infinity, color: (selectionne ? SSMPalette.indigo : SSMPalette.texte3).withValues(alpha: 0.4)),
                     ),
                   ),
                 ),
               ),
               const SizedBox(height: 6),
-              Text(libelle, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: selectionne ? _indigo : _texte)),
+              Text(libelle, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600, color: selectionne ? SSMPalette.indigo : SSMPalette.texte2)),
             ],
           ),
         ),
@@ -597,20 +608,20 @@ class _OngletBulletinsState extends State<_OngletBulletins> {
 }
 
 // ══════════════════════════════════════════════════════════
-// Onglet 4 — Règles de validation des notes
+// Règles de validation des notes
 // ══════════════════════════════════════════════════════════
-class _OngletValidation extends StatefulWidget {
+class _SectionValidation extends StatefulWidget {
   final ParametreValidationNote validation;
   final bool lectureSeule;
   final void Function(String, {bool erreur}) onSnack;
 
-  const _OngletValidation({required this.validation, required this.lectureSeule, required this.onSnack});
+  const _SectionValidation({required this.validation, required this.lectureSeule, required this.onSnack});
 
   @override
-  State<_OngletValidation> createState() => _OngletValidationState();
+  State<_SectionValidation> createState() => _SectionValidationState();
 }
 
-class _OngletValidationState extends State<_OngletValidation> {
+class _SectionValidationState extends State<_SectionValidation> {
   late ParametreValidationNote _valeur;
   bool _enregistrementEnCours = false;
 
@@ -655,24 +666,24 @@ class _OngletValidationState extends State<_OngletValidation> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.all(16),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          activeThumbColor: _indigo,
+          activeThumbColor: SSMPalette.indigo,
           value: _valeur.validationObligatoire,
-          title: const Text('Validation obligatoire'),
+          title: Text('Validation obligatoire', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
           subtitle: Text(
             _valeur.validationObligatoire
                 ? 'Les notes soumises doivent être validées avant publication.'
                 : 'Les notes soumises sont publiées automatiquement.',
-            style: GoogleFonts.inter(fontSize: 12, color: _texte),
+            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
           ),
           onChanged: widget.lectureSeule ? null : (v) => setState(() => _valeur = _valeur.copyWith(validationObligatoire: v)),
         ),
-        const SizedBox(height: 12),
-        Text('RÔLES AUTORISÉS À VALIDER', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4)),
+        const SizedBox(height: 10),
+        Text('RÔLES AUTORISÉS À VALIDER', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -681,29 +692,30 @@ class _OngletValidationState extends State<_OngletValidation> {
             return FilterChip(
               label: Text(e.value),
               selected: selectionne,
-              selectedColor: _indigo.withValues(alpha: 0.15),
-              checkmarkColor: _indigo,
-              labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: selectionne ? _indigo : _texte),
+              selectedColor: SSMPalette.indigoClair,
+              checkmarkColor: SSMPalette.indigo,
+              backgroundColor: const Color(0xFFF9FAFB),
+              labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: selectionne ? SSMPalette.indigo : SSMPalette.texte2),
               onSelected: widget.lectureSeule ? null : (_) => _basculerRole(e.key),
             );
           }).toList(),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          activeThumbColor: _indigo,
+          activeThumbColor: SSMPalette.indigo,
           value: _valeur.modificationApresValidation,
-          title: const Text('Modification possible après validation'),
+          title: Text('Modification possible après validation', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
           onChanged: widget.lectureSeule ? null : (v) => setState(() => _valeur = _valeur.copyWith(modificationApresValidation: v)),
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          activeThumbColor: _indigo,
+          activeThumbColor: SSMPalette.indigo,
           value: _valeur.verrouillageAutoCloture,
-          title: const Text('Verrouillage automatique à la clôture de période'),
+          title: Text('Verrouillage automatique à la clôture de période', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
           onChanged: widget.lectureSeule ? null : (v) => setState(() => _valeur = _valeur.copyWith(verrouillageAutoCloture: v)),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _boutonEnregistrer(enCours: _enregistrementEnCours, visible: !widget.lectureSeule, onPressed: _enregistrer),
       ],
     );

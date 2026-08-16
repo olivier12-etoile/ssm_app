@@ -4,13 +4,9 @@ import '../../models/utilisateur.dart';
 import '../../models/parametre_ecole_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/parametre_ecole_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _texte = Color(0xFF334155);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 // ══════════════════════════════════════════════════════════
 // Section Finance : devise, tranches par défaut, pénalités de retard,
@@ -134,7 +130,7 @@ class _FinanceEcoleScreenState extends State<FinanceEcoleScreen> {
       _remplirDepuis(misAJour);
       setState(() => _enregistrementEnCours = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Paramètres financiers enregistrés avec succès'), backgroundColor: _vert),
+        const SnackBar(content: Text('Paramètres financiers enregistrés avec succès'), backgroundColor: SSMPalette.teal),
       );
     } catch (e) {
       setState(() {
@@ -147,145 +143,118 @@ class _FinanceEcoleScreenState extends State<FinanceEcoleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Finance', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-      ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              children: [
-                if (_lectureSeule) ...[_bandeauLectureSeule(), const SizedBox(height: 16)],
-                if (_erreur != null) _bandeauErreur(_erreur!),
-                _titreSection('Général'),
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 1,
-                      child: _champTexte(controller: _deviseController, label: 'Devise', icone: Icons.attach_money),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 1,
-                      child: _champTexte(
-                        controller: _tranchesController,
-                        label: 'Tranches par défaut',
-                        icone: Icons.splitscreen_outlined,
-                        clavierNumerique: true,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _titreSection('Pénalités de retard'),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: _indigo,
-                  value: _penalitesActives,
-                  title: const Text('Activer les pénalités de retard'),
-                  onChanged: _lectureSeule ? null : (v) => setState(() => _penalitesActives = v),
-                ),
-                if (_penalitesActives) ...[
-                  const SizedBox(height: 8),
-                  _champTexte(
-                    controller: _montantPenaliteController,
-                    label: 'Montant de la pénalité *',
-                    icone: Icons.money_off_outlined,
-                    clavierNumerique: true,
-                  ),
-                ],
-                const SizedBox(height: 16),
-                _titreSection('Paiement'),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  activeThumbColor: _indigo,
-                  value: _paiementPartielAutorise,
-                  title: const Text('Autoriser le paiement partiel'),
-                  subtitle: Text(
-                    _paiementPartielAutorise
-                        ? 'Un élève peut régler moins que le montant dû en une fois.'
-                        : 'Le montant total doit être réglé en une seule fois.',
-                    style: GoogleFonts.inter(fontSize: 12, color: _texte),
-                  ),
-                  onChanged: _lectureSeule ? null : (v) => setState(() => _paiementPartielAutorise = v),
-                ),
-                const SizedBox(height: 16),
-                _titreSection('Élèves non en règle'),
-                _champTexte(
-                  controller: _seuilJoursController,
-                  label: 'Seuil de jours de retard toléré',
-                  icone: Icons.event_busy_outlined,
-                  clavierNumerique: true,
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(Icons.info_outline, color: _indigo, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          "Un élève est considéré non en règle si son reste à payer est supérieur à 0 après ce délai "
-                          "passé la date limite du frais (0 = non en règle dès le premier jour de retard).",
-                          style: GoogleFonts.inter(fontSize: 12, color: _texte),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Finance', sousTitre: 'Frais scolaires et pénalités', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                      children: [
+                        if (_lectureSeule) ...[
+                          const SSMAlertItem(
+                            type: SSMAlerteType.avertissement,
+                            icone: Icons.lock_outline,
+                            titre: 'Lecture seule',
+                            sousTitre: 'Seul le directeur peut modifier les paramètres financiers.',
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (_erreur != null) ...[
+                          SSMAlertItem(type: SSMAlerteType.danger, icone: Icons.warning_amber, titre: 'Erreur', sousTitre: _erreur!),
+                          const SizedBox(height: 16),
+                        ],
+                        _titreSection('Général'),
+                        Row(
+                          children: [
+                            Expanded(child: _champTexte(controller: _deviseController, label: 'Devise', icone: Icons.attach_money)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _champTexte(
+                                controller: _tranchesController,
+                                label: 'Tranches par défaut',
+                                icone: Icons.splitscreen_outlined,
+                                clavierNumerique: true,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                if (!_lectureSeule)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _indigo,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: _enregistrementEnCours ? null : _enregistrer,
-                      child: _enregistrementEnCours
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Enregistrer'),
+                        const SizedBox(height: 16),
+                        _titreSection('Pénalités de retard'),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          activeThumbColor: SSMPalette.indigo,
+                          value: _penalitesActives,
+                          title: Text('Activer les pénalités de retard', style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1)),
+                          onChanged: _lectureSeule ? null : (v) => setState(() => _penalitesActives = v),
+                        ),
+                        if (_penalitesActives) ...[
+                          const SizedBox(height: 8),
+                          _champTexte(
+                            controller: _montantPenaliteController,
+                            label: 'Montant de la pénalité *',
+                            icone: Icons.money_off_outlined,
+                            clavierNumerique: true,
+                          ),
+                        ],
+                        const SizedBox(height: 16),
+                        _titreSection('Paiement'),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          activeThumbColor: SSMPalette.indigo,
+                          value: _paiementPartielAutorise,
+                          title: Text('Autoriser le paiement partiel', style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1)),
+                          subtitle: Text(
+                            _paiementPartielAutorise
+                                ? 'Un élève peut régler moins que le montant dû en une fois.'
+                                : 'Le montant total doit être réglé en une seule fois.',
+                            style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2),
+                          ),
+                          onChanged: _lectureSeule ? null : (v) => setState(() => _paiementPartielAutorise = v),
+                        ),
+                        const SizedBox(height: 16),
+                        _titreSection('Élèves non en règle'),
+                        _champTexte(
+                          controller: _seuilJoursController,
+                          label: 'Seuil de jours de retard toléré',
+                          icone: Icons.event_busy_outlined,
+                          clavierNumerique: true,
+                        ),
+                        const SizedBox(height: 8),
+                        const SSMAlertItem(
+                          type: SSMAlerteType.succes,
+                          icone: Icons.info_outline,
+                          titre: 'Comment ce seuil est utilisé',
+                          sousTitre:
+                              "Un élève est considéré non en règle si son reste à payer est supérieur à 0 après ce délai "
+                              "passé la date limite du frais (0 = non en règle dès le premier jour de retard).",
+                        ),
+                        const SizedBox(height: 24),
+                        if (!_lectureSeule)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SSMPalette.indigo,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                              ),
+                              onPressed: _enregistrementEnCours ? null : _enregistrer,
+                              child: _enregistrementEnCours
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Text('Enregistrer'),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-              ],
             ),
-    );
-  }
-
-  Widget _bandeauLectureSeule() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: _ambre.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10), border: Border.all(color: _ambre.withValues(alpha: 0.3))),
-      child: Row(
-        children: [
-          const Icon(Icons.lock_outline, color: _ambre, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text('Lecture seule — seul le directeur peut modifier les paramètres financiers.', style: GoogleFonts.inter(fontSize: 12, color: _texte))),
-        ],
-      ),
-    );
-  }
-
-  Widget _bandeauErreur(String message) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: _rouge.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber, color: _rouge, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text(message, style: GoogleFonts.inter(fontSize: 13, color: _rouge))),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -293,7 +262,20 @@ class _FinanceEcoleScreenState extends State<FinanceEcoleScreen> {
   Widget _titreSection(String titre) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10, top: 4),
-      child: Text(titre.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: _indigo, letterSpacing: 0.4)),
+      child: Text(titre.toUpperCase(), style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: SSMPalette.indigo, letterSpacing: 0.4)),
+    );
+  }
+
+  InputDecoration _decorationChamp(String label, {IconData? icone}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      prefixIcon: icone != null ? Icon(icone, size: 20, color: SSMPalette.texte3) : null,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5)),
     );
   }
 
@@ -307,12 +289,10 @@ class _FinanceEcoleScreenState extends State<FinanceEcoleScreen> {
       controller: controller,
       enabled: !_lectureSeule,
       keyboardType: clavierNumerique ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
-      style: clavierNumerique ? GoogleFonts.jetBrainsMono(fontSize: 14) : GoogleFonts.inter(fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icone, size: 22),
-        border: const OutlineInputBorder(),
-      ),
+      style: clavierNumerique
+          ? GoogleFonts.jetBrainsMono(fontSize: 14, color: SSMPalette.texte1)
+          : GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+      decoration: _decorationChamp(label, icone: icone),
     );
   }
 }

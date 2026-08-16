@@ -4,22 +4,17 @@ import '../../models/utilisateur.dart';
 import '../../models/permission_securite_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/permission_securite_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _teal = Color(0xFF0D9488);
-const Color _rouge = Color(0xFFDC2626);
-const Color _vert = Color(0xFF16A34A);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 // ══════════════════════════════════════════════════════════
 // Section Utilisateurs & Permissions : matrice de droits par rôle × module.
 // GET/PUT /parametres/permissions, POST /parametres/permissions/reinitialiser
 // (PermissionRoleController). Accessible directeur uniquement — le rôle
 // "directeur" lui-même n'est pas éditable (accès complet immuable côté
-// backend, sécurité anti-blocage).
+// backend, sécurité anti-blocage). Onglets par rôle stylés en pilules
+// (indigo actif), même pattern que pedagogique_detail_screen.dart.
 // ══════════════════════════════════════════════════════════
 class PermissionsScreen extends StatefulWidget {
   const PermissionsScreen({super.key});
@@ -28,9 +23,9 @@ class PermissionsScreen extends StatefulWidget {
   State<PermissionsScreen> createState() => _PermissionsScreenState();
 }
 
-class _PermissionsScreenState extends State<PermissionsScreen> with SingleTickerProviderStateMixin {
+class _PermissionsScreenState extends State<PermissionsScreen> {
   Utilisateur? _utilisateur;
-  late final TabController _tabController;
+  int _roleActif = 0;
 
   Map<String, String> _modules = {};
   Map<String, Map<String, PermissionRole>> _matrice = {};
@@ -46,14 +41,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: RoleUtilisateur.values.length, vsync: this);
     _charger();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   Future<void> _charger() async {
@@ -127,7 +115,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
         _moduleEnCours = null;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SSMPalette.rouge),
       );
     }
   }
@@ -136,17 +124,20 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const Icon(Icons.warning_amber_rounded, color: _rouge, size: 36),
-        title: const Text('Réinitialiser toutes les permissions ?'),
-        content: const Text(
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        icon: const Icon(Icons.warning_amber_rounded, color: SSMPalette.rouge, size: 36),
+        title: Text('Réinitialiser toutes les permissions ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+        content: Text(
           'Toute la matrice de permissions (censeur, enseignant, secrétaire, comptable) sera remise aux valeurs '
           "par défaut du système. Les personnalisations effectuées seront définitivement perdues.\n\n"
           'Cette action est irréversible.',
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Réinitialiser'),
           ),
@@ -162,13 +153,13 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
       await _charger();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Permissions réinitialisées aux valeurs par défaut'), backgroundColor: _vert),
+        const SnackBar(content: Text('Permissions réinitialisées aux valeurs par défaut'), backgroundColor: SSMPalette.teal),
       );
     } catch (e) {
       if (!mounted) return;
       setState(() => _reinitialisationEnCours = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SSMPalette.rouge),
       );
     }
   }
@@ -176,30 +167,61 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Permissions', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-        bottom: _chargement
-            ? null
-            : TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                indicatorColor: Colors.white,
-                labelColor: Colors.white,
-                unselectedLabelColor: Colors.white70,
-                labelStyle: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600),
-                tabs: RoleUtilisateur.values.map((r) => Tab(text: r.libelle)).toList(),
-              ),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Permissions', sousTitre: 'Matrice des droits par rôle', onRetour: () => Navigator.pop(context)),
+            if (!_chargement && _utilisateur?.estDirecteur == true && _erreur == null) _barreOnglets(),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _utilisateur?.estDirecteur != true
+                      ? _accesRefuse()
+                      : _erreur != null
+                          ? _carteErreur(_erreur!, _charger)
+                          : _corps(),
+            ),
+          ],
+        ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _utilisateur?.estDirecteur != true
-              ? _accesRefuse()
-              : _erreur != null
-                  ? _carteErreur(_erreur!, _charger)
-                  : _corps(),
+    );
+  }
+
+  Widget _barreOnglets() {
+    return Container(
+      color: SSMPalette.blanc,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            for (var i = 0; i < RoleUtilisateur.values.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              _boutonOnglet(RoleUtilisateur.values[i].libelle, i),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _boutonOnglet(String label, int index) {
+    final actif = _roleActif == index;
+    return GestureDetector(
+      onTap: () => setState(() => _roleActif = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: actif ? SSMPalette.indigo : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(SSMRayons.pilule),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: actif ? Colors.white : SSMPalette.texte2),
+        ),
+      ),
     );
   }
 
@@ -207,8 +229,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
     return Column(
       children: [
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
+          child: IndexedStack(
+            index: _roleActif,
+            sizing: StackFit.expand,
             children: RoleUtilisateur.values.map((role) => _vueRole(role)).toList(),
           ),
         ),
@@ -219,10 +242,14 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
             child: SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(foregroundColor: _rouge, side: const BorderSide(color: _rouge)),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: SSMPalette.rouge,
+                  side: const BorderSide(color: SSMPalette.rouge),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                ),
                 onPressed: _reinitialisationEnCours ? null : _confirmerReinitialisation,
                 icon: _reinitialisationEnCours
-                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _rouge))
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.rouge))
                     : const Icon(Icons.restore),
                 label: const Text('Réinitialiser aux valeurs par défaut'),
               ),
@@ -238,21 +265,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
       return ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(color: _teal.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(12), border: Border.all(color: _teal.withValues(alpha: 0.3))),
-            child: Row(
-              children: [
-                const Icon(Icons.verified_user, color: _teal),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Le directeur dispose toujours d\'un accès complet à tous les modules. Ce droit n\'est pas modifiable, afin d\'éviter tout blocage de l\'école.',
-                    style: GoogleFonts.inter(fontSize: 12, color: _texte),
-                  ),
-                ),
-              ],
-            ),
+          const SSMAlertItem(
+            type: SSMAlerteType.succes,
+            icone: Icons.verified_user,
+            titre: 'Accès complet',
+            sousTitre: 'Le directeur dispose toujours d\'un accès complet à tous les modules. Ce droit n\'est pas modifiable, afin d\'éviter tout blocage de l\'école.',
           ),
           const SizedBox(height: 12),
           ..._modules.entries.map((e) => _cartePermissionLectureSeule(e.value)),
@@ -278,11 +295,15 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10)),
+      decoration: BoxDecoration(
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
+      ),
       child: Row(
         children: [
-          Expanded(child: Text(libelle, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: _texteFonce))),
-          const Icon(Icons.check_circle, color: _teal, size: 18),
+          Expanded(child: Text(libelle, style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600, color: SSMPalette.texte1))),
+          const Icon(Icons.check_circle, color: SSMPalette.teal, size: 18),
         ],
       ),
     );
@@ -296,9 +317,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+        color: SSMPalette.blanc,
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.bordure),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -307,11 +328,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
           childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
           title: Row(
             children: [
-              Expanded(child: Text(libelle, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: _texteFonce))),
+              Expanded(child: Text(libelle, style: GoogleFonts.sora(fontSize: 14, fontWeight: FontWeight.w700, color: SSMPalette.texte1))),
               if (enCours)
-                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: _indigo))
+                const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: SSMPalette.indigo))
               else if (vientDetreEnregistre)
-                const Icon(Icons.check_circle, color: _vert, size: 18)
+                const Icon(Icons.check_circle, color: SSMPalette.teal, size: 18)
               else
                 _resumeDroits(permission),
             ],
@@ -332,8 +353,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
     final nombre = [p.peutConsulter, p.peutCreer, p.peutModifier, p.peutSupprimer, p.peutValider].where((v) => v).length;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: (nombre > 0 ? _indigo : _gris).withValues(alpha: 0.12), borderRadius: BorderRadius.circular(999)),
-      child: Text('$nombre/5', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w700, color: nombre > 0 ? _indigo : _gris)),
+      decoration: BoxDecoration(
+        color: (nombre > 0 ? SSMPalette.indigo : SSMPalette.texte3).withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(SSMRayons.pilule),
+      ),
+      child: Text('$nombre/5', style: GoogleFonts.jetBrainsMono(fontSize: 11, fontWeight: FontWeight.w700, color: nombre > 0 ? SSMPalette.indigo : SSMPalette.texte3)),
     );
   }
 
@@ -341,9 +365,9 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
     return SwitchListTile(
       contentPadding: EdgeInsets.zero,
       dense: true,
-      activeThumbColor: _indigo,
+      activeThumbColor: SSMPalette.indigo,
       value: valeur,
-      title: Text(label, style: GoogleFonts.inter(fontSize: 13)),
+      title: Text(label, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
       onChanged: enCours ? null : onChanged,
     );
   }
@@ -355,12 +379,12 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.block, color: _rouge, size: 40),
+            const Icon(Icons.block, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
             Text(
               'Seul le directeur peut accéder à la matrice de permissions.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: _texte),
+              style: GoogleFonts.inter(color: SSMPalette.texte2),
             ),
           ],
         ),
@@ -375,15 +399,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> with SingleTicker
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: _rouge, size: 36),
+            const Icon(Icons.error_outline, color: SSMPalette.rouge, size: 36),
             const SizedBox(height: 10),
-            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text(message, textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
             const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: onReessayer,
-              style: ElevatedButton.styleFrom(backgroundColor: _indigo, foregroundColor: Colors.white),
-              child: const Text('Réessayer'),
-            ),
+            ElevatedButton(onPressed: onReessayer, child: const Text('Réessayer')),
           ],
         ),
       ),

@@ -4,14 +4,10 @@ import '../../models/utilisateur.dart';
 import '../../models/parametre_ecole_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/parametre_ecole_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_panel.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 // ══════════════════════════════════════════════════════════
 // Section Direction : informations du directeur (nom, fonction, contacts).
@@ -103,7 +99,7 @@ class _DirectionScreenState extends State<DirectionScreen> {
       _remplirDepuis(misAJour);
       setState(() => _enregistrementEnCours = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Informations de la direction enregistrées avec succès'), backgroundColor: _vert),
+        const SnackBar(content: Text('Informations de la direction enregistrées avec succès'), backgroundColor: SSMPalette.teal),
       );
     } catch (e) {
       setState(() {
@@ -118,49 +114,65 @@ class _DirectionScreenState extends State<DirectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _indigo,
-        foregroundColor: Colors.white,
-        title: Text('Direction', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
-      ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
-              children: [
-                _carteAvatar(),
-                const SizedBox(height: 20),
-                if (_lectureSeule) ...[_bandeauLectureSeule(), const SizedBox(height: 16)],
-                if (_erreur != null) _bandeauErreur(_erreur!),
-                _champTexte(controller: _nomController, label: 'Nom', icone: Icons.badge_outlined),
-                const SizedBox(height: 12),
-                _champTexte(controller: _prenomController, label: 'Prénom', icone: Icons.person_outline),
-                const SizedBox(height: 12),
-                _champTexte(controller: _fonctionController, label: 'Fonction', icone: Icons.work_outline),
-                const SizedBox(height: 12),
-                _champTexte(controller: _telephoneController, label: 'Téléphone', icone: Icons.phone_outlined),
-                const SizedBox(height: 12),
-                _champTexte(controller: _emailController, label: 'Email', icone: Icons.email_outlined),
-                const SizedBox(height: 24),
-                if (!_lectureSeule)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _indigo,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: _enregistrementEnCours ? null : _enregistrer,
-                      child: _enregistrementEnCours
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Enregistrer'),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Direction', sousTitre: 'Informations du directeur', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+                      children: [
+                        _carteAvatar(),
+                        const SizedBox(height: 16),
+                        if (_lectureSeule) ...[
+                          const SSMAlertItem(
+                            type: SSMAlerteType.avertissement,
+                            icone: Icons.lock_outline,
+                            titre: 'Lecture seule',
+                            sousTitre: 'Seul le directeur peut modifier ces informations.',
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+                        if (_erreur != null) ...[
+                          SSMAlertItem(type: SSMAlerteType.danger, icone: Icons.warning_amber, titre: 'Erreur', sousTitre: _erreur!),
+                          const SizedBox(height: 16),
+                        ],
+                        _champTexte(controller: _nomController, label: 'Nom', icone: Icons.badge_outlined),
+                        const SizedBox(height: 12),
+                        _champTexte(controller: _prenomController, label: 'Prénom', icone: Icons.person_outline),
+                        const SizedBox(height: 12),
+                        _champTexte(controller: _fonctionController, label: 'Fonction', icone: Icons.work_outline),
+                        const SizedBox(height: 12),
+                        _champTexte(controller: _telephoneController, label: 'Téléphone', icone: Icons.phone_outlined),
+                        const SizedBox(height: 12),
+                        _champTexte(controller: _emailController, label: 'Email', icone: Icons.email_outlined),
+                        const SizedBox(height: 24),
+                        if (!_lectureSeule)
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SSMPalette.indigo,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen)),
+                              ),
+                              onPressed: _enregistrementEnCours ? null : _enregistrer,
+                              child: _enregistrementEnCours
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Text('Enregistrer'),
+                            ),
+                          ),
+                      ],
                     ),
-                  ),
-              ],
             ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -169,20 +181,15 @@ class _DirectionScreenState extends State<DirectionScreen> {
       animation: Listenable.merge([_nomController, _prenomController, _fonctionController]),
       builder: (context, _) {
         final nomComplet = [_prenomController.text.trim(), _nomController.text.trim()].where((s) => s.isNotEmpty).join(' ');
-        return Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 16, offset: const Offset(0, 4))],
-          ),
+        return SSMPanel(
+          titre: 'Aperçu',
           child: Row(
             children: [
               Container(
                 width: 56,
                 height: 56,
-                decoration: BoxDecoration(color: _indigo.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: const Icon(Icons.person, color: _indigo, size: 30),
+                decoration: const BoxDecoration(color: SSMPalette.indigoClair, shape: BoxShape.circle),
+                child: const Icon(Icons.person, color: SSMPalette.indigo, size: 30),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -191,12 +198,12 @@ class _DirectionScreenState extends State<DirectionScreen> {
                   children: [
                     Text(
                       nomComplet.isEmpty ? 'Nom du directeur' : nomComplet,
-                      style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: _texteFonce),
+                      style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.texte1),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _fonctionController.text.trim().isEmpty ? 'Directeur' : _fonctionController.text.trim(),
-                      style: GoogleFonts.inter(fontSize: 13, color: _texte),
+                      style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
                     ),
                   ],
                 ),
@@ -208,32 +215,16 @@ class _DirectionScreenState extends State<DirectionScreen> {
     );
   }
 
-  Widget _bandeauLectureSeule() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: _ambre.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(10), border: Border.all(color: _ambre.withValues(alpha: 0.3))),
-      child: Row(
-        children: [
-          const Icon(Icons.lock_outline, color: _ambre, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text('Lecture seule — seul le directeur peut modifier ces informations.', style: GoogleFonts.inter(fontSize: 12, color: _texte))),
-        ],
-      ),
-    );
-  }
-
-  Widget _bandeauErreur(String message) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(color: _rouge.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber, color: _rouge, size: 18),
-          const SizedBox(width: 8),
-          Expanded(child: Text(message, style: GoogleFonts.inter(fontSize: 13, color: _rouge))),
-        ],
-      ),
+  InputDecoration _decorationChamp(String label, {IconData? icone}) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+      prefixIcon: icone != null ? Icon(icone, size: 20, color: SSMPalette.texte3) : null,
+      filled: true,
+      fillColor: const Color(0xFFF9FAFB),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: SSMPalette.indigo, width: 1.5)),
     );
   }
 
@@ -241,12 +232,8 @@ class _DirectionScreenState extends State<DirectionScreen> {
     return TextField(
       controller: controller,
       enabled: !_lectureSeule,
-      style: GoogleFonts.inter(fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icone, size: 22),
-        border: const OutlineInputBorder(),
-      ),
+      style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
+      decoration: _decorationChamp(label, icone: icone),
     );
   }
 }

@@ -4,21 +4,18 @@ import '../../models/utilisateur.dart';
 import '../../services/auth_service.dart';
 import '../../services/annee_service.dart';
 import '../../services/permission_securite_service.dart';
-
-const Color _indigo = Color(0xFF1E3A8A);
-const Color _rouge = Color(0xFFDC2626);
-const Color _vert = Color(0xFF16A34A);
-const Color _ambre = Color(0xFFD97706);
-const Color _gris = Color(0xFF94A3B8);
-const Color _texte = Color(0xFF334155);
-const Color _texteFonce = Color(0xFF0F172A);
-const Color _fond = Color(0xFFEFF6FF);
+import '../../theme/ssm_theme.dart';
+import '../../widgets/ssm/ssm_alert_item.dart';
+import '../../widgets/ssm/ssm_sous_entete.dart';
 
 // ══════════════════════════════════════════════════════════
 // Section Actions avancées — zone sensible. Accessible directeur
 // uniquement. Chaque action exige le mot de passe du directeur en
 // reconfirmation (pas seulement le token de session), puis une dernière
-// confirmation explicite avant exécution.
+// confirmation explicite avant exécution. Les cartes reprennent la
+// palette "danger" de ssm_alert_item (fond rouge très clair, bordure
+// rouge) pour bien marquer la dangerosité, sans réutiliser le widget
+// SSMPanel dont l'en-tête est réservé au style neutre/indigo.
 // POST /parametres/actions-avancees/archiver-annee,
 // POST /parametres/actions-avancees/reinitialiser-parametres
 // (ActionAvanceeController).
@@ -81,13 +78,18 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
     final confirme = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const Icon(Icons.report_gmailerrorred, color: _rouge, size: 40),
-        title: const Text('Êtes-vous vraiment sûr ?'),
-        content: const Text('Cette action est irréversible. Elle va être exécutée immédiatement.'),
+        backgroundColor: SSMPalette.blanc,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+        icon: const Icon(Icons.report_gmailerrorred, color: SSMPalette.rouge, size: 40),
+        title: Text('Êtes-vous vraiment sûr ?', style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
+        content: Text(
+          'Cette action est irréversible. Elle va être exécutée immédiatement.',
+          style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Confirmer définitivement'),
           ),
@@ -100,14 +102,14 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
     try {
       await action(motDePasse);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(messageSucces), backgroundColor: _vert));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(messageSucces), backgroundColor: SSMPalette.teal));
       setState(() => _actionEnCours = null);
       await _charger();
     } catch (e) {
       if (!mounted) return;
       setState(() => _actionEnCours = null);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: _rouge),
+        SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SSMPalette.rouge),
       );
     }
   }
@@ -146,17 +148,21 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _fond,
-      appBar: AppBar(
-        backgroundColor: _rouge,
-        foregroundColor: Colors.white,
-        title: Text('Actions avancées', style: GoogleFonts.sora(fontWeight: FontWeight.w700)),
+      backgroundColor: SSMPalette.fond,
+      body: SafeArea(
+        child: Column(
+          children: [
+            SSMSousEnTete(titre: 'Actions avancées', sousTitre: 'Zone sensible — réservée au directeur', onRetour: () => Navigator.pop(context)),
+            Expanded(
+              child: _chargement
+                  ? const Center(child: CircularProgressIndicator(color: SSMPalette.indigo))
+                  : _utilisateur?.estDirecteur != true
+                      ? _accesRefuse()
+                      : _corps(),
+            ),
+          ],
+        ),
       ),
-      body: _chargement
-          ? const Center(child: CircularProgressIndicator(color: _indigo))
-          : _utilisateur?.estDirecteur != true
-              ? _accesRefuse()
-              : _corps(),
     );
   }
 
@@ -164,25 +170,11 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: _rouge.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _rouge.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.warning_amber_rounded, color: _rouge, size: 24),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  "Zone sensible. Chaque action ci-dessous exige votre mot de passe et une confirmation finale avant exécution.",
-                  style: GoogleFonts.inter(fontSize: 12, color: _texte, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
+        const SSMAlertItem(
+          type: SSMAlerteType.danger,
+          icone: Icons.warning_amber_rounded,
+          titre: 'Zone sensible',
+          sousTitre: 'Chaque action ci-dessous exige votre mot de passe et une confirmation finale avant exécution.',
         ),
         const SizedBox(height: 20),
         _carteAction(
@@ -193,16 +185,23 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (_annees.isEmpty)
-                Text('Aucune année scolaire disponible.', style: GoogleFonts.inter(fontSize: 12, color: _gris))
+                Text('Aucune année scolaire disponible.', style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte3))
               else
                 DropdownButtonFormField<int>(
                   initialValue: _anneeSelectionneeId,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Année scolaire', border: OutlineInputBorder(), isDense: true),
+                  decoration: InputDecoration(
+                    labelText: 'Année scolaire',
+                    labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+                    isDense: true,
+                    filled: true,
+                    fillColor: SSMPalette.blanc,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
+                  ),
                   items: _annees
                       .map((a) => DropdownMenuItem<int>(
                             value: a['id'] as int,
-                            child: Text('${a['libelle']} (${a['statut']})'),
+                            child: Text('${a['libelle']} (${a['statut']})', style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte1)),
                           ))
                       .toList(),
                   onChanged: (v) => setState(() => _anneeSelectionneeId = v),
@@ -211,7 +210,7 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen))),
                   onPressed: _annees.isEmpty || _actionEnCours != null ? null : _archiverAnnee,
                   icon: _actionEnCours == 'archiver'
                       ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -230,7 +229,7 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
           contenu: SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: _rouge, foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.rouge, foregroundColor: Colors.white, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen))),
               onPressed: _actionEnCours != null ? null : _reinitialiserParametres,
               icon: _actionEnCours == 'reinitialiser'
                   ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
@@ -248,10 +247,9 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _ambre.withValues(alpha: 0.4)),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 3))],
+        color: const Color(0xFFFFF5F5),
+        borderRadius: BorderRadius.circular(SSMRayons.grand),
+        border: Border.all(color: SSMPalette.rouge.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,15 +259,15 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
               Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(color: _rouge.withValues(alpha: 0.12), shape: BoxShape.circle),
-                child: Icon(icone, color: _rouge, size: 18),
+                decoration: const BoxDecoration(color: Color(0xFFFEE2E2), shape: BoxShape.circle),
+                child: Icon(icone, color: SSMPalette.rouge, size: 18),
               ),
               const SizedBox(width: 10),
-              Expanded(child: Text(titre, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: _texteFonce))),
+              Expanded(child: Text(titre, style: GoogleFonts.sora(fontSize: 15, fontWeight: FontWeight.w700, color: SSMPalette.texte1))),
             ],
           ),
           const SizedBox(height: 8),
-          Text(description, style: GoogleFonts.inter(fontSize: 12, color: _texte)),
+          Text(description, style: GoogleFonts.inter(fontSize: 12, color: SSMPalette.texte2)),
           const SizedBox(height: 14),
           contenu,
         ],
@@ -284,9 +282,9 @@ class _ActionsAvanceesScreenState extends State<ActionsAvanceesScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.block, color: _rouge, size: 40),
+            const Icon(Icons.block, color: SSMPalette.rouge, size: 40),
             const SizedBox(height: 12),
-            Text('Seul le directeur peut accéder aux actions avancées.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: _texte)),
+            Text('Seul le directeur peut accéder aux actions avancées.', textAlign: TextAlign.center, style: GoogleFonts.inter(color: SSMPalette.texte2)),
           ],
         ),
       ),
@@ -329,26 +327,32 @@ class _DialogMotDePasseState extends State<_DialogMotDePasse> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      icon: const Icon(Icons.warning_amber_rounded, color: _ambre, size: 36),
-      title: Text(widget.titre),
+      backgroundColor: SSMPalette.blanc,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SSMRayons.grand)),
+      icon: const Icon(Icons.warning_amber_rounded, color: SSMPalette.ambre, size: 36),
+      title: Text(widget.titre, style: GoogleFonts.sora(fontSize: 16, fontWeight: FontWeight.w700, color: SSMPalette.indigo)),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(widget.message, style: GoogleFonts.inter(fontSize: 13, color: _texte)),
+          Text(widget.message, style: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2)),
           const SizedBox(height: 16),
           TextField(
             controller: _controller,
             obscureText: _obscure,
             autofocus: true,
+            style: GoogleFonts.inter(fontSize: 14, color: SSMPalette.texte1),
             decoration: InputDecoration(
               labelText: 'Votre mot de passe',
-              prefixIcon: const Icon(Icons.lock_outline),
+              labelStyle: GoogleFonts.inter(fontSize: 13, color: SSMPalette.texte2),
+              prefixIcon: const Icon(Icons.lock_outline, color: SSMPalette.texte3),
               suffixIcon: IconButton(
-                icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+                icon: Icon(_obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, color: SSMPalette.texte3),
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
-              border: const OutlineInputBorder(),
+              filled: true,
+              fillColor: const Color(0xFFF9FAFB),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(SSMRayons.moyen), borderSide: const BorderSide(color: Color(0xFFE5E7EB))),
               errorText: _erreur,
             ),
             onSubmitted: (_) => _valider(),
@@ -356,9 +360,9 @@ class _DialogMotDePasseState extends State<_DialogMotDePasse> {
         ],
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text('Annuler', style: GoogleFonts.inter(color: SSMPalette.texte2))),
         ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: _ambre, foregroundColor: Colors.white),
+          style: ElevatedButton.styleFrom(backgroundColor: SSMPalette.ambre, foregroundColor: Colors.white, elevation: 0),
           onPressed: _valider,
           child: const Text('Continuer'),
         ),
