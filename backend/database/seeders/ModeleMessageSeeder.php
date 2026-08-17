@@ -60,10 +60,18 @@ class ModeleMessageSeeder extends Seeder
                 'nom' => 'Absence signalée',
                 'categorie' => 'presence',
                 'contenu' => "Bonjour {parent},\n\n"
-                    . "Votre enfant {eleve} ({classe}) a été marqué absent le {date} à {heure}.\n\n"
+                    . "Votre enfant {eleve} ({classe}) a été marqué absent le {date} en {matiere}.\n\n"
                     . "Merci de justifier cette absence auprès de l'administration.\n\n"
                     . "{ecole}",
-                'variables_disponibles' => ['parent', 'eleve', 'classe', 'date', 'heure', 'ecole'],
+                'variables_disponibles' => ['parent', 'eleve', 'classe', 'date', 'matiere', 'ecole'],
+            ],
+            [
+                'nom' => 'Retard signalé',
+                'categorie' => 'presence',
+                'contenu' => "Bonjour {parent},\n\n"
+                    . "Votre enfant {eleve} ({classe}) est arrivé(e) en retard le {date} en {matiere}.\n\n"
+                    . "{ecole}",
+                'variables_disponibles' => ['parent', 'eleve', 'classe', 'date', 'matiere', 'ecole'],
             ],
         ];
 

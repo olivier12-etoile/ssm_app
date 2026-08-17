@@ -18,6 +18,9 @@ import '../../widgets/ssm/ssm_pill.dart';
 import '../../widgets/ssm/ssm_quick_action_button.dart';
 import '../../widgets/ssm/ssm_stat_card.dart';
 import '../../widgets/ssm_widgets.dart' show SSMSectionTitre;
+import '../presences/appel_presence_screen.dart';
+import '../presences/appels_recents_screen.dart';
+import '../presences/statistiques_presence_classe_screen.dart';
 import 'fiche_utilisateur_screen.dart';
 
 ButtonStyle _stylePrimaire(Color couleur) => ElevatedButton.styleFrom(
@@ -1072,6 +1075,48 @@ class _FicheClasseScreenState extends State<FicheClasseScreen> {
                     _afficherErreur(e.toString().replaceAll('Exception: ', ''));
                   }
                 },
+              ),
+              SSMQuickActionButton(
+                icone: Icons.fact_check_outlined,
+                label: "Faire l'appel",
+                variante: SSMActionVariante.teal,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AppelPresenceScreen(
+                      classeId: widget.classeId,
+                      classeNom: _classe?['nom'] as String? ?? widget.classeId.toString(),
+                    ),
+                  ),
+                ),
+              ),
+              SSMQuickActionButton(
+                icone: Icons.pie_chart_outline,
+                label: 'Statistiques présence',
+                variante: SSMActionVariante.ambre,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => StatistiquesPresenceClasseScreen(
+                      classeId: widget.classeId,
+                      classeNom: _classe?['nom'] as String? ?? widget.classeId.toString(),
+                    ),
+                  ),
+                ),
+              ),
+              SSMQuickActionButton(
+                icone: Icons.history,
+                label: 'Historique des appels',
+                variante: SSMActionVariante.gris,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AppelsRecentsScreen(
+                      classeId: widget.classeId,
+                      classeNom: _classe?['nom'] as String? ?? widget.classeId.toString(),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

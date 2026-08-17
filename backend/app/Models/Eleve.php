@@ -82,4 +82,19 @@ public function getPhotoUrlAttribute()
     {
         return $this->hasMany(Bulletin::class, 'eleve_id');
     }
+
+    public function appelsPresence()
+    {
+        return $this->hasMany(Presence::class, 'eleve_id');
+    }
+
+    /**
+     * Totaux d'absences justifiées/non justifiées et de retards sur une
+     * période (module Présences). Utilisé par GenerationBulletinService pour
+     * remplir absences_justifiees/absences_non_justifiees/retards du bulletin.
+     */
+    public function statistiquesPresence(int $periodeId): array
+    {
+        return Presence::totauxPourEleve($this->id, $periodeId);
+    }
 }

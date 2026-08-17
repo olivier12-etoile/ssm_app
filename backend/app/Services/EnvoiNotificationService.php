@@ -83,6 +83,14 @@ class EnvoiNotificationService
         // période active courante de l'école — portée via cibles.periode_id.
         $periodeId = $notification->cibles['periode_id'] ?? null;
 
+        // De même, un déclencheur peut porter des valeurs figées pour
+        // {classe}/{matiere}/{date} (ex: appel de présence) plutôt que de
+        // laisser VariableNotificationService les déduire par défaut.
+        $variablesSupplementaires = array_intersect_key(
+            $notification->cibles ?? [],
+            array_flip(['classe', 'matiere', 'date'])
+        );
+
         $nombreEnvoyes = 0;
         $nombreEchoues = 0;
 
@@ -95,7 +103,7 @@ class EnvoiNotificationService
                 }
 
                 $message = $destinataire->eleve_id
-                    ? $this->variableService->remplacerVariables($notification->message, $destinataire->eleve_id, $periodeId)
+                    ? $this->variableService->remplacerVariables($notification->message, $destinataire->eleve_id, $periodeId, $variablesSupplementaires)
                     : $notification->message;
 
                 $notificationAttente = NotificationAttente::create([

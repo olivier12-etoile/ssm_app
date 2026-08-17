@@ -131,7 +131,7 @@ class ResumeResultatsGlobal {
         nombreAuDessusDe10: (json['nombre_eleves_ge_10'] as num?)?.toInt() ?? 0,
         nombreEnDessousDe10: (json['nombre_eleves_lt_10'] as num?)?.toInt() ?? 0,
         repartitionMoyennes: (json['repartition_moyennes'] as Map<String, dynamic>?)
-            ?.map((cle, valeur) => MapEntry(cle, (valeur as num).toInt())),
+            ?.map((cle, valeur) => MapEntry(cle, (valeur as num?)?.toInt() ?? 0)),
       );
 }
 
@@ -156,8 +156,8 @@ class DashboardGeneral {
   });
 
   factory DashboardGeneral.fromJson(Map<String, dynamic> json) => DashboardGeneral(
-        anneeScolaireId: json['annee_scolaire_id'] as int,
-        periodeId: json['periode_id'] as int?,
+        anneeScolaireId: (json['annee_scolaire_id'] as num?)?.toInt() ?? 0,
+        periodeId: (json['periode_id'] as num?)?.toInt(),
         effectifs: EffectifsGeneraux.fromJson(json['effectifs'] as Map<String, dynamic>? ?? const {}),
         enseignants: EffectifsEnseignants.fromJson(json['enseignants'] as Map<String, dynamic>? ?? const {}),
         classes: EffectifsClasses.fromJson(json['classes'] as Map<String, dynamic>? ?? const {}),

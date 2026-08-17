@@ -30,12 +30,20 @@ class VariableNotificationService
     // $periodeId permet de forcer la période utilisée pour {periode}/{moyenne}
     // (ex: notification de résultats déclenchée pour une période qui n'est
     // plus la période active de l'école). Sans précision, on retombe sur la
-    // période active courante.
-    public function remplacerVariables(string $contenu, int $eleveId, ?int $periodeId = null): string
+    // période active courante. $variablesSupplementaires écrase les valeurs
+    // par défaut (ex: {classe}/{matiere}/{date} d'un appel de présence précis
+    // plutôt que la classe d'inscription courante / la date du jour — voir
+    // DeclencheurNotificationService->surAbsence()).
+    public function remplacerVariables(string $contenu, int $eleveId, ?int $periodeId = null, array $variablesSupplementaires = []): string
     {
         $eleve = Eleve::with('ecole')->findOrFail($eleveId);
 
-        return $this->injecter($contenu, $this->valeursPourEleve($eleve, $periodeId));
+        $valeurs = array_merge(
+            $this->valeursPourEleve($eleve, $periodeId),
+            array_filter($variablesSupplementaires, fn ($valeur) => $valeur !== null)
+        );
+
+        return $this->injecter($contenu, $valeurs);
     }
 
     public function genererApercu(string $contenu, int $eleveIdExemple, ?int $periodeId = null): array
@@ -104,6 +112,11 @@ class VariableNotificationService
             'date_echeance'   => $premierFraisImpaye?->date_limite?->format('d/m/Y') ?? '—',
             'date'            => now()->format('d/m/Y'),
             'heure'           => now()->format('H:i'),
+            // Pas de matière par défaut (une notification n'est pas toujours
+            // liée à un cours précis) : {matiere} n'est renseignée que via
+            // $variablesSupplementaires (ex: appel de présence, voir
+            // DeclencheurNotificationService->surAbsence()).
+            'matiere'         => '—',
             'ecole'           => $eleve->ecole->nom ?? '—',
         ];
     }

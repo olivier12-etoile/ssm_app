@@ -54,7 +54,7 @@ class StatistiqueNotificationService {
       throw Exception(data['message'] ?? 'Erreur chargement des statistiques par canal');
     }
     final map = data['par_canal'] as Map<String, dynamic>? ?? {};
-    return map.map((k, v) => MapEntry(k, (v as num).toInt()));
+    return map.map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0));
   }
 
   static Future<Map<String, int>> getStatistiquesParCategorie({String? dateDebut, String? dateFin}) async {
@@ -68,6 +68,6 @@ class StatistiqueNotificationService {
       throw Exception(data['message'] ?? 'Erreur chargement des statistiques par catégorie');
     }
     final map = data['par_categorie'] as Map<String, dynamic>? ?? {};
-    return map.map((k, v) => MapEntry(k, (v as num).toInt()));
+    return map.map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0));
   }
 }

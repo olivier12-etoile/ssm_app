@@ -35,6 +35,26 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/images/logo/
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon_square_white_bg.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  web:
+    generate: true
+    image_path: "assets/icon/icon_square_white_bg.png"
+    background_color: "#FFFFFF"
+    theme_color: "#1E3A8A"
+  windows:
+    generate: true
+    image_path: "assets/icon/icon_square_white_bg.png"
+    icon_size: 256

@@ -116,17 +116,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // ── Logo SSM ─────────────────────────────
-                    const Icon(Icons.school, size: 64, color: Colors.white),
-                    const SizedBox(height: 12),
-                    Text(
-                      'SSM',
-                      style: GoogleFonts.sora(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+                    Image.asset(
+                      'assets/images/logo/ssm_logo_full_white.png',
+                      height: 72,
+                      fit: BoxFit.contain,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 8),
                     Text(
                       'Smart School Manager',
                       style: GoogleFonts.inter(

@@ -36,6 +36,7 @@ class ParametreNotification extends Model
         'impaye'              => 'Notifier le parent en cas d\'impayé',
         'bulletin_disponible' => 'Notifier le parent quand un bulletin est disponible',
         'absence'             => 'Notifier le parent en cas d\'absence',
+        'retard'              => 'Notifier le parent en cas de retard',
     ];
 
     // Types de notifications acceptés par l'école, par destinataire

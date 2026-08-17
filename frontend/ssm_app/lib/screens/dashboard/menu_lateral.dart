@@ -229,7 +229,12 @@ class MenuLateral extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.school, color: Colors.white, size: 26),
+                  Image.asset(
+                    'assets/images/logo/ssm_icon_white.png',
+                    width: 26,
+                    height: 26,
+                    fit: BoxFit.contain,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'SSM',

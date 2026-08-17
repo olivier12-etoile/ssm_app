@@ -316,16 +316,11 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
         children: [
           Row(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFD97706).withValues(alpha: 0.3),
-                      blurRadius: 12,
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.park, color: Color(0xFFD97706), size: 26),
+              Image.asset(
+                'assets/images/logo/ssm_icon_white.png',
+                width: 26,
+                height: 26,
+                fit: BoxFit.contain,
               ),
               const SizedBox(width: 10),
               Text(
@@ -1167,7 +1162,12 @@ class _TableauDeBordScreenState extends State<TableauDeBordScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.park, size: 14, color: Color(0xFFD97706)),
+          Image.asset(
+            'assets/images/logo/ssm_icon_blue.png',
+            width: 14,
+            height: 14,
+            fit: BoxFit.contain,
+          ),
           const SizedBox(width: 6),
           Text(
             'Smart School Manager · Togo 2026 · Version 2.0',

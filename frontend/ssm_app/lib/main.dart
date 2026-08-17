@@ -29,6 +29,7 @@ import 'screens/censeur/suivi_absences_classe_screen.dart';
 import 'screens/enseignant/saisie_absences_screen.dart';
 import 'screens/enseignant/liste_presence_screen.dart';
 import 'screens/enseignant/dashboard_enseignant_screen.dart';
+import 'screens/enseignant/mes_classes_enseignant_screen.dart';
 import 'screens/emploi_du_temps/emploi_du_temps_module_screen.dart';
 import 'screens/emploi_du_temps/parametrage_creneaux_screen.dart';
 import 'screens/secretaire/gestion_paiements_screen.dart';
@@ -61,6 +62,7 @@ class SSMApp extends StatelessWidget {
         '/changer-mot-de-passe': (context) => const ChangementMdpScreen(),
         '/tableau-de-bord': (context) => const DashboardDirecteurScreen(),
         '/dashboard/enseignant': (context) => const DashboardEnseignantScreen(),
+        '/enseignant/mes-classes': (context) => const MesClassesEnseignantScreen(),
         '/dashboard/censeur': (context) => const DashboardCenseurScreen(),
         '/censeur/classe/absences': (context) {
           final args =

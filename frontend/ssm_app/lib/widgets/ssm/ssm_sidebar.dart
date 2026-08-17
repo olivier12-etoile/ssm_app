@@ -128,31 +128,11 @@ class SSMSidebar extends StatelessWidget {
   }
 
   Widget _logoMark() {
-    Widget carre(Color couleur) => Container(
-          width: 10.5,
-          height: 10.5,
-          decoration: BoxDecoration(color: couleur, borderRadius: BorderRadius.circular(3)),
-        );
-
-    return SizedBox(
-      width: 24,
-      height: 24,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            carre(SSMPalette.teal),
-            const SizedBox(width: 3),
-            carre(Colors.white.withValues(alpha: 0.82)),
-          ]),
-          const SizedBox(height: 3),
-          Row(mainAxisSize: MainAxisSize.min, children: [
-            carre(Colors.white.withValues(alpha: 0.82)),
-            const SizedBox(width: 3),
-            carre(SSMPalette.ambre),
-          ]),
-        ],
-      ),
+    return Image.asset(
+      'assets/images/logo/ssm_icon_white.png',
+      width: 26,
+      height: 26,
+      fit: BoxFit.contain,
     );
   }
 

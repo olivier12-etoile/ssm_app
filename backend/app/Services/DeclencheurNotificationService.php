@@ -2,13 +2,13 @@
 
 namespace App\Services;
 
-use App\Models\Absence;
 use App\Models\ClasseMatiere;
 use App\Models\Eleve;
 use App\Models\FraisScolaire;
 use App\Models\ModeleMessage;
 use App\Models\Paiement;
 use App\Models\ParametreNotification;
+use App\Models\Presence;
 use App\Models\SaisieNote;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -197,39 +197,68 @@ class DeclencheurNotificationService
     }
 
     /**
-     * Le module Absences existe déjà (App\Models\Absence,
-     * AbsenceController) : cette méthode est pleinement fonctionnelle.
-     * Elle n'est cependant PAS câblée dans AbsenceController->enregistrer()
-     * pour l'instant — ce contrôleur crée déjà sa propre NotificationAttente
-     * via MessageTemplateService::absence(), et brancher les deux en même
-     * temps enverrait deux notifications pour la même absence. Le câblage
-     * (remplacement de ce bloc existant, comme pour PaiementController) est
-     * hors périmètre de cette tâche.
+     * À appeler après qu'un appel de présence est terminé
+     * (PresenceService->terminerAppel()), pour chaque élève marqué absent
+     * (ou en retard, selon le paramétrage) pas encore notifié. $presenceId
+     * référence une ligne de la table presences (module Présences), pas
+     * l'ancien module Absences (App\Models\Absence, resté isolé — voir
+     * AbsenceController qui compose son propre message via
+     * MessageTemplateService et ne passe pas par ce déclencheur).
+     *
+     * Utilise le modèle « Retard signalé » pour un retard, « Absence
+     * signalée » sinon (avec repli sur « Absence signalée » si le modèle
+     * de retard n'est pas encore paramétré pour l'école).
      */
-    public function surAbsence(int $absenceId, ?int $declenchePar = null): void
+    public function surAbsence(int $presenceId, ?int $declenchePar = null): void
     {
-        $absence = Absence::with('eleve')->findOrFail($absenceId);
+        $presence = Presence::with(['eleve', 'appelPresence.classe', 'appelPresence.matiere'])->findOrFail($presenceId);
 
-        if (!$absence->eleve) {
+        if (!$presence->eleve) {
             return;
         }
 
-        $ecoleId = $absence->eleve->ecole_id;
+        $ecoleId = $presence->eleve->ecole_id;
 
         if (!ParametreNotification::estActif($ecoleId, self::CLE_ABSENCE)) {
             return;
         }
 
-        if (!$absence->eleve->telephone_parent) {
+        if (!$presence->eleve->telephone_parent) {
             return;
         }
 
-        $this->notifierEleve(
-            $ecoleId,
-            $absence->eleve_id,
-            'Absence signalée',
-            $declenchePar
-        );
+        $nomModele = $presence->statut === 'retard' ? 'Retard signalé' : 'Absence signalée';
+        $modele = $this->modele($ecoleId, $nomModele) ?? $this->modele($ecoleId, 'Absence signalée');
+        if (!$modele) {
+            return;
+        }
+
+        $auteur = $this->resoudreAuteur($ecoleId, $declenchePar);
+        if (!$auteur) {
+            return;
+        }
+
+        $appel = $presence->appelPresence;
+
+        // classe/matiere/date sont portées dans cibles pour qu'EnvoiNotificationService
+        // les substitue aux variables {classe}/{matiere}/{date} du modèle à la
+        // place des valeurs par défaut (classe d'inscription courante, date du
+        // jour) — voir VariableNotificationService::remplacerVariables().
+        $notification = $this->envoiService->creerNotification($ecoleId, $auteur, [
+            'titre'             => $modele->nom,
+            'message'           => $modele->contenu,
+            'modele_message_id' => $modele->id,
+            'type_cible'        => 'eleve',
+            'cibles'            => [
+                'eleve_id' => $presence->eleve_id,
+                'classe'   => $appel?->classe?->nom,
+                'matiere'  => $appel?->matiere?->nom,
+                'date'     => $appel?->date_appel?->format('d/m/Y'),
+            ],
+            'canal' => 'whatsapp',
+        ]);
+
+        $this->envoiService->envoyerMaintenant($notification->id);
     }
 
     // ── Aides internes ────────────────────────────────────────────

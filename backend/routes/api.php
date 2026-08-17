@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\HistoriqueBulletinController;
 use App\Http\Controllers\Api\StatistiqueBulletinController;
 use App\Http\Controllers\Api\DashboardBulletinController;
 use App\Http\Controllers\Api\AbsenceController;
+use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Api\NotificationAttenteController;
 use App\Http\Controllers\Api\AppreciationController;
 use App\Http\Controllers\Api\DashboardController;
@@ -571,6 +572,19 @@ Route::prefix('bulletins')->group(function () {
     Route::get('/statistiques/distribution/{classeId}/{periodeId}', [StatistiqueBulletinController::class, 'distribution']);
 
     Route::get('/dashboard/resume',                            [DashboardBulletinController::class, 'resume']);
+});
+
+// Module Présences — appels de présence (par classe/matière/date), liés aux
+// Notifications (surAbsence) et au module Bulletins (statistiques de présence)
+Route::prefix('presences')->group(function () {
+    Route::post('/appels',                                   [PresenceController::class, 'creerAppel']);
+    Route::get('/appels/{id}',                                [PresenceController::class, 'getAppel']);
+    Route::put('/appels/{id}/marquer',                        [PresenceController::class, 'marquerPresence']);
+    Route::put('/appels/{id}/marquer-bulk',                   [PresenceController::class, 'marquerPresenceBulk']);
+    Route::post('/appels/{id}/terminer',                      [PresenceController::class, 'terminerAppel']);
+    Route::get('/historique/eleve/{eleveId}/{periodeId}',    [PresenceController::class, 'historiqueEleve']);
+    Route::get('/statistiques/classe/{classeId}/{periodeId}', [PresenceController::class, 'statistiquesClasse']);
+    Route::get('/appels-recents/{classeId}',                  [PresenceController::class, 'appelsRecents']);
 });
 
 });

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Absence;
 use App\Models\Bulletin;
 use App\Models\Classe;
 use App\Models\ClasseMatiere;
@@ -10,7 +9,6 @@ use App\Models\Eleve;
 use App\Models\Inscription;
 use App\Models\PeriodeAcademique;
 use App\Models\RegleAppreciation;
-use App\Models\Sanction;
 use App\Models\SaisieNote;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -30,8 +28,10 @@ use RuntimeException;
  */
 class GenerationBulletinService
 {
-    public function __construct(private NoteCalculService $noteCalculService)
-    {
+    public function __construct(
+        private NoteCalculService $noteCalculService,
+        private PresenceService $presenceService
+    ) {
     }
 
     public function genererPourEleve(int $eleveId, int $periodeId): Bulletin
@@ -355,27 +355,14 @@ class GenerationBulletinService
             ->values();
     }
 
-    // absences_justifiees/non_justifiees : module Absences (table absences,
-    // champ justifiee). retards : le module Absences ne distingue pas les
-    // retards -- ils sont enregistrés comme Sanction de type "retard"
-    // (module Discipline).
+    // absences_justifiees/absences_non_justifiees/retards : module Présences
+    // (table presences, via un appel de présence "termine" sur cette
+    // période) -- voir PresenceService->historiqueEleve() et
+    // Presence::totauxPourEleve().
     private function statistiquesPresence(int $eleveId, PeriodeAcademique $periode): array
     {
-        $absencesJustifiees = Absence::where('eleve_id', $eleveId)
-            ->whereBetween('date_absence', [$periode->date_debut, $periode->date_fin])
-            ->where('justifiee', true)
-            ->count();
+        $totaux = $this->presenceService->historiqueEleve($eleveId, $periode->id)['totaux'];
 
-        $absencesNonJustifiees = Absence::where('eleve_id', $eleveId)
-            ->whereBetween('date_absence', [$periode->date_debut, $periode->date_fin])
-            ->where('justifiee', false)
-            ->count();
-
-        $retards = Sanction::where('eleve_id', $eleveId)
-            ->where('type', 'retard')
-            ->whereBetween('date_sanction', [$periode->date_debut, $periode->date_fin])
-            ->count();
-
-        return [$absencesJustifiees, $absencesNonJustifiees, $retards];
+        return [$totaux['absences_justifiees'], $totaux['absences_non_justifiees'], $totaux['retards']];
     }
 }

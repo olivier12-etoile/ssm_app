@@ -66,6 +66,6 @@ class StatistiqueNotification {
 
   static Map<String, int> _mapEntiers(dynamic valeur) {
     if (valeur is! Map) return {};
-    return valeur.map((cle, v) => MapEntry(cle.toString(), (v as num).toInt()));
+    return valeur.map((cle, v) => MapEntry(cle.toString(), (v as num?)?.toInt() ?? 0));
   }
 }

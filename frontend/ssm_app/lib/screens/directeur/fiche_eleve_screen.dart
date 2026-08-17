@@ -26,6 +26,7 @@ import '../../widgets/ssm/ssm_pill.dart';
 import '../../widgets/ssm/ssm_quick_action_button.dart';
 import '../bulletins/apercu_bulletin_screen.dart';
 import '../bulletins/historique_bulletins_eleve_screen.dart';
+import '../presences/historique_presence_eleve_screen.dart';
 
 Color _couleurStatutEleve(String? statut) {
   switch (statut) {
@@ -250,7 +251,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 8, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _chargerTout();
   }
 
@@ -427,6 +428,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               _tabDiscipline(),
               _tabDocuments(),
               _tabChronologie(),
+              _tabPresences(),
             ],
           ),
         ),
@@ -532,6 +534,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
               if (telephoneParent != null && telephoneParent.isNotEmpty)
                 SSMQuickActionButton(icone: Icons.chat_bubble_outline, label: 'WhatsApp', variante: SSMActionVariante.teal, onTap: _dialogCommuniquer),
               SSMQuickActionButton(icone: Icons.picture_as_pdf_outlined, label: 'Bulletin', variante: SSMActionVariante.ambre, onTap: () => _tabController.animateTo(4)),
+              SSMQuickActionButton(icone: Icons.event_available, label: 'Présences', variante: SSMActionVariante.teal, onTap: () => _tabController.animateTo(8)),
               SSMQuickActionButton(icone: Icons.more_horiz, label: 'Plus', variante: SSMActionVariante.gris, onTap: _dialogPlusActions),
             ],
           ),
@@ -560,6 +563,7 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
           Tab(text: '🏛️ Discipline'),
           Tab(text: '📁 Docs'),
           Tab(text: '📅 Chronologie'),
+          Tab(text: '✅ Présences'),
         ],
       ),
     );
@@ -1695,6 +1699,13 @@ class _FicheEleveScreenState extends State<FicheEleveScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _tabPresences() {
+    return HistoriquePresenceEleveScreen(
+      eleveId: widget.eleveId,
+      eleveNom: _eleve != null ? '${_eleve!['nom']} ${_eleve!['prenom']}' : null,
     );
   }
 

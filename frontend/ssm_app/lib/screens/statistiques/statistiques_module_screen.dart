@@ -374,7 +374,8 @@ class _StatistiquesModuleScreenState extends State<StatistiquesModuleScreen> {
     required List<(T, String)> items,
     required ValueChanged<T?>? onChanged,
   }) {
-    final libelleActuel = items.firstWhere((i) => i.$1 == valeur, orElse: () => (valeur as T, '—')).$2;
+    final correspondances = items.where((i) => i.$1 == valeur);
+    final libelleActuel = correspondances.isEmpty ? '—' : correspondances.first.$2;
 
     return PopupMenuButton<T>(
       enabled: onChanged != null && items.isNotEmpty,
@@ -615,7 +616,7 @@ class _StatistiquesModuleScreenState extends State<StatistiquesModuleScreen> {
 
   Widget _graphiqueEvolution() {
     final labels = (_evolution?['labels'] as List?)?.map((e) => e.toString()).toList() ?? const <String>[];
-    final valeurs = (_evolution?['valeurs'] as List?)?.map((v) => (v as num).toDouble()).toList() ?? const <double>[];
+    final valeurs = (_evolution?['valeurs'] as List?)?.map((v) => (v as num?)?.toDouble() ?? 0.0).toList() ?? const <double>[];
     final maxValeur = valeurs.isEmpty ? 0.0 : valeurs.reduce((a, b) => a > b ? a : b);
     final maxY = maxValeur <= 0 ? 10.0 : maxValeur * 1.2;
 
